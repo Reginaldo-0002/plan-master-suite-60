@@ -16,7 +16,7 @@ interface Content {
   content_type: 'product' | 'tool' | 'course' | 'tutorial';
   required_plan: 'free' | 'vip' | 'pro';
   is_active: boolean;
-  status: string;
+  status: 'published' | 'draft' | 'scheduled';
   video_url: string | null;
   hero_image_url: string | null;
   created_at: string;
@@ -57,7 +57,11 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
 
       if (error) throw error;
       console.log('Contents fetched:', data?.length || 0);
-      setContents(data || []);
+      setContents((data || []).map(item => ({
+        ...item,
+        status: item.status as 'published' | 'draft' | 'scheduled',
+        difficulty_level: item.difficulty_level as 'beginner' | 'intermediate' | 'advanced'
+      })));
     } catch (error) {
       console.error('Error fetching contents:', error);
       toast({
