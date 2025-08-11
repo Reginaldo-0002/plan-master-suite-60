@@ -1,12 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, DollarSign, Clock, Target, Gift, Eye, Sparkles } from "lucide-react";
+import { Users, Clock, Target, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { LoyaltySystem } from "@/components/loyalty/LoyaltySystem";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 
 interface Profile {
@@ -20,8 +19,6 @@ interface Profile {
   areas_accessed: number;
   referral_code: string;
   referral_earnings: number;
-  loyalty_level: string;
-  total_points: number;
   created_at: string;
   updated_at: string;
 }
@@ -34,7 +31,6 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
   const [notifications, setNotifications] = useState([]);
   const [recentContent, setRecentContent] = useState([]);
   const [referralStats, setReferralStats] = useState({ count: 0, earnings: 0 });
-  const [showLoyalty, setShowLoyalty] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -42,47 +38,8 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
       fetchNotifications();
       fetchRecentContent();
       fetchReferralStats();
-      // Award points for daily login
-      awardDailyLoginPoints();
     }
   }, [profile]);
-
-  const awardDailyLoginPoints = async () => {
-    if (!profile) return;
-    
-    try {
-      // Check if user already received daily points today
-      const today = new Date().toISOString().split('T')[0];
-      const { data: existingInteraction } = await supabase
-        .from('user_interactions')
-        .select('*')
-        .eq('user_id', profile.user_id)
-        .eq('interaction_type', 'daily_login')
-        .gte('created_at', today + 'T00:00:00')
-        .single();
-
-      if (!existingInteraction) {
-        // Award daily login points
-        await supabase.rpc('award_loyalty_points', {
-          user_uuid: profile.user_id,
-          points_amount: 10,
-          activity_type: 'daily_login'
-        });
-
-        // Log the interaction
-        await supabase
-          .from('user_interactions')
-          .insert([{
-            user_id: profile.user_id,
-            interaction_type: 'daily_login',
-            target_type: 'system',
-            metadata: { points_awarded: 10 }
-          }]);
-      }
-    } catch (error) {
-      console.error('Error awarding daily points:', error);
-    }
-  };
 
   const fetchNotifications = async () => {
     try {
@@ -188,30 +145,13 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
               Aqui está um resumo da sua atividade na plataforma
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge className={getPlanBadgeColor(profile.plan)}>
-              Plano {profile.plan.toUpperCase()}
-            </Badge>
-            <Button
-              variant="outline"
-              onClick={() => setShowLoyalty(!showLoyalty)}
-              className="border-futuristic-primary text-futuristic-primary hover:bg-futuristic-primary/10"
-            >
-              <Sparkles className="w-4 h-4 mr-2" />
-              {showLoyalty ? 'Ocultar' : 'Mostrar'} Loyalty
-            </Button>
-          </div>
+          <Badge className={getPlanBadgeColor(profile.plan)}>
+            Plano {profile.plan.toUpperCase()}
+          </Badge>
         </div>
 
-        {/* Loyalty System */}
-        {showLoyalty && (
-          <div className="animate-float">
-            <LoyaltySystem userId={profile.user_id} />
-          </div>
-        )}
-
-        {/* Enhanced Stats Cards with Futuristic Design */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        {/* Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20 hover:shadow-lg hover:shadow-futuristic-primary/20 transition-all duration-300 animate-glow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Tempo Total</CardTitle>
@@ -250,24 +190,9 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
               </p>
             </CardContent>
           </Card>
-          
-          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-neon/20 hover:shadow-lg hover:shadow-futuristic-neon/20 transition-all duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pontos Loyalty</CardTitle>
-              <Sparkles className="h-4 w-4 text-futuristic-neon" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-futuristic-neon">
-                {profile.total_points || 0}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                nível {profile.loyalty_level || 'bronze'}
-              </p>
-            </CardContent>
-          </Card>
         </div>
 
-        {/* Enhanced Referral Program */}
+        {/* Referral Program */}
         <Card className="bg-gradient-to-br from-futuristic-primary/10 to-futuristic-secondary/10 border-futuristic-primary/20 shadow-lg backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-futuristic-primary">
@@ -275,7 +200,7 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
               Programa de Indicação
             </CardTitle>
             <CardDescription>
-              Compartilhe seu código e ganhe com cada nova indicação
+              Compartilhe seu código e ganhe R$ {referralStats.earnings.toFixed(2)} com suas indicações
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -283,6 +208,9 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
               <div>
                 <p className="font-medium">Seu código de indicação:</p>
                 <p className="text-lg font-mono font-bold text-futuristic-primary">{profile.referral_code}</p>
+                <p className="text-sm text-muted-foreground">
+                  Ganhos totais: R$ {referralStats.earnings.toFixed(2)}
+                </p>
               </div>
               <Button onClick={copyReferralCode} className="bg-futuristic-gradient hover:opacity-90">
                 Copiar Código
@@ -291,7 +219,7 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
           </CardContent>
         </Card>
 
-        {/* Enhanced Recent Content & Notifications */}
+        {/* Recent Content & Notifications */}
         <div className="grid gap-4 md:grid-cols-2">
           <Card className="bg-background/60 backdrop-blur-sm border-futuristic-accent/20">
             <CardHeader>

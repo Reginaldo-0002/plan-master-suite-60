@@ -15,7 +15,6 @@ import { AdminRulesEditor } from "@/components/admin/AdminRulesEditor";
 import { AdminTeamManagement } from "@/components/admin/AdminTeamManagement";
 import { AdminReferralSettings } from "@/components/admin/AdminReferralSettings";
 import { AdminUpcomingReleases } from "@/components/admin/AdminUpcomingReleases";
-import { AdminSystemCleanup } from "@/components/admin/AdminSystemCleanup";
 import { AdminCarouselManagement } from "@/components/admin/AdminCarouselManagement";
 import { ContentTopicsEditor } from "@/components/content/ContentTopicsEditor";
 import { Loader2, ArrowLeft } from "lucide-react";
@@ -39,7 +38,6 @@ type ActiveAdminSection =
   | 'team' 
   | 'referral-settings' 
   | 'upcoming-releases' 
-  | 'system-cleanup' 
   | 'carousel';
 
 interface Profile {
@@ -83,7 +81,6 @@ const AdminDashboard = () => {
 
       setUser(session.user);
       
-      // Get user profile and check admin permissions
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -96,7 +93,6 @@ const AdminDashboard = () => {
         return null;
       }
 
-      // Validar dados do perfil
       if (!validateProfileData(profileData)) {
         console.error('Invalid profile data:', profileData);
         toast({
@@ -108,7 +104,6 @@ const AdminDashboard = () => {
         return null;
       }
 
-      // If user is not admin, make them admin (first user becomes admin)
       if (profileData.role !== 'admin') {
         const { error: updateError } = await supabase
           .from('profiles')
@@ -153,13 +148,11 @@ const AdminDashboard = () => {
   const handleSectionChange = (tab: string) => {
     const validSections: ActiveAdminSection[] = [
       'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
-      'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 
-      'system-cleanup', 'carousel'
+      'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel'
     ];
     
     if (validSections.includes(tab as ActiveAdminSection)) {
       setActiveSection(tab as ActiveAdminSection);
-      // Reset selected content when changing sections
       if (tab !== 'content-topics') {
         setSelectedContentId(null);
       }
@@ -234,8 +227,6 @@ const AdminDashboard = () => {
         return <AdminReferralSettings />;
       case 'upcoming-releases':
         return <AdminUpcomingReleases />;
-      case 'system-cleanup':
-        return <AdminSystemCleanup />;
       case 'carousel':
         return <AdminCarouselManagement />;
       default:

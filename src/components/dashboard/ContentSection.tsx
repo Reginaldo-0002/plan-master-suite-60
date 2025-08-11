@@ -1,9 +1,10 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText } from "lucide-react";
+import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Content {
@@ -14,6 +15,7 @@ interface Content {
   status: 'active' | 'maintenance' | 'blocked';
   required_plan: 'free' | 'vip' | 'pro';
   hero_image_url: string | null;
+  video_url: string | null;
   release_date: string | null;
   created_at: string;
   updated_at: string;
@@ -40,8 +42,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       case 'products': return 'product';
       case 'tools': return 'tool';
       case 'courses': return 'course';
-      case 'rules': return 'tutorial'; // Regras são um tipo especial de tutorial
-      case 'coming-soon': return null; // Coming soon busca por data futura
+      case 'rules': return 'tutorial';
       default: return null;
     }
   };
@@ -50,17 +51,13 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
     try {
       let query = supabase
         .from('content')
-        .select('id, title, description, content_type, status, required_plan, hero_image_url, scheduled_publish_at, created_at, updated_at')
+        .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')
+        .eq('is_active', true)
         .order('created_at', { ascending: false });
 
       const contentType = getContentTypeForQuery(type);
       
-      if (type === 'coming-soon') {
-        // Para "coming-soon", buscar por data de lançamento futura
-        const today = new Date().toISOString();
-        query = query.gte('scheduled_publish_at', today);
-      } else if (contentType) {
-        // Só aplicar o filtro se contentType não for null
+      if (contentType) {
         query = query.eq('content_type', contentType);
       }
 
@@ -76,7 +73,6 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
         return;
       }
 
-      // Mapear os dados para o formato esperado
       const mappedData: Content[] = (data || []).map(item => ({
         ...item,
         status: (item.status as 'active' | 'maintenance' | 'blocked') || 'active',
@@ -86,8 +82,49 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       setContent(mappedData);
     } catch (error) {
       console.error('Error:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao carregar conteúdo",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAccessContent = async (contentItem: Content) => {
+    if (!canAccess(contentItem.required_plan) || contentItem.status !== 'active') {
+      return;
+    }
+
+    try {
+      // Log user interaction
+      await supabase
+        .from('user_interactions')
+        .insert([{
+          user_id: (await supabase.auth.getUser()).data.user?.id,
+          interaction_type: 'content_access',
+          target_type: 'content',
+          target_id: contentItem.id,
+          metadata: { content_type: contentItem.content_type }
+        }]);
+
+      // Open video or redirect based on content type
+      if (contentItem.video_url) {
+        window.open(contentItem.video_url, '_blank');
+      } else {
+        toast({
+          title: "Conteúdo acessado",
+          description: `Acessando: ${contentItem.title}`,
+        });
+      }
+    } catch (error) {
+      console.error('Error accessing content:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao acessar conteúdo",
+        variant: "destructive",
+      });
     }
   };
 
@@ -130,15 +167,13 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       case 'products': return 'Produtos';
       case 'tools': return 'Ferramentas';
       case 'courses': return 'Cursos';
-      case 'rules': return 'Regras';
-      case 'coming-soon': return 'Em Breve';
+      case 'rules': return 'Regras e Tutoriais';
       default: return 'Conteúdo';
     }
   };
 
   const getSectionIcon = () => {
     switch (type) {
-      case 'coming-soon': return <Calendar className="w-6 h-6" />;
       case 'rules': return <FileText className="w-6 h-6" />;
       default: return null;
     }
@@ -146,6 +181,13 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
 
   const canAccess = (contentPlan: string) => {
     return planHierarchy[userPlan] >= planHierarchy[contentPlan as keyof typeof planHierarchy];
+  };
+
+  const getActionIcon = (contentItem: Content) => {
+    if (contentItem.video_url) {
+      return <Play className="w-4 h-4 mr-2" />;
+    }
+    return <ExternalLink className="w-4 h-4 mr-2" />;
   };
 
   if (loading) {
@@ -167,10 +209,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
         <Card>
           <CardContent className="text-center py-12">
             <p className="text-muted-foreground">
-              {type === 'coming-soon' 
-                ? 'Nenhum lançamento programado no momento.' 
-                : `Nenhum ${getSectionTitle().toLowerCase()} disponível no momento.`
-              }
+              Nenhum {getSectionTitle().toLowerCase()} disponível no momento.
             </p>
           </CardContent>
         </Card>
@@ -207,8 +246,12 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
               </CardHeader>
               <CardContent>
                 {canAccess(item.required_plan) && item.status === 'active' ? (
-                  <Button className="w-full">
-                    {type === 'coming-soon' ? 'Aguardando Lançamento' : 'Acessar'}
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleAccessContent(item)}
+                  >
+                    {getActionIcon(item)}
+                    Acessar
                   </Button>
                 ) : !canAccess(item.required_plan) ? (
                   <Button variant="outline" className="w-full" disabled>
