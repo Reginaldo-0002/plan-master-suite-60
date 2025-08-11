@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { isValidEmail, validatePassword, sanitizeInput, userCreationLimiter } from "@/lib/security";
+import { useRoleCheck } from "@/hooks/useRoleCheck";
 
 interface CreateUserDialogProps {
   isOpen: boolean;
@@ -25,28 +27,50 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
     role: "user" as "user" | "admin" | "moderator"
   });
   const { toast } = useToast();
+  const { isAdmin } = useRoleCheck();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      // Check admin permission for role assignment
+      if ((formData.role === 'admin' || formData.role === 'moderator') && !isAdmin) {
+        throw new Error("Apenas administradores podem criar usuários com roles elevados");
+      }
+
+      // Rate limiting check
+      if (!userCreationLimiter.canMakeRequest()) {
+        throw new Error("Muitas tentativas de criação de usuário. Tente novamente em alguns minutos.");
+      }
+
       // Validate form
       if (!formData.email || !formData.password || !formData.full_name) {
         throw new Error("Todos os campos são obrigatórios");
       }
 
-      if (formData.password.length < 6) {
-        throw new Error("A senha deve ter pelo menos 6 caracteres");
+      // Validate email format
+      if (!isValidEmail(formData.email)) {
+        throw new Error("Formato de email inválido");
       }
+
+      // Validate password strength
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        throw new Error(passwordValidation.message);
+      }
+
+      // Sanitize inputs
+      const sanitizedFullName = sanitizeInput(formData.full_name);
+      const sanitizedEmail = sanitizeInput(formData.email);
 
       // Create user in Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: formData.email,
+        email: sanitizedEmail,
         password: formData.password,
         email_confirm: true,
         user_metadata: {
-          full_name: formData.full_name
+          full_name: sanitizedFullName
         }
       });
 
@@ -58,18 +82,30 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
         throw new Error("Erro ao criar usuário");
       }
 
-      // Create profile
+      // Create profile (without role - will be handled by user_roles table)
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
           user_id: authData.user.id,
-          full_name: formData.full_name,
-          plan: formData.plan,
-          role: formData.role
+          full_name: sanitizedFullName,
+          plan: formData.plan
         });
 
       if (profileError) {
         throw profileError;
+      }
+
+      // Assign role using the secure user_roles table
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .insert({
+          user_id: authData.user.id,
+          role: formData.role,
+          assigned_by: (await supabase.auth.getUser()).data.user?.id
+        });
+
+      if (roleError) {
+        throw roleError;
       }
 
       toast({

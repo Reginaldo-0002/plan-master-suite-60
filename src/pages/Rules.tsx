@@ -56,10 +56,9 @@ export default function Rules() {
             </CardDescription>
           </CardHeader>
           <CardContent className="prose prose-lg max-w-none">
-            <div 
-              className="text-foreground leading-relaxed whitespace-pre-wrap"
-              dangerouslySetInnerHTML={{ __html: rules }}
-            />
+            <div className="text-foreground leading-relaxed whitespace-pre-wrap">
+              {rules}
+            </div>
           </CardContent>
         </Card>
       </div>

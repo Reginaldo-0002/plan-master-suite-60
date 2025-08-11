@@ -24,6 +24,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { validateProfileData } from "@/lib/typeGuards";
 import { Button } from "@/components/ui/button";
+import { RequireRole } from "@/components/auth/RequireRole";
 
 type ActiveAdminSection = 
   | 'overview' 
@@ -81,6 +82,7 @@ const AdminDashboard = () => {
 
       setUser(session.user);
       
+      // Get profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
@@ -104,24 +106,16 @@ const AdminDashboard = () => {
         return null;
       }
 
-      if (profileData.role !== 'admin') {
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ role: 'admin' })
-          .eq('user_id', session.user.id);
-
-        if (updateError) {
-          console.error('Error updating user to admin:', updateError);
-        } else {
-          profileData.role = 'admin';
-          toast({
-            title: "Bem-vindo!",
-            description: "Você foi configurado como administrador principal do sistema",
-          });
-        }
+      // Check user role securely using the new role system
+      const { data: userRole, error: roleError } = await supabase.rpc('get_current_user_role');
+      
+      if (roleError) {
+        console.error('Error fetching user role:', roleError);
+        navigate("/dashboard");
+        return null;
       }
 
-      if (profileData.role !== 'admin' && profileData.role !== 'moderator') {
+      if (!userRole || (userRole !== 'admin' && userRole !== 'moderator')) {
         toast({
           title: "Acesso Negado",
           description: "Você não tem permissão para acessar o painel administrativo",
@@ -131,6 +125,8 @@ const AdminDashboard = () => {
         return null;
       }
 
+      // Update profile with the secure role
+      profileData.role = userRole;
       setProfile(profileData as Profile);
       return profileData;
     }, {
@@ -235,19 +231,21 @@ const AdminDashboard = () => {
   };
 
   return (
-    <ErrorBoundary>
-      <div className="flex h-screen bg-background">
-        <AdminSidebar 
-          activeTab={activeSection} 
-          setActiveTab={handleSectionChange}
-        />
-        <main className="flex-1 overflow-auto">
-          <ErrorBoundary>
-            {renderActiveSection()}
-          </ErrorBoundary>
-        </main>
-      </div>
-    </ErrorBoundary>
+    <RequireRole role="moderator">
+      <ErrorBoundary>
+        <div className="flex h-screen bg-background">
+          <AdminSidebar 
+            activeTab={activeSection} 
+            setActiveTab={handleSectionChange}
+          />
+          <main className="flex-1 overflow-auto">
+            <ErrorBoundary>
+              {renderActiveSection()}
+            </ErrorBoundary>
+          </main>
+        </div>
+      </ErrorBoundary>
+    </RequireRole>
   );
 };
 
