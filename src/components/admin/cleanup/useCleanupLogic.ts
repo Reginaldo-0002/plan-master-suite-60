@@ -23,11 +23,11 @@ export const useCleanupLogic = () => {
         timestamp: new Date().toISOString()
       });
       
-      // Chamar a função corrigida com os novos nomes de parâmetros
+      // Usar os nomes corretos dos parâmetros esperados pelo TypeScript
       const { data, error } = await supabase.rpc('system_cleanup', {
-        p_cleanup_type: cleanupType,
-        p_target_tables: null,
-        p_keep_admin: keepAdmin
+        cleanup_type: cleanupType,
+        target_tables: null,
+        keep_admin: keepAdmin
       });
 
       console.log('Cleanup result:', { data, error });
