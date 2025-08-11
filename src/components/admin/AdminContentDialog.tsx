@@ -72,7 +72,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
   // Verificar se há conteúdo para rolar
   useEffect(() => {
     const checkScrollable = () => {
-      const scrollContainer = document.querySelector('.content-scroll-area');
+      const scrollContainer = document.querySelector('.admin-content-scroll-area');
       if (scrollContainer) {
         const isScrollable = scrollContainer.scrollHeight > scrollContainer.clientHeight;
         setShowScrollIndicator(isScrollable);
@@ -163,351 +163,408 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="fixed-dialog-container">
-        {/* Header Fixo */}
-        <div className="dialog-header">
-          <DialogHeader>
-            <DialogTitle className="header-title">
-              {contentItem?.id ? 'Editar' : 'Criar'} {getContentTypeLabel(contentType)}
-            </DialogTitle>
-            <DialogDescription className="header-description">
-              Preencha os campos abaixo para {contentItem?.id ? 'editar' : 'criar'} o conteúdo.
-            </DialogDescription>
-          </DialogHeader>
-          
-          {/* Indicador de Scroll */}
-          {showScrollIndicator && (
-            <div className="scroll-indicator">
-              <ScrollText className="w-4 h-4 mr-2" />
-              <span className="text-xs">Role para ver mais campos</span>
-              <ChevronDown className="w-4 h-4 ml-2 animate-bounce" />
-            </div>
-          )}
-        </div>
+    <>
+      <style>{`
+        .admin-dialog-container {
+          max-width: 64rem;
+          width: 100%;
+          height: 95vh;
+          padding: 0;
+          gap: 0;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+        }
 
-        {/* Área de Conteúdo Scrollável */}
-        <div className="content-scroll-area">
-          <div className="form-content">
-            {/* Título */}
-            <div className="field-group">
-              <Label htmlFor="title" className="field-label required">
-                Título
-              </Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Digite o título..."
-                className="futuristic-input"
-              />
-            </div>
+        .admin-dialog-header {
+          padding: 1rem 1.5rem;
+          border-bottom: 1px solid hsl(var(--border));
+          background: hsl(var(--background) / 0.95);
+          backdrop-filter: blur(4px);
+          flex-shrink: 0;
+          position: relative;
+          z-index: 10;
+        }
 
-            {/* Descrição */}
-            <div className="field-group">
-              <Label htmlFor="description" className="field-label">
-                Descrição
-              </Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Descreva o conteúdo..."
-                rows={4}
-                className="futuristic-input resize-none"
-              />
-            </div>
+        .admin-header-title {
+          font-size: 1.25rem;
+          font-weight: 700;
+          color: hsl(var(--foreground));
+          margin-bottom: 0.5rem;
+        }
 
-            {/* Plano Necessário */}
-            <div className="field-group">
-              <Label htmlFor="required_plan" className="field-label">
-                Plano Necessário
-              </Label>
-              <Select 
-                value={formData.required_plan} 
-                onValueChange={(value: any) => setFormData({ ...formData, required_plan: value })}
-              >
-                <SelectTrigger className="futuristic-input">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent className="futuristic-dropdown">
-                  <SelectItem value="free">🆓 Gratuito</SelectItem>
-                  <SelectItem value="vip">⭐ VIP</SelectItem>
-                  <SelectItem value="pro">💎 Pro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        .admin-header-description {
+          font-size: 0.875rem;
+          color: hsl(var(--muted-foreground));
+        }
 
-            {/* URL do Vídeo */}
-            <div className="field-group">
-              <Label htmlFor="video_url" className="field-label">
-                🎥 URL do Vídeo (opcional)
-              </Label>
-              <Input
-                id="video_url"
-                value={formData.video_url || ""}
-                onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                placeholder="https://youtube.com/watch?v=..."
-                className="futuristic-input"
-              />
-            </div>
+        .admin-scroll-indicator {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin-top: 0.75rem;
+          padding: 0.5rem;
+          background: hsl(var(--primary) / 0.1);
+          border-radius: 0.5rem;
+          border: 1px solid hsl(var(--primary) / 0.2);
+          color: hsl(var(--primary));
+        }
 
-            {/* Ordem de Exibição */}
-            <div className="field-group">
-              <Label htmlFor="order_index" className="field-label">
-                📊 Ordem de Exibição
-              </Label>
-              <Input
-                id="order_index"
-                type="number"
-                value={formData.order_index}
-                onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
-                className="futuristic-input"
-              />
-            </div>
+        .admin-content-scroll-area {
+          flex: 1;
+          overflow-y: auto;
+          scrollbar-width: thin;
+          scrollbar-color: hsl(var(--primary) / 0.3) hsl(var(--muted));
+          position: relative;
+        }
 
-            {/* Switches */}
-            <div className="switches-group">
-              <div className="switch-item">
-                <Label htmlFor="is_active" className="switch-label">
-                  ✅ Conteúdo Ativo
-                </Label>
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  className="futuristic-switch"
-                />
-              </div>
+        .admin-content-scroll-area::-webkit-scrollbar {
+          width: 8px;
+        }
 
-              <div className="switch-item">
-                <Label htmlFor="show_in_carousel" className="switch-label">
-                  🎠 Exibir no Carrossel
-                </Label>
-                <Switch
-                  id="show_in_carousel"
-                  checked={formData.show_in_carousel}
-                  onCheckedChange={(checked) => setFormData({ ...formData, show_in_carousel: checked })}
-                  className="futuristic-switch"
-                />
-              </div>
-            </div>
+        .admin-content-scroll-area::-webkit-scrollbar-track {
+          background: hsl(var(--muted));
+          border-radius: 4px;
+        }
 
-            {/* Campos do Carrossel */}
-            {formData.show_in_carousel && (
-              <div className="carousel-section">
-                <h4 className="carousel-title">🎠 Configurações do Carrossel</h4>
-                
-                <div className="field-group">
-                  <Label htmlFor="carousel_image_url" className="field-label">
-                    🖼️ URL da Imagem do Carrossel
-                  </Label>
-                  <Input
-                    id="carousel_image_url"
-                    value={formData.carousel_image_url || ""}
-                    onChange={(e) => setFormData({ ...formData, carousel_image_url: e.target.value })}
-                    placeholder="https://exemplo.com/imagem.jpg"
-                    className="futuristic-input"
-                  />
-                </div>
-                
-                <div className="field-group">
-                  <Label htmlFor="carousel_order" className="field-label">
-                    🔢 Ordem no Carrossel
-                  </Label>
-                  <Input
-                    id="carousel_order"
-                    type="number"
-                    value={formData.carousel_order}
-                    onChange={(e) => setFormData({ ...formData, carousel_order: parseInt(e.target.value) || 0 })}
-                    className="futuristic-input"
-                  />
-                </div>
+        .admin-content-scroll-area::-webkit-scrollbar-thumb {
+          background: hsl(var(--primary) / 0.5);
+          border-radius: 4px;
+          transition: background 0.2s ease;
+        }
+
+        .admin-content-scroll-area::-webkit-scrollbar-thumb:hover {
+          background: hsl(var(--primary) / 0.7);
+        }
+
+        .admin-form-content {
+          padding: 1rem 1.5rem;
+        }
+
+        .admin-field-group {
+          margin-bottom: 1.5rem;
+        }
+
+        .admin-field-label {
+          display: block;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: hsl(var(--foreground));
+          margin-bottom: 0.5rem;
+        }
+
+        .admin-field-label.required::after {
+          content: ' *';
+          color: hsl(var(--destructive));
+        }
+
+        .admin-switches-group {
+          margin-bottom: 1.5rem;
+          padding: 1rem;
+          background: hsl(var(--muted) / 0.3);
+          border-radius: 0.5rem;
+          border: 1px solid hsl(var(--border) / 0.5);
+        }
+
+        .admin-switch-item {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          margin-bottom: 1rem;
+        }
+
+        .admin-switch-item:last-child {
+          margin-bottom: 0;
+        }
+
+        .admin-switch-label {
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: hsl(var(--foreground));
+        }
+
+        .admin-carousel-section {
+          margin-bottom: 1.5rem;
+          padding: 1rem;
+          background: hsl(var(--primary) / 0.05);
+          border-radius: 0.5rem;
+          border: 1px solid hsl(var(--primary) / 0.2);
+        }
+
+        .admin-carousel-title {
+          font-size: 0.875rem;
+          font-weight: 600;
+          color: hsl(var(--primary));
+          margin-bottom: 1rem;
+        }
+
+        .admin-scroll-padding {
+          height: 2rem;
+        }
+
+        .admin-dialog-footer {
+          border-top: 1px solid hsl(var(--border));
+          background: hsl(var(--background) / 0.95);
+          backdrop-filter: blur(4px);
+          flex-shrink: 0;
+          position: relative;
+          z-index: 10;
+        }
+
+        .admin-footer-shadow {
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          height: 1rem;
+          background: linear-gradient(to bottom, transparent, hsl(var(--background) / 0.2));
+          pointer-events: none;
+          transform: translateY(-100%);
+        }
+
+        .admin-footer-buttons {
+          display: flex;
+          justify-content: flex-end;
+          gap: 0.75rem;
+          padding: 1rem 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+          .admin-dialog-container {
+            max-width: 95vw;
+            height: 90vh;
+          }
+
+          .admin-form-content,
+          .admin-dialog-header,
+          .admin-footer-buttons {
+            padding-left: 1rem;
+            padding-right: 1rem;
+          }
+
+          .admin-footer-buttons {
+            flex-direction: column;
+            gap: 0.5rem;
+          }
+        }
+
+        @media (max-height: 600px) {
+          .admin-dialog-container {
+            height: 98vh;
+          }
+
+          .admin-dialog-header {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+          }
+
+          .admin-footer-buttons {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+          }
+        }
+      `}</style>
+
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="admin-dialog-container">
+          {/* Header Fixo */}
+          <div className="admin-dialog-header">
+            <DialogHeader>
+              <DialogTitle className="admin-header-title">
+                {contentItem?.id ? 'Editar' : 'Criar'} {getContentTypeLabel(contentType)}
+              </DialogTitle>
+              <DialogDescription className="admin-header-description">
+                Preencha os campos abaixo para {contentItem?.id ? 'editar' : 'criar'} o conteúdo.
+              </DialogDescription>
+            </DialogHeader>
+            
+            {/* Indicador de Scroll */}
+            {showScrollIndicator && (
+              <div className="admin-scroll-indicator">
+                <ScrollText className="w-4 h-4 mr-2" />
+                <span className="text-xs">Role para ver mais campos</span>
+                <ChevronDown className="w-4 h-4 ml-2 animate-bounce" />
               </div>
             )}
-
-            {/* Espaço adicional para garantir que o último campo seja acessível */}
-            <div className="scroll-padding"></div>
           </div>
-        </div>
 
-        {/* Footer Fixo com Botões */}
-        <div className="dialog-footer">
-          <div className="footer-shadow"></div>
-          <div className="footer-buttons">
-            <Button 
-              variant="outline" 
-              onClick={onClose} 
-              disabled={isLoading}
-              className="futuristic-button-secondary"
-            >
-              Cancelar
-            </Button>
-            <Button 
-              onClick={handleSave} 
-              disabled={isLoading}
-              className="futuristic-button-primary"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  💾 Salvar Conteúdo
-                </>
+          {/* Área de Conteúdo Scrollável */}
+          <div className="admin-content-scroll-area">
+            <div className="admin-form-content">
+              {/* Título */}
+              <div className="admin-field-group">
+                <Label htmlFor="title" className="admin-field-label required">
+                  Título
+                </Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="Digite o título..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Descrição */}
+              <div className="admin-field-group">
+                <Label htmlFor="description" className="admin-field-label">
+                  Descrição
+                </Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Descreva o conteúdo..."
+                  rows={4}
+                  className="w-full resize-none"
+                />
+              </div>
+
+              {/* Plano Necessário */}
+              <div className="admin-field-group">
+                <Label htmlFor="required_plan" className="admin-field-label">
+                  Plano Necessário
+                </Label>
+                <Select 
+                  value={formData.required_plan} 
+                  onValueChange={(value: any) => setFormData({ ...formData, required_plan: value })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">🆓 Gratuito</SelectItem>
+                    <SelectItem value="vip">⭐ VIP</SelectItem>
+                    <SelectItem value="pro">💎 Pro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* URL do Vídeo */}
+              <div className="admin-field-group">
+                <Label htmlFor="video_url" className="admin-field-label">
+                  🎥 URL do Vídeo (opcional)
+                </Label>
+                <Input
+                  id="video_url"
+                  value={formData.video_url || ""}
+                  onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                  placeholder="https://youtube.com/watch?v=..."
+                  className="w-full"
+                />
+              </div>
+
+              {/* Ordem de Exibição */}
+              <div className="admin-field-group">
+                <Label htmlFor="order_index" className="admin-field-label">
+                  📊 Ordem de Exibição
+                </Label>
+                <Input
+                  id="order_index"
+                  type="number"
+                  value={formData.order_index}
+                  onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Switches */}
+              <div className="admin-switches-group">
+                <div className="admin-switch-item">
+                  <Label htmlFor="is_active" className="admin-switch-label">
+                    ✅ Conteúdo Ativo
+                  </Label>
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                </div>
+
+                <div className="admin-switch-item">
+                  <Label htmlFor="show_in_carousel" className="admin-switch-label">
+                    🎠 Exibir no Carrossel
+                  </Label>
+                  <Switch
+                    id="show_in_carousel"
+                    checked={formData.show_in_carousel}
+                    onCheckedChange={(checked) => setFormData({ ...formData, show_in_carousel: checked })}
+                  />
+                </div>
+              </div>
+
+              {/* Campos do Carrossel */}
+              {formData.show_in_carousel && (
+                <div className="admin-carousel-section">
+                  <h4 className="admin-carousel-title">🎠 Configurações do Carrossel</h4>
+                  
+                  <div className="admin-field-group">
+                    <Label htmlFor="carousel_image_url" className="admin-field-label">
+                      🖼️ URL da Imagem do Carrossel
+                    </Label>
+                    <Input
+                      id="carousel_image_url"
+                      value={formData.carousel_image_url || ""}
+                      onChange={(e) => setFormData({ ...formData, carousel_image_url: e.target.value })}
+                      placeholder="https://exemplo.com/imagem.jpg"
+                      className="w-full"
+                    />
+                  </div>
+                  
+                  <div className="admin-field-group">
+                    <Label htmlFor="carousel_order" className="admin-field-label">
+                      🔢 Ordem no Carrossel
+                    </Label>
+                    <Input
+                      id="carousel_order"
+                      type="number"
+                      value={formData.carousel_order}
+                      onChange={(e) => setFormData({ ...formData, carousel_order: parseInt(e.target.value) || 0 })}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
               )}
-            </Button>
+
+              {/* Espaço adicional para garantir que o último campo seja acessível */}
+              <div className="admin-scroll-padding"></div>
+            </div>
           </div>
-        </div>
 
-        <style jsx>{`
-          .fixed-dialog-container {
-            @apply max-w-4xl w-full h-[95vh] p-0 gap-0 flex flex-col overflow-hidden;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-          }
-
-          .dialog-header {
-            @apply px-6 py-4 border-b bg-background/95 backdrop-blur-sm;
-            flex-shrink: 0;
-            position: relative;
-            z-index: 10;
-          }
-
-          .header-title {
-            @apply text-xl font-bold text-foreground mb-2;
-          }
-
-          .header-description {
-            @apply text-sm text-muted-foreground;
-          }
-
-          .scroll-indicator {
-            @apply flex items-center justify-center mt-3 p-2 bg-primary/10 rounded-lg border border-primary/20;
-            color: hsl(var(--primary));
-          }
-
-          .content-scroll-area {
-            @apply flex-1 overflow-y-auto;
-            scrollbar-width: thin;
-            scrollbar-color: hsl(var(--primary) / 0.3) hsl(var(--muted));
-            position: relative;
-          }
-
-          .content-scroll-area::-webkit-scrollbar {
-            width: 8px;
-          }
-
-          .content-scroll-area::-webkit-scrollbar-track {
-            background: hsl(var(--muted));
-            border-radius: 4px;
-          }
-
-          .content-scroll-area::-webkit-scrollbar-thumb {
-            background: hsl(var(--primary) / 0.5);
-            border-radius: 4px;
-            transition: background 0.2s ease;
-          }
-
-          .content-scroll-area::-webkit-scrollbar-thumb:hover {
-            background: hsl(var(--primary) / 0.7);
-          }
-
-          .form-content {
-            @apply px-6 py-4;
-          }
-
-          .field-group {
-            @apply mb-6;
-          }
-
-          .field-label {
-            @apply block text-sm font-medium text-foreground mb-2;
-          }
-
-          .field-label.required::after {
-            content: ' *';
-            color: hsl(var(--destructive));
-          }
-
-          .switches-group {
-            @apply space-y-4 mb-6 p-4 bg-muted/30 rounded-lg border border-border/50;
-          }
-
-          .switch-item {
-            @apply flex items-center justify-between;
-          }
-
-          .switch-label {
-            @apply text-sm font-medium text-foreground;
-          }
-
-          .carousel-section {
-            @apply space-y-4 p-4 bg-primary/5 rounded-lg border border-primary/20 mb-6;
-          }
-
-          .carousel-title {
-            @apply text-sm font-semibold text-primary mb-4;
-          }
-
-          .scroll-padding {
-            @apply h-8;
-          }
-
-          .dialog-footer {
-            @apply border-t bg-background/95 backdrop-blur-sm;
-            flex-shrink: 0;
-            position: relative;
-            z-index: 10;
-          }
-
-          .footer-shadow {
-            @apply absolute top-0 left-0 right-0 h-4 bg-gradient-to-b from-transparent to-background/20 pointer-events-none;
-            transform: translateY(-100%);
-          }
-
-          .footer-buttons {
-            @apply flex justify-end gap-3 px-6 py-4;
-          }
-
-          @media (max-width: 768px) {
-            .fixed-dialog-container {
-              @apply max-w-[95vw] h-[90vh];
-            }
-
-            .form-content {
-              @apply px-4 py-3;
-            }
-
-            .dialog-header,
-            .footer-buttons {
-              @apply px-4;
-            }
-
-            .footer-buttons {
-              @apply flex-col gap-2;
-            }
-          }
-
-          @media (max-height: 600px) {
-            .fixed-dialog-container {
-              @apply h-[98vh];
-            }
-
-            .dialog-header {
-              @apply py-3;
-            }
-
-            .footer-buttons {
-              @apply py-3;
-            }
-          }
-        `}</style>
-      </DialogContent>
-    </Dialog>
+          {/* Footer Fixo com Botões */}
+          <div className="admin-dialog-footer">
+            <div className="admin-footer-shadow"></div>
+            <div className="admin-footer-buttons">
+              <Button 
+                variant="outline" 
+                onClick={onClose} 
+                disabled={isLoading}
+              >
+                Cancelar
+              </Button>
+              <Button 
+                onClick={handleSave} 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    💾 Salvar Conteúdo
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
