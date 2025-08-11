@@ -10,7 +10,7 @@ import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 
-type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings";
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "rules" | "coming-soon" | "profile" | "settings";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -116,14 +116,10 @@ export default function Dashboard() {
         return <ContentSection type="tools" userPlan={profile.plan} />;
       case "courses":
         return <ContentSection type="courses" userPlan={profile.plan} />;
-      case "tutorials":
-        return <ContentSection type="tutorials" userPlan={profile.plan} />;
       case "rules":
         return <ContentSection type="rules" userPlan={profile.plan} />;
       case "coming-soon":
         return <ContentSection type="coming-soon" userPlan={profile.plan} />;
-      case "carousel":
-        return <ContentSection type="carousel" userPlan={profile.plan} />;
       case "profile":
         return (
           <ProfileSettings 
