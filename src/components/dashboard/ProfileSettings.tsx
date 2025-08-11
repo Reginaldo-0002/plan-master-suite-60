@@ -1,26 +1,15 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import {
-  User,
-  CreditCard,
-  Shield,
-  Save,
-  Upload,
-  Crown,
-  Gem,
-  Star,
-  Loader2
-} from "lucide-react";
+import { AvatarUpload } from "@/components/media/AvatarUpload";
+import { Copy, Loader2 } from "lucide-react";
 
 interface Profile {
   id: string;
@@ -38,47 +27,47 @@ interface Profile {
 }
 
 interface ProfileSettingsProps {
-  profile: Profile | null;
-  onProfileUpdate: (profile: Profile) => void;
+  profile: Profile;
+  onProfileUpdate: (updatedProfile: Profile) => void;
 }
 
 export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsProps) => {
-  const [fullName, setFullName] = useState(profile?.full_name || "");
-  const [pixKey, setPixKey] = useState(profile?.pix_key || "");
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    full_name: profile.full_name || "",
+    pix_key: profile.pix_key || ""
+  });
   const { toast } = useToast();
 
-  const handleUpdateProfile = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!profile) return;
-
     setLoading(true);
+
     try {
       const { data, error } = await supabase
         .from('profiles')
         .update({
-          full_name: fullName,
-          pix_key: pixKey,
+          full_name: formData.full_name,
+          pix_key: formData.pix_key
         })
-        .eq('id', profile.id)
+        .eq('user_id', profile.user_id)
         .select()
         .single();
 
       if (error) throw error;
 
-      onProfileUpdate(data);
+      const updatedProfile = { ...profile, ...data };
+      onProfileUpdate(updatedProfile);
+
       toast({
-        title: "Perfil atualizado",
-        description: "Suas informações foram salvas com sucesso.",
+        title: "Sucesso",
+        description: "Perfil atualizado com sucesso!",
       });
-    } catch (error: any) {
+    } catch (error) {
+      console.error('Error updating profile:', error);
       toast({
-        title: "Erro ao atualizar perfil",
-        description: error.message,
+        title: "Erro",
+        description: "Erro ao atualizar perfil",
         variant: "destructive",
       });
     } finally {
@@ -86,313 +75,170 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
     }
   };
 
-  const handleUpdatePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (newPassword !== confirmPassword) {
-      toast({
-        title: "Erro",
-        description: "As senhas não coincidem.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast({
-        title: "Erro",
-        description: "A nova senha deve ter pelo menos 6 caracteres.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      
-      toast({
-        title: "Senha atualizada",
-        description: "Sua senha foi alterada com sucesso.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Erro ao alterar senha",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setPasswordLoading(false);
-    }
+  const handleAvatarUpdate = (avatarUrl: string) => {
+    const updatedProfile = { ...profile, avatar_url: avatarUrl };
+    onProfileUpdate(updatedProfile);
   };
 
-  const getPlanInfo = (plan: string) => {
+  const copyReferralCode = () => {
+    navigator.clipboard.writeText(profile.referral_code);
+    toast({
+      title: "Copiado!",
+      description: "Código de indicação copiado para a área de transferência",
+    });
+  };
+
+  const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
-      case 'pro':
-        return {
-          name: 'Pro',
-          icon: <Crown className="w-5 h-5" />,
-          color: 'bg-plan-pro',
-          description: 'Acesso completo a todos os recursos',
-          features: ['Todos os produtos e ferramentas', 'Programa de indicação', 'Suporte premium']
-        };
-      case 'vip':
-        return {
-          name: 'VIP',
-          icon: <Gem className="w-5 h-5" />,
-          color: 'bg-plan-vip',
-          description: 'Acesso a conteúdo premium',
-          features: ['Conteúdo VIP e Pro', 'Programa de indicação', 'Suporte prioritário']
-        };
-      default:
-        return {
-          name: 'Free',
-          icon: <Star className="w-5 h-5" />,
-          color: 'bg-plan-free',
-          description: 'Acesso básico à plataforma',
-          features: ['Conteúdo gratuito', 'Tutoriais básicos', 'Suporte por email']
-        };
+      case 'free': return 'bg-plan-free text-white';
+      case 'vip': return 'bg-plan-vip text-white';
+      case 'pro': return 'bg-plan-pro text-white';
+      default: return 'bg-plan-free text-white';
     }
   };
-
-  const planInfo = getPlanInfo(profile?.plan || 'free');
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold font-heading text-foreground">
-          Configurações
-        </h1>
+    <div className="container mx-auto p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-foreground">Configurações do Perfil</h1>
         <p className="text-muted-foreground">
-          Gerencie sua conta e personalize sua experiência
+          Gerencie suas informações pessoais e configurações da conta
         </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="profile">Perfil</TabsTrigger>
-          <TabsTrigger value="plan">Meu Plano</TabsTrigger>
-          <TabsTrigger value="security">Segurança</TabsTrigger>
-        </TabsList>
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Avatar and Basic Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Foto do Perfil</CardTitle>
+            <CardDescription>
+              Atualize sua foto de perfil
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AvatarUpload
+              currentAvatarUrl={profile.avatar_url}
+              onAvatarUpdate={handleAvatarUpdate}
+              userId={profile.user_id}
+              userName={profile.full_name}
+            />
+          </CardContent>
+        </Card>
 
-        <TabsContent value="profile" className="space-y-6">
-          <Card className="shadow-card border-card-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <User className="w-5 h-5" />
-                Informações Pessoais
-              </CardTitle>
-              <CardDescription>
-                Atualize suas informações pessoais e de pagamento
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Avatar Section */}
-              <div className="flex items-center gap-4">
-                <Avatar className="w-20 h-20">
-                  <AvatarImage src={profile?.avatar_url || ""} />
-                  <AvatarFallback className="gradient-primary text-primary-foreground text-xl">
-                    {profile?.full_name?.charAt(0) || 'U'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="space-y-2">
-                  <Button variant="outline" size="sm">
-                    <Upload className="w-4 h-4 mr-2" />
-                    Alterar Foto
-                  </Button>
-                  <p className="text-sm text-muted-foreground">
-                    JPG, PNG ou GIF. Máximo 2MB.
-                  </p>
-                </div>
+        {/* Plan Info */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações da Conta</CardTitle>
+            <CardDescription>
+              Detalhes do seu plano e estatísticas
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Plano Atual:</span>
+              <Badge className={getPlanBadgeColor(profile.plan)}>
+                {profile.plan.toUpperCase()}
+              </Badge>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Tempo Total:</span>
+              <span className="text-sm">{Math.floor(profile.total_session_time / 60)}h {profile.total_session_time % 60}m</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Áreas Acessadas:</span>
+              <span className="text-sm">{profile.areas_accessed}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Personal Information */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Informações Pessoais</CardTitle>
+            <CardDescription>
+              Atualize suas informações pessoais
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="full_name">Nome Completo</Label>
+                <Input
+                  id="full_name"
+                  value={formData.full_name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
+                  placeholder="Seu nome completo"
+                />
               </div>
 
-              <Separator />
+              <div>
+                <Label htmlFor="pix_key">Chave PIX</Label>
+                <Input
+                  id="pix_key"
+                  value={formData.pix_key}
+                  onChange={(e) => setFormData(prev => ({ ...prev, pix_key: e.target.value }))}
+                  placeholder="Sua chave PIX para recebimentos"
+                />
+              </div>
 
-              {/* Profile Form */}
-              <form onSubmit={handleUpdateProfile} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Nome Completo</Label>
-                  <Input
-                    id="fullName"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Seu nome completo"
-                  />
-                </div>
+              <Button type="submit" disabled={loading} className="w-full">
+                {loading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  "Salvar Alterações"
+                )}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={profile?.user_id || ""}
-                    disabled
-                    className="bg-muted"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    O email não pode ser alterado. Entre em contato com o suporte se necessário.
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="pixKey">Chave PIX</Label>
-                  <Input
-                    id="pixKey"
-                    value={pixKey}
-                    onChange={(e) => setPixKey(e.target.value)}
-                    placeholder="Sua chave PIX para recebimento de bônus"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    Necessário para receber pagamentos do programa de indicação
-                  </p>
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="gradient-primary"
-                  disabled={loading}
+        {/* Referral Program */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Programa de Indicação</CardTitle>
+            <CardDescription>
+              Compartilhe e ganhe com suas indicações
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label>Seu Código de Indicação</Label>
+              <div className="flex gap-2 mt-1">
+                <Input
+                  value={profile.referral_code}
+                  readOnly
+                  className="bg-muted"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={copyReferralCode}
                 >
-                  {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  <Save className="w-4 h-4 mr-2" />
-                  Salvar Alterações
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="plan" className="space-y-6">
-          <Card className="shadow-card border-card-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CreditCard className="w-5 h-5" />
-                Plano Atual
-              </CardTitle>
-              <CardDescription>
-                Informações sobre sua assinatura atual
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div className="flex items-center gap-4">
-                  <div className={`w-12 h-12 rounded-lg ${planInfo.color} flex items-center justify-center text-white`}>
-                    {planInfo.icon}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-foreground">Plano {planInfo.name}</h3>
-                    <p className="text-sm text-muted-foreground">{planInfo.description}</p>
-                  </div>
-                </div>
-                <Badge className={`${planInfo.color} text-white`}>
-                  Ativo
-                </Badge>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-medium text-foreground">Recursos inclusos:</h4>
-                <ul className="space-y-2">
-                  {planInfo.features.map((feature, index) => (
-                    <li key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <div className="w-1.5 h-1.5 rounded-full bg-primary"></div>
-                      {feature}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <Separator />
-
-              <div className="space-y-4">
-                <h4 className="font-medium text-foreground">Alterar Plano</h4>
-                <p className="text-sm text-muted-foreground">
-                  Faça upgrade do seu plano para acessar mais recursos e conteúdo exclusivo.
-                </p>
-                <Button variant="outline" className="w-full">
-                  Ver Opções de Upgrade
+                  <Copy className="w-4 h-4" />
                 </Button>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
 
-        <TabsContent value="security" className="space-y-6">
-          <Card className="shadow-card border-card-border">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-5 h-5" />
-                Segurança da Conta
-              </CardTitle>
-              <CardDescription>
-                Altere sua senha para manter sua conta segura
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleUpdatePassword} className="space-y-4">
-                <Alert>
-                  <Shield className="w-4 h-4" />
-                  <AlertDescription>
-                    Recomendamos usar uma senha forte com pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas e números.
-                  </AlertDescription>
-                </Alert>
+            <Separator />
 
-                <div className="space-y-2">
-                  <Label htmlFor="currentPassword">Senha Atual</Label>
-                  <Input
-                    id="currentPassword"
-                    type="password"
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="Digite sua senha atual"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="newPassword">Nova Senha</Label>
-                  <Input
-                    id="newPassword"
-                    type="password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="Digite sua nova senha"
-                    minLength={6}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmar Nova Senha</Label>
-                  <Input
-                    id="confirmPassword"
-                    type="password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirme sua nova senha"
-                    minLength={6}
-                  />
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="gradient-primary"
-                  disabled={passwordLoading || !newPassword || !confirmPassword}
-                >
-                  {passwordLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  <Shield className="w-4 h-4 mr-2" />
-                  Alterar Senha
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Ganhos Totais:</span>
+                <span className="text-sm font-bold text-green-600">
+                  R$ {profile.referral_earnings.toFixed(2)}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Compartilhe seu código e ganhe comissão quando seus indicados fizerem upgrade
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

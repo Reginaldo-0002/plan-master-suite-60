@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +10,9 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Eye, Ban, Trash2, UserX, Filter, Mail, MessageSquare } from "lucide-react";
+import { Search, Eye, Ban, Trash2, UserPlus, MessageSquare, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { CreateUserDialog } from "./CreateUserDialog";
 
 interface User {
   id: string;
@@ -40,6 +40,7 @@ export const AdminUserManagement = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
   const [messageContent, setMessageContent] = useState("");
   const [messageSubject, setMessageSubject] = useState("");
   const { toast } = useToast();
@@ -243,6 +244,10 @@ export const AdminUserManagement = () => {
     setIsMessageDialogOpen(true);
   };
 
+  const handleUserCreated = () => {
+    fetchUsers();
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = !searchTerm || 
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -295,6 +300,10 @@ export const AdminUserManagement = () => {
             Gerencie todos os usuários da plataforma
           </p>
         </div>
+        <Button onClick={() => setIsCreateUserDialogOpen(true)} className="bg-primary hover:bg-primary/90">
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Usuário
+        </Button>
       </div>
 
       {/* User Stats */}
@@ -596,7 +605,7 @@ export const AdminUserManagement = () => {
             </div>
             <div className="flex gap-2">
               <Button onClick={sendMessage} className="flex-1">
-                <Mail className="w-4 h-4 mr-2" />
+                <MessageSquare className="w-4 h-4 mr-2" />
                 Enviar Mensagem
               </Button>
               <Button variant="outline" onClick={() => setIsMessageDialogOpen(false)}>
@@ -606,6 +615,13 @@ export const AdminUserManagement = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Create User Dialog */}
+      <CreateUserDialog
+        isOpen={isCreateUserDialogOpen}
+        onClose={() => setIsCreateUserDialogOpen(false)}
+        onUserCreated={handleUserCreated}
+      />
     </div>
   );
 };
