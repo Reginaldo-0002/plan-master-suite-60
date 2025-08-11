@@ -29,6 +29,7 @@ interface User {
   created_at: string;
   updated_at: string;
   is_blocked?: boolean;
+  user_roles?: Array<{ role: string }>;
 }
 
 export const AdminUserManagement = () => {
@@ -67,13 +68,31 @@ export const AdminUserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      const { data, error } = await supabase
+      // First get all profiles
+      const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUsers((data || []) as User[]);
+      if (profilesError) throw profilesError;
+
+      // Get all user roles
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) throw rolesError;
+
+      // Combine the data
+      const usersWithRoles = (profilesData || []).map(user => {
+        const userRole = rolesData?.find(role => role.user_id === user.user_id);
+        return {
+          ...user,
+          role: userRole?.role || 'user'
+        };
+      });
+      
+      setUsers(usersWithRoles as User[]);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -113,10 +132,13 @@ export const AdminUserManagement = () => {
 
   const updateUserRole = async (userId: string, newRole: 'user' | 'admin' | 'moderator') => {
     try {
+      // Update in user_roles table instead of profiles
       const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('user_id', userId);
+        .from('user_roles')
+        .upsert({ 
+          user_id: userId,
+          role: newRole
+        });
 
       if (error) throw error;
 
@@ -138,25 +160,27 @@ export const AdminUserManagement = () => {
 
   const blockUser = async (userId: string) => {
     try {
-      // Add blocking logic here - you might want to add an is_blocked field
+      // Add blocking functionality here - for now just change role to user
       const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'blocked' })
-        .eq('user_id', userId);
+        .from('user_roles')
+        .upsert({ 
+          user_id: userId,
+          role: 'user'
+        });
 
       if (error) throw error;
 
       toast({
-        title: "Usuário bloqueado",
-        description: "O acesso do usuário foi suspenso",
+        title: "Usuário alterado",
+        description: "Usuário definido como usuário comum",
       });
       
       fetchUsers();
     } catch (error) {
-      console.error('Error blocking user:', error);
+      console.error('Error updating user:', error);
       toast({
         title: "Erro",
-        description: "Erro ao bloquear usuário",
+        description: "Erro ao alterar usuário",
         variant: "destructive",
       });
     }

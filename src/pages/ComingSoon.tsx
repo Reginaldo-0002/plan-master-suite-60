@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Crown, Gem, Star, Calendar, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Sidebar } from "@/components/layout/Sidebar";
+import { useNavigate } from "react-router-dom";
+import { Profile } from "@/types/profile";
 
 interface UpcomingRelease {
   id: string;
@@ -37,11 +40,59 @@ const ComingSoon = () => {
   const [upcomingReleases, setUpcomingReleases] = useState<UpcomingRelease[]>([]);
   const [upcomingContent, setUpcomingContent] = useState<UpcomingContent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
+    fetchProfile();
     fetchUpcomingData();
   }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              user_id: user.id,
+              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
+              plan: 'free' as const
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          return;
+        }
+
+        setProfile(newProfile);
+      } else if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      } else {
+        setProfile(profileData);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  };
 
   const fetchUpcomingData = async () => {
     try {
@@ -131,9 +182,9 @@ const ComingSoon = () => {
     return `${diffMonths} meses`;
   };
 
-  if (loading) {
+  if (loading || !profile) {
     return (
-      <div className="flex items-center justify-center min-h-96">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -142,15 +193,21 @@ const ComingSoon = () => {
   const hasUpcomingData = upcomingReleases.length > 0 || upcomingContent.length > 0;
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Calendar className="w-6 h-6" />
-        <h1 className="text-3xl font-bold text-foreground">Em Breve</h1>
-      </div>
-      
-      <p className="text-muted-foreground">
-        Confira os próximos lançamentos e novidades que estão chegando na plataforma.
-      </p>
+    <div className="flex min-h-screen w-full bg-background">
+      <Sidebar 
+        profile={profile} 
+        activeSection="coming-soon" 
+        onSectionChange={() => {}}
+      />
+      <div className="flex-1 p-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <Calendar className="w-6 h-6" />
+          <h1 className="text-3xl font-bold text-foreground">Em Breve</h1>
+        </div>
+        
+        <p className="text-muted-foreground">
+          Confira os próximos lançamentos e novidades que estão chegando na plataforma.
+        </p>
 
       {!hasUpcomingData ? (
         <Card>
@@ -254,6 +311,7 @@ const ComingSoon = () => {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };

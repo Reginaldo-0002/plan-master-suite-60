@@ -33,7 +33,7 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       // Create unique filename
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `${userId}/${fileName}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage

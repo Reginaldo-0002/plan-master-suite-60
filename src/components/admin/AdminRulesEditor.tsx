@@ -22,14 +22,16 @@ export const AdminRulesEditor = () => {
       const { data, error } = await supabase
         .from('admin_settings')
         .select('value')
-        .eq('key', 'platform_rules')
+        .eq('key', 'site_rules')
         .single();
 
       if (error && error.code !== 'PGRST116') {
         throw error;
       }
 
-      if (data?.value && typeof data.value === 'string') {
+      if (data?.value && typeof data.value === 'object' && 'content' in data.value) {
+        setRulesContent(data.value.content as string);
+      } else if (data?.value && typeof data.value === 'string') {
         setRulesContent(data.value);
       } else {
         // Default rules content
@@ -99,8 +101,8 @@ Estas regras podem ser alteradas a qualquer momento. Os usuários serão notific
       const { error } = await supabase
         .from('admin_settings')
         .upsert({ 
-          key: 'platform_rules',
-          value: rulesContent
+          key: 'site_rules',
+          value: { content: rulesContent }
         });
 
       if (error) throw error;

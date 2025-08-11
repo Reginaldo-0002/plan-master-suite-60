@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { Profile } from "@/types/profile";
 import { Loader2 } from "lucide-react";
+import { Sidebar } from "@/components/layout/Sidebar";
 
 interface ContentCarouselPageProps {
   userPlan?: 'free' | 'vip' | 'pro';
@@ -121,27 +122,36 @@ export const ContentCarouselPage = ({ userPlan: propUserPlan }: ContentCarouselP
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
-            Conteúdos em Destaque
-          </h2>
-          <p className="text-muted-foreground">
-            Explore nossos produtos, ferramentas, cursos e tutoriais
-          </p>
+    <div className="flex min-h-screen w-full bg-background">
+      {profile && (
+        <Sidebar 
+          profile={profile} 
+          activeSection="carousel" 
+          onSectionChange={() => {}}
+        />
+      )}
+      <div className="flex-1 space-y-8 p-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground">
+              Conteúdos em Destaque
+            </h2>
+            <p className="text-muted-foreground">
+              Explore nossos produtos, ferramentas, cursos e tutoriais
+            </p>
+          </div>
+          <Badge className={getPlanBadgeColor(userPlan)}>
+            Plano {userPlan.toUpperCase()}
+          </Badge>
         </div>
-        <Badge className={getPlanBadgeColor(userPlan)}>
-          Plano {userPlan.toUpperCase()}
-        </Badge>
-      </div>
 
-      {/* Carousel */}
-      <ContentCarousel 
-        userPlan={userPlan} 
-        onContentClick={handleContentClick}
-      />
+        {/* Carousel */}
+        <ContentCarousel 
+          userPlan={userPlan} 
+          onContentClick={handleContentClick}
+        />
+      </div>
     </div>
   );
 };
