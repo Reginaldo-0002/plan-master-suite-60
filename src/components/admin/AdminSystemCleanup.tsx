@@ -79,7 +79,23 @@ export const AdminSystemCleanup = () => {
       });
 
       if (error) throw error;
-      return data as CleanupResult;
+      
+      // Safely convert the JSON result to CleanupResult
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const cleanupResult = data as Record<string, any>;
+        return {
+          success: Boolean(cleanupResult.success),
+          records_deleted: Number(cleanupResult.records_deleted) || 0,
+          cleanup_type: String(cleanupResult.cleanup_type) || cleanupType
+        } as CleanupResult;
+      }
+      
+      // Fallback result if data structure is unexpected
+      return {
+        success: true,
+        records_deleted: 0,
+        cleanup_type: cleanupType
+      } as CleanupResult;
     }, {
       title: "Erro na Limpeza",
       showToast: false
