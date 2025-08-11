@@ -113,7 +113,7 @@ const Products = () => {
         </main>
       </div>
       
-      <SupportChat />
+      <SupportChat profile={profile} />
     </div>
   );
 };

@@ -107,7 +107,7 @@ const Tutorials = () => {
         </main>
       </div>
       
-      <SupportChat />
+      <SupportChat profile={profile} />
     </div>
   );
 };

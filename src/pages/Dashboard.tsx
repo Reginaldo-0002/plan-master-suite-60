@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Sidebar } from "@/components/layout/Sidebar";
@@ -16,6 +17,7 @@ export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
@@ -144,7 +146,18 @@ export default function Dashboard() {
       <Sidebar 
         profile={profile}
         activeSection={activeSection} 
-        onSectionChange={handleSectionChange}
+        onSectionChange={(section) => {
+          if (section === 'dashboard') setActiveSection('dashboard');
+          else if (section === 'products') navigate('/produtos');
+          else if (section === 'courses') navigate('/cursos');
+          else if (section === 'tools') navigate('/ferramentas');
+          else if (section === 'tutorials') navigate('/tutoriais');
+          else if (section === 'rules') navigate('/rules');
+          else if (section === 'carousel') navigate('/carousel');
+          else if (section === 'coming-soon') navigate('/em-breve');
+          else if (section === 'profile') setActiveSection('profile');
+          else if (section === 'settings') setActiveSection('settings');
+        }}
       />
       
       <main className="flex-1 overflow-y-auto p-6">

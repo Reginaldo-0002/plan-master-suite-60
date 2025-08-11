@@ -107,7 +107,7 @@ const Tools = () => {
         </main>
       </div>
       
-      <SupportChat />
+      <SupportChat profile={profile} />
     </div>
   );
 };

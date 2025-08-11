@@ -107,7 +107,7 @@ const Courses = () => {
         </main>
       </div>
       
-      <SupportChat />
+      <SupportChat profile={profile} />
     </div>
   );
 };
