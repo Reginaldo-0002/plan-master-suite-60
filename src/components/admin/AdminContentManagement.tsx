@@ -20,14 +20,23 @@ interface Content {
   title: string;
   description: string | null;
   content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  content_url: string | null;
-  image_url: string | null;
+  video_url: string | null;
+  hero_image_url: string | null;
+  hero_image_alt: string | null;
+  carousel_image_url: string | null;
   is_active: boolean;
   is_premium: boolean;
   required_plan: 'free' | 'vip' | 'pro';
   status: string | null;
   published_at: string | null;
   auto_publish_at: string | null;
+  show_in_carousel: boolean;
+  carousel_order: number;
+  order_index: number;
+  difficulty_level: string | null;
+  estimated_duration: number | null;
+  tags: string[] | null;
+  metadata: any;
   created_at: string;
   updated_at: string;
 }
@@ -41,11 +50,16 @@ export const AdminContentManagement = () => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [contentType, setContentType] = useState<Content['content_type']>("product");
-  const [contentUrl, setContentUrl] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
+  const [heroImageUrl, setHeroImageUrl] = useState("");
+  const [heroImageAlt, setHeroImageAlt] = useState("");
+  const [carouselImageUrl, setCarouselImageUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
   const [requiredPlan, setRequiredPlan] = useState<Content['required_plan']>("free");
+  const [showInCarousel, setShowInCarousel] = useState(false);
+  const [difficultyLevel, setDifficultyLevel] = useState("beginner");
+  const [estimatedDuration, setEstimatedDuration] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [showMediaUpload, setShowMediaUpload] = useState(false);
   const [showTopicsEditor, setShowTopicsEditor] = useState(false);
@@ -65,14 +79,23 @@ export const AdminContentManagement = () => {
           title,
           description,
           content_type,
-          content_url,
-          image_url,
+          video_url,
+          hero_image_url,
+          hero_image_alt,
+          carousel_image_url,
           is_active,
           is_premium,
           required_plan,
           status,
           published_at,
           auto_publish_at,
+          show_in_carousel,
+          carousel_order,
+          order_index,
+          difficulty_level,
+          estimated_duration,
+          tags,
+          metadata,
           created_at,
           updated_at
         `)
@@ -80,25 +103,7 @@ export const AdminContentManagement = () => {
 
       if (error) throw error;
       
-      // Map the data to ensure all required fields are present
-      const mappedContent: Content[] = (data || []).map(item => ({
-        id: item.id,
-        title: item.title,
-        description: item.description,
-        content_type: item.content_type,
-        content_url: item.content_url,
-        image_url: item.image_url,
-        is_active: item.is_active,
-        is_premium: item.is_premium,
-        required_plan: item.required_plan,
-        status: item.status,
-        published_at: item.published_at,
-        auto_publish_at: item.auto_publish_at,
-        created_at: item.created_at,
-        updated_at: item.updated_at
-      }));
-      
-      setContent(mappedContent);
+      setContent(data || []);
     } catch (error) {
       console.error('Error fetching content:', error);
       toast({
@@ -128,11 +133,16 @@ export const AdminContentManagement = () => {
           title,
           description,
           content_type: contentType,
-          content_url: contentUrl,
-          image_url: imageUrl,
+          video_url: videoUrl,
+          hero_image_url: heroImageUrl,
+          hero_image_alt: heroImageAlt,
+          carousel_image_url: carouselImageUrl,
           is_active: isActive,
           is_premium: isPremium,
           required_plan: requiredPlan,
+          show_in_carousel: showInCarousel,
+          difficulty_level: difficultyLevel,
+          estimated_duration: estimatedDuration,
           status: 'draft'
         }]);
 
@@ -166,11 +176,16 @@ export const AdminContentManagement = () => {
           title,
           description,
           content_type: contentType,
-          content_url: contentUrl,
-          image_url: imageUrl,
+          video_url: videoUrl,
+          hero_image_url: heroImageUrl,
+          hero_image_alt: heroImageAlt,
+          carousel_image_url: carouselImageUrl,
           is_active: isActive,
           is_premium: isPremium,
           required_plan: requiredPlan,
+          show_in_carousel: showInCarousel,
+          difficulty_level: difficultyLevel,
+          estimated_duration: estimatedDuration,
           updated_at: new Date().toISOString()
         })
         .eq('id', selectedContent.id);
@@ -230,11 +245,16 @@ export const AdminContentManagement = () => {
           title: `${content.title} (Cópia)`,
           description: content.description,
           content_type: content.content_type,
-          content_url: content.content_url,
-          image_url: content.image_url,
+          video_url: content.video_url,
+          hero_image_url: content.hero_image_url,
+          hero_image_alt: content.hero_image_alt,
+          carousel_image_url: content.carousel_image_url,
           is_active: content.is_active,
           is_premium: content.is_premium,
           required_plan: content.required_plan,
+          show_in_carousel: content.show_in_carousel,
+          difficulty_level: content.difficulty_level,
+          estimated_duration: content.estimated_duration,
           status: 'draft'
         }])
         .select()
@@ -263,11 +283,16 @@ export const AdminContentManagement = () => {
     setTitle(content.title);
     setDescription(content.description || "");
     setContentType(content.content_type);
-    setContentUrl(content.content_url || "");
-    setImageUrl(content.image_url || "");
+    setVideoUrl(content.video_url || "");
+    setHeroImageUrl(content.hero_image_url || "");
+    setHeroImageAlt(content.hero_image_alt || "");
+    setCarouselImageUrl(content.carousel_image_url || "");
     setIsActive(content.is_active);
     setIsPremium(content.is_premium);
     setRequiredPlan(content.required_plan);
+    setShowInCarousel(content.show_in_carousel);
+    setDifficultyLevel(content.difficulty_level || "beginner");
+    setEstimatedDuration(content.estimated_duration);
     setIsEditDialogOpen(true);
   };
 
@@ -275,11 +300,16 @@ export const AdminContentManagement = () => {
     setTitle("");
     setDescription("");
     setContentType("product");
-    setContentUrl("");
-    setImageUrl("");
+    setVideoUrl("");
+    setHeroImageUrl("");
+    setHeroImageAlt("");
+    setCarouselImageUrl("");
     setIsActive(true);
     setIsPremium(false);
     setRequiredPlan("free");
+    setShowInCarousel(false);
+    setDifficultyLevel("beginner");
+    setEstimatedDuration(null);
   };
 
   const getPlanBadgeColor = (plan: string) => {
@@ -352,8 +382,8 @@ export const AdminContentManagement = () => {
                 <CardContent className="p-0">
                   <div className="relative aspect-video overflow-hidden rounded-t-lg">
                     <img
-                      src={content.image_url || '/placeholder.svg'}
-                      alt={content.title}
+                      src={content.hero_image_url || content.carousel_image_url || '/placeholder.svg'}
+                      alt={content.hero_image_alt || content.title}
                       className="w-full h-full object-cover"
                       style={{ aspectRatio: '16/9' }}
                     />
@@ -372,6 +402,9 @@ export const AdminContentManagement = () => {
                       )}
                       {content.status && (
                         <Badge variant="outline">{content.status}</Badge>
+                      )}
+                      {content.show_in_carousel && (
+                        <Badge className="bg-green-100 text-green-800">Carousel</Badge>
                       )}
                     </div>
                   </div>
@@ -413,7 +446,7 @@ export const AdminContentManagement = () => {
           </div>
           
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Editar Conteúdo</DialogTitle>
                 <DialogDescription>
@@ -455,22 +488,22 @@ export const AdminContentManagement = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="content-url">URL do Conteúdo</Label>
+                  <Label htmlFor="video-url">URL do Vídeo</Label>
                   <Input
-                    id="content-url"
-                    value={contentUrl}
-                    onChange={(e) => setContentUrl(e.target.value)}
-                    placeholder="URL do conteúdo"
+                    id="video-url"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="URL do vídeo"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="image-url">URL da Imagem (1920x1080)</Label>
+                  <Label htmlFor="hero-image-url">URL da Imagem Principal</Label>
                   <div className="flex gap-2">
                     <Input
-                      id="image-url"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="URL da imagem"
+                      id="hero-image-url"
+                      value={heroImageUrl}
+                      onChange={(e) => setHeroImageUrl(e.target.value)}
+                      placeholder="URL da imagem principal"
                     />
                     <Button
                       variant="outline"
@@ -482,20 +515,52 @@ export const AdminContentManagement = () => {
                   {showMediaUpload && (
                     <MediaUpload
                       onUploadComplete={(url) => {
-                        setImageUrl(url);
+                        setHeroImageUrl(url);
                         setShowMediaUpload(false);
                       }}
                       targetWidth={1920}
                       targetHeight={1080}
                     />
                   )}
-                  {imageUrl && (
+                  {heroImageUrl && (
                     <img
-                      src={imageUrl}
+                      src={heroImageUrl}
                       alt="Preview"
                       className="w-full h-32 object-cover rounded-md mt-2"
                     />
                   )}
+                </div>
+                <div>
+                  <Label htmlFor="hero-image-alt">Texto Alternativo da Imagem</Label>
+                  <Input
+                    id="hero-image-alt"
+                    value={heroImageAlt}
+                    onChange={(e) => setHeroImageAlt(e.target.value)}
+                    placeholder="Descrição da imagem para acessibilidade"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="difficulty-level">Nível de Dificuldade</Label>
+                  <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o nível" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Iniciante</SelectItem>
+                      <SelectItem value="intermediate">Intermediário</SelectItem>
+                      <SelectItem value="advanced">Avançado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="estimated-duration">Duração Estimada (minutos)</Label>
+                  <Input
+                    id="estimated-duration"
+                    type="number"
+                    value={estimatedDuration || ""}
+                    onChange={(e) => setEstimatedDuration(e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Duração em minutos"
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
                   <input
@@ -516,6 +581,16 @@ export const AdminContentManagement = () => {
                     onChange={(e) => setIsPremium(e.target.checked)}
                   />
                   <Label htmlFor="is-premium">Premium</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="show-in-carousel"
+                    className="h-4 w-4"
+                    checked={showInCarousel}
+                    onChange={(e) => setShowInCarousel(e.target.checked)}
+                  />
+                  <Label htmlFor="show-in-carousel">Mostrar no Carousel</Label>
                 </div>
                 <div>
                   <Label htmlFor="required-plan">Plano Necessário</Label>
@@ -543,7 +618,7 @@ export const AdminContentManagement = () => {
           </Dialog>
 
           <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Novo Conteúdo</DialogTitle>
                 <DialogDescription>
@@ -585,22 +660,22 @@ export const AdminContentManagement = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="content-url">URL do Conteúdo</Label>
+                  <Label htmlFor="video-url">URL do Vídeo</Label>
                   <Input
-                    id="content-url"
-                    value={contentUrl}
-                    onChange={(e) => setContentUrl(e.target.value)}
-                    placeholder="URL do conteúdo"
+                    id="video-url"
+                    value={videoUrl}
+                    onChange={(e) => setVideoUrl(e.target.value)}
+                    placeholder="URL do vídeo"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="image-url">URL da Imagem (1920x1080)</Label>
+                  <Label htmlFor="hero-image-url">URL da Imagem Principal</Label>
                   <div className="flex gap-2">
                     <Input
-                      id="image-url"
-                      value={imageUrl}
-                      onChange={(e) => setImageUrl(e.target.value)}
-                      placeholder="URL da imagem"
+                      id="hero-image-url"
+                      value={heroImageUrl}
+                      onChange={(e) => setHeroImageUrl(e.target.value)}
+                      placeholder="URL da imagem principal"
                     />
                     <Button
                       variant="outline"
@@ -612,20 +687,52 @@ export const AdminContentManagement = () => {
                   {showMediaUpload && (
                     <MediaUpload
                       onUploadComplete={(url) => {
-                        setImageUrl(url);
+                        setHeroImageUrl(url);
                         setShowMediaUpload(false);
                       }}
                       targetWidth={1920}
                       targetHeight={1080}
                     />
                   )}
-                  {imageUrl && (
+                  {heroImageUrl && (
                     <img
-                      src={imageUrl}
+                      src={heroImageUrl}
                       alt="Preview"
                       className="w-full h-32 object-cover rounded-md mt-2"
                     />
                   )}
+                </div>
+                <div>
+                  <Label htmlFor="hero-image-alt">Texto Alternativo da Imagem</Label>
+                  <Input
+                    id="hero-image-alt"
+                    value={heroImageAlt}
+                    onChange={(e) => setHeroImageAlt(e.target.value)}
+                    placeholder="Descrição da imagem para acessibilidade"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="difficulty-level">Nível de Dificuldade</Label>
+                  <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o nível" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="beginner">Iniciante</SelectItem>
+                      <SelectItem value="intermediate">Intermediário</SelectItem>
+                      <SelectItem value="advanced">Avançado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="estimated-duration">Duração Estimada (minutos)</Label>
+                  <Input
+                    id="estimated-duration"
+                    type="number"
+                    value={estimatedDuration || ""}
+                    onChange={(e) => setEstimatedDuration(e.target.value ? parseInt(e.target.value) : null)}
+                    placeholder="Duração em minutos"
+                  />
                 </div>
                 <div className="flex items-center space-x-2">
                   <input
@@ -646,6 +753,16 @@ export const AdminContentManagement = () => {
                     onChange={(e) => setIsPremium(e.target.checked)}
                   />
                   <Label htmlFor="is-premium">Premium</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="show-in-carousel"
+                    className="h-4 w-4"
+                    checked={showInCarousel}
+                    onChange={(e) => setShowInCarousel(e.target.checked)}
+                  />
+                  <Label htmlFor="show-in-carousel">Mostrar no Carousel</Label>
                 </div>
                 <div>
                   <Label htmlFor="required-plan">Plano Necessário</Label>
