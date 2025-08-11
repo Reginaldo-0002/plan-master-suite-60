@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -5,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Eye, Ban, Trash2, UserX, Filter } from "lucide-react";
+import { Search, Eye, Ban, Trash2, UserX, Filter, Mail, MessageSquare } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface User {
@@ -33,7 +36,12 @@ export const AdminUserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState<string>("all");
+  const [roleFilter, setRoleFilter] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
+  const [messageContent, setMessageContent] = useState("");
+  const [messageSubject, setMessageSubject] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -77,14 +85,72 @@ export const AdminUserManagement = () => {
     }
   };
 
+  const updateUserPlan = async (userId: string, newPlan: 'free' | 'vip' | 'pro') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ plan: newPlan })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Plano atualizado para ${newPlan.toUpperCase()}`,
+      });
+      
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user plan:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar plano do usuário",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const updateUserRole = async (userId: string, newRole: 'user' | 'admin' | 'moderator') => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: newRole })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Função atualizada para ${newRole}`,
+      });
+      
+      fetchUsers();
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao atualizar função do usuário",
+        variant: "destructive",
+      });
+    }
+  };
+
   const blockUser = async (userId: string) => {
     try {
-      // Here you would implement user blocking logic
-      // For now, we'll just show a toast
+      // Add blocking logic here - you might want to add an is_blocked field
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'blocked' })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
       toast({
         title: "Usuário bloqueado",
         description: "O acesso do usuário foi suspenso",
       });
+      
+      fetchUsers();
     } catch (error) {
       console.error('Error blocking user:', error);
       toast({
@@ -124,14 +190,68 @@ export const AdminUserManagement = () => {
     }
   };
 
+  const sendMessage = async () => {
+    if (!selectedUser || !messageContent || !messageSubject) {
+      toast({
+        title: "Erro",
+        description: "Preencha todos os campos da mensagem",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Create a notification for the user
+      const { error } = await supabase
+        .from('notifications')
+        .insert({
+          title: messageSubject,
+          message: messageContent,
+          type: 'info',
+          target_users: [selectedUser.user_id],
+          is_active: true
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Mensagem enviada com sucesso",
+      });
+      
+      setIsMessageDialogOpen(false);
+      setMessageContent("");
+      setMessageSubject("");
+      setSelectedUser(null);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao enviar mensagem",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const openDetailsDialog = (user: User) => {
+    setSelectedUser(user);
+    setIsDetailsDialogOpen(true);
+  };
+
+  const openMessageDialog = (user: User) => {
+    setSelectedUser(user);
+    setIsMessageDialogOpen(true);
+  };
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = !searchTerm || 
       user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.user_id.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesPlan = planFilter === "all" || user.plan === planFilter;
+    const matchesRole = roleFilter === "all" || user.role === roleFilter;
     
-    return matchesSearch && matchesPlan;
+    return matchesSearch && matchesPlan && matchesRole;
   });
 
   const getPlanBadgeColor = (plan: string) => {
@@ -143,10 +263,27 @@ export const AdminUserManagement = () => {
     }
   };
 
+  const getRoleBadgeColor = (role: string) => {
+    switch (role) {
+      case 'admin': return 'bg-red-100 text-red-800';
+      case 'moderator': return 'bg-orange-100 text-orange-800';
+      case 'user': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     return `${hours}h ${mins}m`;
+  };
+
+  const userStats = {
+    total: users.length,
+    free: users.filter(u => u.plan === 'free').length,
+    vip: users.filter(u => u.plan === 'vip').length,
+    pro: users.filter(u => u.plan === 'pro').length,
+    admins: users.filter(u => u.role === 'admin').length,
   };
 
   return (
@@ -158,6 +295,60 @@ export const AdminUserManagement = () => {
             Gerencie todos os usuários da plataforma
           </p>
         </div>
+      </div>
+
+      {/* User Stats */}
+      <div className="grid gap-4 md:grid-cols-5">
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{userStats.total}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Free
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{userStats.free}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              VIP
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{userStats.vip}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Pro
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{userStats.pro}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Admins
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{userStats.admins}</div>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Filters */}
@@ -173,7 +364,6 @@ export const AdminUserManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
-                
               />
             </div>
             <Select value={planFilter} onValueChange={setPlanFilter}>
@@ -185,6 +375,17 @@ export const AdminUserManagement = () => {
                 <SelectItem value="free">Free</SelectItem>
                 <SelectItem value="vip">VIP</SelectItem>
                 <SelectItem value="pro">Pro</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filtrar por função" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as funções</SelectItem>
+                <SelectItem value="user">Usuário</SelectItem>
+                <SelectItem value="moderator">Moderador</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -205,8 +406,8 @@ export const AdminUserManagement = () => {
               <TableRow>
                 <TableHead>Usuário</TableHead>
                 <TableHead>Plano</TableHead>
+                <TableHead>Função</TableHead>
                 <TableHead>Tempo de Uso</TableHead>
-                <TableHead>Áreas Acessadas</TableHead>
                 <TableHead>Cadastro</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
@@ -233,74 +434,56 @@ export const AdminUserManagement = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getPlanBadgeColor(user.plan)}>
-                      {user.plan.toUpperCase()}
-                    </Badge>
-                    {user.role === 'admin' && (
-                      <Badge variant="secondary" className="ml-2">
-                        Admin
-                      </Badge>
-                    )}
+                    <Select 
+                      value={user.plan} 
+                      onValueChange={(value: 'free' | 'vip' | 'pro') => updateUserPlan(user.user_id, value)}
+                    >
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+                  <TableCell>
+                    <Select 
+                      value={user.role} 
+                      onValueChange={(value: 'user' | 'admin' | 'moderator') => updateUserRole(user.user_id, value)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="user">Usuário</SelectItem>
+                        <SelectItem value="moderator">Moderador</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>{formatTime(user.total_session_time)}</TableCell>
-                  <TableCell>{user.areas_accessed}</TableCell>
                   <TableCell>
                     {new Date(user.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedUser(user)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-md">
-                          <DialogHeader>
-                            <DialogTitle>Detalhes do Usuário</DialogTitle>
-                          </DialogHeader>
-                          {selectedUser && (
-                            <div className="space-y-4">
-                              <div className="flex items-center gap-3">
-                                <Avatar className="h-12 w-12">
-                                  <AvatarImage src={selectedUser.avatar_url || ""} />
-                                  <AvatarFallback>
-                                    {selectedUser.full_name ? selectedUser.full_name.charAt(0).toUpperCase() : "U"}
-                                  </AvatarFallback>
-                                </Avatar>
-                                <div>
-                                  <div className="font-medium">{selectedUser.full_name || "Sem nome"}</div>
-                                  <div className="text-sm text-muted-foreground">{selectedUser.user_id}</div>
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div>
-                                  <strong>Plano:</strong> {selectedUser.plan.toUpperCase()}
-                                </div>
-                                <div>
-                                  <strong>Role:</strong> {selectedUser.role}
-                                </div>
-                                <div>
-                                  <strong>Tempo de Uso:</strong> {formatTime(selectedUser.total_session_time)}
-                                </div>
-                                <div>
-                                  <strong>Áreas Acessadas:</strong> {selectedUser.areas_accessed}
-                                </div>
-                                <div className="col-span-2">
-                                  <strong>PIX:</strong> {selectedUser.pix_key || "Não informado"}
-                                </div>
-                                <div className="col-span-2">
-                                  <strong>Ganhos:</strong> R$ {selectedUser.referral_earnings.toFixed(2)}
-                                </div>
-                              </div>
-                            </div>
-                          )}
-                        </DialogContent>
-                      </Dialog>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openDetailsDialog(user)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openMessageDialog(user)}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                      </Button>
                       
                       <Button
                         variant="ghost"
@@ -327,6 +510,102 @@ export const AdminUserManagement = () => {
           </Table>
         </CardContent>
       </Card>
+
+      {/* User Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Detalhes do Usuário</DialogTitle>
+          </DialogHeader>
+          {selectedUser && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={selectedUser.avatar_url || ""} />
+                  <AvatarFallback>
+                    {selectedUser.full_name ? selectedUser.full_name.charAt(0).toUpperCase() : "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium">{selectedUser.full_name || "Sem nome"}</div>
+                  <div className="text-sm text-muted-foreground">{selectedUser.user_id}</div>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <strong>Plano:</strong> 
+                  <Badge className={getPlanBadgeColor(selectedUser.plan)}>
+                    {selectedUser.plan.toUpperCase()}
+                  </Badge>
+                </div>
+                <div>
+                  <strong>Função:</strong>
+                  <Badge className={getRoleBadgeColor(selectedUser.role)}>
+                    {selectedUser.role}
+                  </Badge>
+                </div>
+                <div>
+                  <strong>Tempo de Uso:</strong> {formatTime(selectedUser.total_session_time)}
+                </div>
+                <div>
+                  <strong>Áreas Acessadas:</strong> {selectedUser.areas_accessed}
+                </div>
+                <div className="col-span-2">
+                  <strong>PIX:</strong> {selectedUser.pix_key || "Não informado"}
+                </div>
+                <div className="col-span-2">
+                  <strong>Ganhos:</strong> R$ {selectedUser.referral_earnings.toFixed(2)}
+                </div>
+                <div className="col-span-2">
+                  <strong>Código de Indicação:</strong> {selectedUser.referral_code}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Message Dialog */}
+      <Dialog open={isMessageDialogOpen} onOpenChange={setIsMessageDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enviar Mensagem</DialogTitle>
+            <DialogDescription>
+              Envie uma mensagem para {selectedUser?.full_name || "este usuário"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="message-subject">Assunto</Label>
+              <Input
+                id="message-subject"
+                value={messageSubject}
+                onChange={(e) => setMessageSubject(e.target.value)}
+                placeholder="Assunto da mensagem..."
+              />
+            </div>
+            <div>
+              <Label htmlFor="message-content">Mensagem</Label>
+              <Textarea
+                id="message-content"
+                value={messageContent}
+                onChange={(e) => setMessageContent(e.target.value)}
+                placeholder="Digite sua mensagem..."
+                rows={4}
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={sendMessage} className="flex-1">
+                <Mail className="w-4 h-4 mr-2" />
+                Enviar Mensagem
+              </Button>
+              <Button variant="outline" onClick={() => setIsMessageDialogOpen(false)}>
+                Cancelar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

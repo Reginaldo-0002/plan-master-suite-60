@@ -6,11 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit2, Trash2, Eye, Search } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, Search, Upload, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Content {
@@ -31,8 +31,10 @@ export const AdminContentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
+  const [planFilter, setPlanFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -87,10 +89,23 @@ export const AdminContentManagement = () => {
   };
 
   const createContent = async () => {
+    if (!formData.title.trim()) {
+      toast({
+        title: "Erro",
+        description: "O título é obrigatório",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('content')
-        .insert([formData]);
+        .insert([{
+          ...formData,
+          description: formData.description || null,
+          video_url: formData.video_url || null
+        }]);
 
       if (error) throw error;
 
@@ -118,7 +133,11 @@ export const AdminContentManagement = () => {
     try {
       const { error } = await supabase
         .from('content')
-        .update(formData)
+        .update({
+          ...formData,
+          description: formData.description || null,
+          video_url: formData.video_url || null
+        })
         .eq('id', selectedContent.id);
 
       if (error) throw error;
@@ -171,6 +190,63 @@ export const AdminContentManagement = () => {
     }
   };
 
+  const toggleContentStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('content')
+        .update({ is_active: !currentStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Conteúdo ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
+      });
+      
+      fetchContents();
+    } catch (error) {
+      console.error('Error toggling content status:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao alterar status do conteúdo",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const duplicateContent = async (content: Content) => {
+    try {
+      const { error } = await supabase
+        .from('content')
+        .insert([{
+          title: `${content.title} (Cópia)`,
+          description: content.description,
+          content_type: content.content_type,
+          required_plan: content.required_plan,
+          video_url: content.video_url,
+          is_active: false,
+          order_index: content.order_index + 1
+        }]);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Conteúdo duplicado com sucesso",
+      });
+      
+      fetchContents();
+    } catch (error) {
+      console.error('Error duplicating content:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao duplicar conteúdo",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: "",
@@ -197,13 +273,20 @@ export const AdminContentManagement = () => {
     setIsEditDialogOpen(true);
   };
 
+  const openViewDialog = (content: Content) => {
+    setSelectedContent(content);
+    setIsViewDialogOpen(true);
+  };
+
   const filteredContents = contents.filter(content => {
     const matchesSearch = !searchTerm || 
-      content.title.toLowerCase().includes(searchTerm.toLowerCase());
+      content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      content.description?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = typeFilter === "all" || content.content_type === typeFilter;
+    const matchesPlan = planFilter === "all" || content.required_plan === planFilter;
     
-    return matchesSearch && matchesType;
+    return matchesSearch && matchesType && matchesPlan;
   });
 
   const getTypeBadgeColor = (type: string) => {
@@ -225,6 +308,24 @@ export const AdminContentManagement = () => {
     }
   };
 
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'product': return 'Produto';
+      case 'tool': return 'Ferramenta';
+      case 'course': return 'Curso';
+      case 'tutorial': return 'Tutorial';
+      default: return type;
+    }
+  };
+
+  const contentStats = {
+    total: contents.length,
+    active: contents.filter(c => c.is_active).length,
+    products: contents.filter(c => c.content_type === 'product').length,
+    tools: contents.filter(c => c.content_type === 'tool').length,
+    courses: contents.filter(c => c.content_type === 'course').length,
+  };
+
   return (
     <div className="flex-1 space-y-8 p-8">
       <div className="flex items-center justify-between">
@@ -240,6 +341,60 @@ export const AdminContentManagement = () => {
         </Button>
       </div>
 
+      {/* Content Stats */}
+      <div className="grid gap-4 md:grid-cols-5">
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{contentStats.total}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ativos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{contentStats.active}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Produtos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{contentStats.products}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Ferramentas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{contentStats.tools}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-border">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Cursos
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-foreground">{contentStats.courses}</div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Filters */}
       <Card className="border-border">
         <CardHeader>
@@ -249,11 +404,10 @@ export const AdminContentManagement = () => {
           <div className="flex gap-4">
             <div className="flex-1">
               <Input
-                placeholder="Buscar por título..."
+                placeholder="Buscar por título ou descrição..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
-                
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -266,6 +420,17 @@ export const AdminContentManagement = () => {
                 <SelectItem value="tool">Ferramentas</SelectItem>
                 <SelectItem value="course">Cursos</SelectItem>
                 <SelectItem value="tutorial">Tutoriais</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={planFilter} onValueChange={setPlanFilter}>
+              <SelectTrigger className="w-48">
+                <SelectValue placeholder="Filtrar por plano" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os planos</SelectItem>
+                <SelectItem value="free">Free</SelectItem>
+                <SelectItem value="vip">VIP</SelectItem>
+                <SelectItem value="pro">Pro</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -286,7 +451,7 @@ export const AdminContentManagement = () => {
               <TableRow>
                 <TableHead>Título</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Plano Necessário</TableHead>
+                <TableHead>Plano</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ordem</TableHead>
                 <TableHead>Ações</TableHead>
@@ -307,7 +472,7 @@ export const AdminContentManagement = () => {
                   </TableCell>
                   <TableCell>
                     <Badge className={getTypeBadgeColor(content.content_type)}>
-                      {content.content_type}
+                      {getTypeLabel(content.content_type)}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -316,9 +481,15 @@ export const AdminContentManagement = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant={content.is_active ? "default" : "secondary"}>
-                      {content.is_active ? "Ativo" : "Inativo"}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={content.is_active}
+                        onCheckedChange={() => toggleContentStatus(content.id, content.is_active)}
+                      />
+                      <span className="text-sm">
+                        {content.is_active ? "Ativo" : "Inativo"}
+                      </span>
+                    </div>
                   </TableCell>
                   <TableCell>{content.order_index}</TableCell>
                   <TableCell>
@@ -326,9 +497,26 @@ export const AdminContentManagement = () => {
                       <Button
                         variant="ghost"
                         size="sm"
+                        onClick={() => openViewDialog(content)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+                      
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => openEditDialog(content)}
                       >
                         <Edit2 className="w-4 h-4" />
+                      </Button>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => duplicateContent(content)}
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Upload className="w-4 h-4" />
                       </Button>
                       
                       <Button
@@ -348,6 +536,91 @@ export const AdminContentManagement = () => {
         </CardContent>
       </Card>
 
+      {/* View Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Visualizar Conteúdo</DialogTitle>
+          </DialogHeader>
+          {selectedContent && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Tipo</Label>
+                  <Badge className={getTypeBadgeColor(selectedContent.content_type)}>
+                    {getTypeLabel(selectedContent.content_type)}
+                  </Badge>
+                </div>
+                <div>
+                  <Label>Plano Necessário</Label>
+                  <Badge className={getPlanBadgeColor(selectedContent.required_plan)}>
+                    {selectedContent.required_plan.toUpperCase()}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Título</Label>
+                <div className="font-medium">{selectedContent.title}</div>
+              </div>
+              
+              {selectedContent.description && (
+                <div>
+                  <Label>Descrição</Label>
+                  <div className="text-sm text-muted-foreground">
+                    {selectedContent.description}
+                  </div>
+                </div>
+              )}
+              
+              {selectedContent.video_url && (
+                <div>
+                  <Label>URL do Vídeo</Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground truncate">
+                      {selectedContent.video_url}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(selectedContent.video_url!, '_blank')}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Status</Label>
+                  <div>
+                    <Badge variant={selectedContent.is_active ? "default" : "secondary"}>
+                      {selectedContent.is_active ? "Ativo" : "Inativo"}
+                    </Badge>
+                  </div>
+                </div>
+                <div>
+                  <Label>Ordem</Label>
+                  <div>{selectedContent.order_index}</div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
+                <div>
+                  <Label>Criado em</Label>
+                  <div>{new Date(selectedContent.created_at).toLocaleString('pt-BR')}</div>
+                </div>
+                <div>
+                  <Label>Atualizado em</Label>
+                  <div>{new Date(selectedContent.updated_at).toLocaleString('pt-BR')}</div>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-md">
@@ -359,7 +632,7 @@ export const AdminContentManagement = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="title">Título</Label>
+              <Label htmlFor="title">Título *</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -375,42 +648,45 @@ export const AdminContentManagement = () => {
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Digite a descrição..."
+                rows={3}
               />
             </div>
             
-            <div>
-              <Label htmlFor="type">Tipo de Conteúdo</Label>
-              <Select 
-                value={formData.content_type} 
-                onValueChange={(value: any) => setFormData({...formData, content_type: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="product">Produto</SelectItem>
-                  <SelectItem value="tool">Ferramenta</SelectItem>
-                  <SelectItem value="course">Curso</SelectItem>
-                  <SelectItem value="tutorial">Tutorial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="plan">Plano Necessário</Label>
-              <Select 
-                value={formData.required_plan} 
-                onValueChange={(value: any) => setFormData({...formData, required_plan: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="vip">VIP</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="type">Tipo de Conteúdo</Label>
+                <Select 
+                  value={formData.content_type} 
+                  onValueChange={(value: any) => setFormData({...formData, content_type: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="product">Produto</SelectItem>
+                    <SelectItem value="tool">Ferramenta</SelectItem>
+                    <SelectItem value="course">Curso</SelectItem>
+                    <SelectItem value="tutorial">Tutorial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="plan">Plano Necessário</Label>
+                <Select 
+                  value={formData.required_plan} 
+                  onValueChange={(value: any) => setFormData({...formData, required_plan: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="vip">VIP</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div>
@@ -423,23 +699,25 @@ export const AdminContentManagement = () => {
               />
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
-              />
-              <Label htmlFor="is_active">Ativo</Label>
-            </div>
-            
-            <div>
-              <Label htmlFor="order_index">Ordem (índice)</Label>
-              <Input
-                id="order_index"
-                type="number"
-                value={formData.order_index}
-                onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="is_active"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+                />
+                <Label htmlFor="is_active">Ativo</Label>
+              </div>
+              
+              <div>
+                <Label htmlFor="order_index">Ordem</Label>
+                <Input
+                  id="order_index"
+                  type="number"
+                  value={formData.order_index}
+                  onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
+                />
+              </div>
             </div>
             
             <div className="flex gap-2">
@@ -465,7 +743,7 @@ export const AdminContentManagement = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-title">Título</Label>
+              <Label htmlFor="edit-title">Título *</Label>
               <Input
                 id="edit-title"
                 value={formData.title}
@@ -481,42 +759,45 @@ export const AdminContentManagement = () => {
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Digite a descrição..."
+                rows={3}
               />
             </div>
             
-            <div>
-              <Label htmlFor="edit-type">Tipo de Conteúdo</Label>
-              <Select 
-                value={formData.content_type} 
-                onValueChange={(value: any) => setFormData({...formData, content_type: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="product">Produto</SelectItem>
-                  <SelectItem value="tool">Ferramenta</SelectItem>
-                  <SelectItem value="course">Curso</SelectItem>
-                  <SelectItem value="tutorial">Tutorial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-plan">Plano Necessário</Label>
-              <Select 
-                value={formData.required_plan} 
-                onValueChange={(value: any) => setFormData({...formData, required_plan: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="vip">VIP</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="edit-type">Tipo de Conteúdo</Label>
+                <Select 
+                  value={formData.content_type} 
+                  onValueChange={(value: any) => setFormData({...formData, content_type: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="product">Produto</SelectItem>
+                    <SelectItem value="tool">Ferramenta</SelectItem>
+                    <SelectItem value="course">Curso</SelectItem>
+                    <SelectItem value="tutorial">Tutorial</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-plan">Plano Necessário</Label>
+                <Select 
+                  value={formData.required_plan} 
+                  onValueChange={(value: any) => setFormData({...formData, required_plan: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="vip">VIP</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             
             <div>
@@ -529,28 +810,30 @@ export const AdminContentManagement = () => {
               />
             </div>
             
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="edit-is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
-              />
-              <Label htmlFor="edit-is_active">Ativo</Label>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-order_index">Ordem (índice)</Label>
-              <Input
-                id="edit-order_index"
-                type="number"
-                value={formData.order_index}
-                onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="edit-is_active"
+                  checked={formData.is_active}
+                  onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+                />
+                <Label htmlFor="edit-is_active">Ativo</Label>
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-order_index">Ordem</Label>
+                <Input
+                  id="edit-order_index"
+                  type="number"
+                  value={formData.order_index}
+                  onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
+                />
+              </div>
             </div>
             
             <div className="flex gap-2">
               <Button onClick={updateContent} className="flex-1">
-                Salvar Alterações
+                Atualizar Conteúdo
               </Button>
               <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
                 Cancelar
