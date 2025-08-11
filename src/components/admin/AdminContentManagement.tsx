@@ -1,17 +1,15 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit2, Trash2, Video, FileText, Save } from "lucide-react";
+import { Plus, Edit2, Trash2, Video, FileText, BookOpen, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AdminContentDialog } from "./AdminContentDialog";
 
 interface Content {
   id: string;
@@ -29,36 +27,12 @@ interface Content {
   show_in_carousel: boolean | null;
 }
 
-interface FormData {
-  title: string;
-  description: string;
-  content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  video_url: string;
-  required_plan: 'free' | 'vip' | 'pro';
-  is_active: boolean;
-  order_index: number;
-  carousel_image_url: string;
-  carousel_order: number;
-  show_in_carousel: boolean;
-}
-
 export const AdminContentManagement = () => {
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [selectedContentType, setSelectedContentType] = useState<'course' | 'tool' | 'tutorial' | 'product'>('product');
   const [editingContent, setEditingContent] = useState<Content | null>(null);
-  const [formData, setFormData] = useState<FormData>({
-    title: "",
-    description: "",
-    content_type: "product",
-    video_url: "",
-    required_plan: "free",
-    is_active: true,
-    order_index: 0,
-    carousel_image_url: "",
-    carousel_order: 0,
-    show_in_carousel: false
-  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -98,61 +72,6 @@ export const AdminContentManagement = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  const createContent = async () => {
-    try {
-      const { error } = await supabase
-        .from('content')
-        .insert([formData]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Conteúdo criado com sucesso",
-      });
-      
-      setIsCreateDialogOpen(false);
-      resetForm();
-      fetchContents();
-    } catch (error) {
-      console.error('Error creating content:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar conteúdo",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateContent = async () => {
-    if (!editingContent) return;
-
-    try {
-      const { error } = await supabase
-        .from('content')
-        .update(formData)
-        .eq('id', editingContent.id);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Conteúdo atualizado com sucesso",
-      });
-      
-      setEditingContent(null);
-      resetForm();
-      fetchContents();
-    } catch (error) {
-      console.error('Error updating content:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar conteúdo",
-        variant: "destructive",
-      });
     }
   };
 
@@ -210,36 +129,22 @@ export const AdminContentManagement = () => {
     }
   };
 
-  const openEditDialog = (content: Content) => {
-    setEditingContent(content);
-    setFormData({
-      title: content.title,
-      description: content.description || "",
-      content_type: content.content_type,
-      video_url: content.video_url || "",
-      required_plan: content.required_plan,
-      is_active: content.is_active,
-      order_index: content.order_index,
-      carousel_image_url: content.carousel_image_url || "",
-      carousel_order: content.carousel_order || 0,
-      show_in_carousel: content.show_in_carousel || false
-    });
+  const openCreateDialog = (contentType: 'course' | 'tool' | 'tutorial' | 'product') => {
+    setSelectedContentType(contentType);
+    setEditingContent(null);
+    setIsDialogOpen(true);
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      content_type: "product",
-      video_url: "",
-      required_plan: "free",
-      is_active: true,
-      order_index: 0,
-      carousel_image_url: "",
-      carousel_order: 0,
-      show_in_carousel: false
-    });
+  const openEditDialog = (content: Content) => {
+    setEditingContent(content);
+    setSelectedContentType(content.content_type);
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogClose = () => {
+    setIsDialogOpen(false);
     setEditingContent(null);
+    fetchContents(); // Atualizar a lista após fechar o diálogo
   };
 
   const getPlanBadgeColor = (plan: string) => {
@@ -254,10 +159,20 @@ export const AdminContentManagement = () => {
   const getContentTypeIcon = (type: string) => {
     switch (type) {
       case 'product': return <Video className="w-4 h-4" />;
-      case 'tool': return <FileText className="w-4 h-4" />;
-      case 'course': return <Video className="w-4 h-4" />;
+      case 'tool': return <Wrench className="w-4 h-4" />;
+      case 'course': return <BookOpen className="w-4 h-4" />;
       case 'tutorial': return <FileText className="w-4 h-4" />;
       default: return <FileText className="w-4 h-4" />;
+    }
+  };
+
+  const getContentTypeLabel = (type: string) => {
+    switch (type) {
+      case 'product': return 'Produto';
+      case 'tool': return 'Ferramenta';
+      case 'course': return 'Curso';
+      case 'tutorial': return 'Tutorial';
+      default: return type;
     }
   };
 
@@ -270,10 +185,24 @@ export const AdminContentManagement = () => {
             Gerencie produtos, ferramentas, cursos e tutoriais da plataforma
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Novo Conteúdo
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => openCreateDialog('course')} variant="outline">
+            <BookOpen className="w-4 h-4 mr-2" />
+            Novo Curso
+          </Button>
+          <Button onClick={() => openCreateDialog('tool')} variant="outline">
+            <Wrench className="w-4 h-4 mr-2" />
+            Nova Ferramenta
+          </Button>
+          <Button onClick={() => openCreateDialog('tutorial')} variant="outline">
+            <FileText className="w-4 h-4 mr-2" />
+            Novo Tutorial
+          </Button>
+          <Button onClick={() => openCreateDialog('product')}>
+            <Plus className="w-4 h-4 mr-2" />
+            Novo Produto
+          </Button>
+        </div>
       </div>
 
       <Card className="border-border">
@@ -310,7 +239,7 @@ export const AdminContentManagement = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       {getContentTypeIcon(content.content_type)}
-                      <span className="capitalize">{content.content_type}</span>
+                      <span className="capitalize">{getContentTypeLabel(content.content_type)}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -356,158 +285,13 @@ export const AdminContentManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={isCreateDialogOpen || !!editingContent} onOpenChange={(open) => {
-        if (!open) {
-          setIsCreateDialogOpen(false);
-          setEditingContent(null);
-          resetForm();
-        }
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingContent ? 'Editar Conteúdo' : 'Criar Novo Conteúdo'}
-            </DialogTitle>
-            <DialogDescription>
-              {editingContent ? 'Atualize as informações do conteúdo' : 'Configure um novo conteúdo para a plataforma'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="title">Título</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                placeholder="Digite o título..."
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="description">Descrição</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Digite a descrição..."
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="content_type">Tipo de Conteúdo</Label>
-              <Select 
-                value={formData.content_type} 
-                onValueChange={(value: 'product' | 'tool' | 'course' | 'tutorial') => setFormData({...formData, content_type: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="product">Produto</SelectItem>
-                  <SelectItem value="tool">Ferramenta</SelectItem>
-                  <SelectItem value="course">Curso</SelectItem>
-                  <SelectItem value="tutorial">Tutorial</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="video_url">URL do Vídeo</Label>
-              <Input
-                id="video_url"
-                value={formData.video_url}
-                onChange={(e) => setFormData({...formData, video_url: e.target.value})}
-                placeholder="https://..."
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="required_plan">Plano Necessário</Label>
-              <Select 
-                value={formData.required_plan} 
-                onValueChange={(value: 'free' | 'vip' | 'pro') => setFormData({...formData, required_plan: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="vip">VIP</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="order_index">Ordem de Exibição</Label>
-              <Input
-                id="order_index"
-                type="number"
-                value={formData.order_index}
-                onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="carousel_image_url">URL da Imagem do Carrossel (1920x1080)</Label>
-              <Input
-                id="carousel_image_url"
-                value={formData.carousel_image_url}
-                onChange={(e) => setFormData({...formData, carousel_image_url: e.target.value})}
-                placeholder="https://exemplo.com/imagem.jpg"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="carousel_order">Ordem no Carrossel</Label>
-              <Input
-                id="carousel_order"
-                type="number"
-                value={formData.carousel_order}
-                onChange={(e) => setFormData({...formData, carousel_order: parseInt(e.target.value) || 0})}
-                placeholder="0"
-              />
-            </div>
-            
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="is_active"
-                checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
-              />
-              <Label htmlFor="is_active">Ativo</Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="show_in_carousel"
-                checked={formData.show_in_carousel}
-                onCheckedChange={(checked) => setFormData({...formData, show_in_carousel: checked})}
-              />
-              <Label htmlFor="show_in_carousel">Exibir no Carrossel</Label>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button 
-                onClick={editingContent ? updateContent : createContent} 
-                className="flex-1"
-              >
-                <Save className="w-4 h-4 mr-2" />
-                {editingContent ? 'Atualizar' : 'Criar'} Conteúdo
-              </Button>
-              <Button variant="outline" onClick={() => {
-                setIsCreateDialogOpen(false);
-                setEditingContent(null);
-                resetForm();
-              }}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Usar o AdminContentDialog corrigido */}
+      <AdminContentDialog
+        isOpen={isDialogOpen}
+        onClose={handleDialogClose}
+        contentItem={editingContent}
+        contentType={selectedContentType}
+      />
     </div>
   );
 };
