@@ -126,9 +126,9 @@ const Dashboard = () => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar
+        profile={profile}
         activeSection={activeSection === 'carousel' ? 'dashboard' : activeSection}
         onSectionChange={handleSectionChange}
-        userPlan={profile.plan}
       />
       <div className="flex-1 ml-64">
         <div className="p-6">
