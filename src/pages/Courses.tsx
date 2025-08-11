@@ -85,7 +85,7 @@ const Courses = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <div className="flex h-screen bg-background">
       <Sidebar
         profile={profile}
         activeSection="courses"
@@ -101,11 +101,9 @@ const Courses = () => {
         }}
       />
       
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <main className="flex-1 overflow-y-auto">
-          <ContentSection type="courses" userPlan={profile.plan} />
-        </main>
-      </div>
+      <main className="flex-1 overflow-y-auto p-6">
+        <ContentSection type="courses" userPlan={profile.plan} />
+      </main>
       
       <SupportChat profile={profile} />
     </div>
