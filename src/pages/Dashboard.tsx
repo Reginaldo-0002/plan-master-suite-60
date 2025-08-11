@@ -7,11 +7,13 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { ContentSection } from "@/components/dashboard/ContentSection";
+import { RulesSection } from "@/components/dashboard/RulesSection";
+import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 
-type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "rules" | "coming-soon" | "profile" | "settings";
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "rules" | "coming-soon" | "carousel" | "profile" | "settings";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -118,10 +120,14 @@ export default function Dashboard() {
         return <ContentSection type="tools" userPlan={profile.plan} />;
       case "courses":
         return <ContentSection type="courses" userPlan={profile.plan} />;
+      case "tutorials":
+        return <ContentSection type="tutorials" userPlan={profile.plan} />;
       case "rules":
-        return <ContentSection type="rules" userPlan={profile.plan} />;
+        return <RulesSection />;
       case "coming-soon":
-        return <ContentSection type="coming-soon" userPlan={profile.plan} />;
+        return <ComingSoonSection />;
+      case "carousel":
+        return <ContentSection type="carousel" userPlan={profile.plan} />;
       case "profile":
         return (
           <ProfileSettings 
@@ -147,16 +153,9 @@ export default function Dashboard() {
         profile={profile}
         activeSection={activeSection} 
         onSectionChange={(section) => {
-          if (section === 'dashboard') setActiveSection('dashboard');
-          else if (section === 'products') navigate('/produtos');
-          else if (section === 'courses') navigate('/cursos');
-          else if (section === 'tools') navigate('/ferramentas');
-          else if (section === 'tutorials') navigate('/tutoriais');
-          else if (section === 'rules') navigate('/rules');
-          else if (section === 'carousel') navigate('/carousel');
-          else if (section === 'coming-soon') navigate('/em-breve');
-          else if (section === 'profile') setActiveSection('profile');
-          else if (section === 'settings') setActiveSection('settings');
+          setActiveSection(section as ActiveSection);
+          // Update URL without causing navigation issues
+          window.history.pushState(null, '', `/?section=${section}`);
         }}
       />
       
