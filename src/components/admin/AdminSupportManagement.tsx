@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -183,7 +184,11 @@ export const AdminSupportManagement = () => {
             typeof option.id === 'string' && 
             typeof option.title === 'string' && 
             typeof option.response === 'string'
-          ) as ChatbotOption[];
+          ).map((option: any) => ({
+            id: option.id as string,
+            title: option.title as string,
+            response: option.response as string
+          }));
           setChatbotConfig(validOptions);
         }
       } else {
@@ -291,11 +296,20 @@ export const AdminSupportManagement = () => {
         ...newOption
       }];
 
+      // Convert to plain object for JSON storage
+      const configValue = { 
+        menu_options: updatedOptions.map(option => ({
+          id: option.id,
+          title: option.title,
+          response: option.response
+        }))
+      };
+
       const { error } = await supabase
         .from('admin_settings')
         .upsert({ 
           key: 'chatbot_config',
-          value: { menu_options: updatedOptions }
+          value: configValue as any
         });
 
       if (error) throw error;
@@ -321,11 +335,20 @@ export const AdminSupportManagement = () => {
     try {
       const updatedOptions = chatbotConfig.filter(option => option.id !== optionId);
 
+      // Convert to plain object for JSON storage
+      const configValue = { 
+        menu_options: updatedOptions.map(option => ({
+          id: option.id,
+          title: option.title,
+          response: option.response
+        }))
+      };
+
       const { error } = await supabase
         .from('admin_settings')
         .upsert({ 
           key: 'chatbot_config',
-          value: { menu_options: updatedOptions }
+          value: configValue as any
         });
 
       if (error) throw error;

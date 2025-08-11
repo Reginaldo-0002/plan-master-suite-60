@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,7 +103,11 @@ export const SupportChat = () => {
             typeof option.id === 'string' && 
             typeof option.title === 'string' && 
             typeof option.response === 'string'
-          ) as ChatbotOption[];
+          ).map((option: any) => ({
+            id: option.id as string,
+            title: option.title as string,
+            response: option.response as string
+          }));
           setChatbotOptions(validOptions);
         }
       } else {
