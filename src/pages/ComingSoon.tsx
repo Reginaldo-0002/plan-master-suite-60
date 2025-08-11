@@ -1,311 +1,221 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Clock, Rocket, Star, Calendar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { MagneticBackground } from "@/components/background/MagneticBackground";
+import { Loader2, Crown, Gem, Star, Calendar, ArrowLeft } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 
-interface UpcomingRelease {
+interface UpcomingContent {
   id: string;
   title: string;
   description: string | null;
-  release_date: string;
-  target_plans: string[];
-  countdown_enabled: boolean;
-  announcement_image: string | null;
-  content_preview: string | null;
+  content_type: string;
+  status: 'active' | 'maintenance' | 'blocked';
+  required_plan: 'free' | 'vip' | 'pro';
+  hero_image_url: string | null;
+  release_date: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
-interface Profile {
-  plan: string;
-}
-
-interface TimeLeft {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-}
-
-export const ComingSoon = () => {
-  const [releases, setReleases] = useState<UpcomingRelease[]>([]);
-  const [userPlan, setUserPlan] = useState<string>('free');
+const ComingSoon = () => {
+  const [upcomingContent, setUpcomingContent] = useState<UpcomingContent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUserProfile();
-    fetchUpcomingReleases();
-    
-    // Atualizar timer a cada segundo
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    return () => clearInterval(timer);
+    fetchUpcomingContent();
   }, []);
 
-  const fetchUserProfile = async () => {
+  const fetchUpcomingContent = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('plan')
-          .eq('user_id', user.id)
-          .single();
-
-        if (error) throw error;
-        setUserPlan(data?.plan || 'free');
-      }
-    } catch (error) {
-      console.error('Error fetching user profile:', error);
-    }
-  };
-
-  const fetchUpcomingReleases = async () => {
-    try {
+      // Buscar conteúdo com data de lançamento futura ou atual
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+      
+      console.log('Fetching upcoming content for date:', todayStr);
+      
       const { data, error } = await supabase
-        .from('upcoming_releases')
+        .from('content')
         .select('*')
-        .eq('is_active', true)
+        .not('release_date', 'is', null)
+        .gte('release_date', todayStr)
         .order('release_date', { ascending: true });
 
-      if (error) throw error;
-      
-      // Filtrar apenas lançamentos que ainda não passaram
-      const now = new Date();
-      const futureReleases = (data || []).filter(release => 
-        new Date(release.release_date) > now
-      );
-      
-      console.log('Upcoming releases found:', futureReleases.length);
-      setReleases(futureReleases);
+      console.log('Upcoming content result:', { data, error });
+
+      if (error) {
+        console.error('Error fetching upcoming content:', error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar próximos lançamentos",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setUpcomingContent(data || []);
     } catch (error) {
-      console.error('Error fetching upcoming releases:', error);
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const calculateTimeLeft = (releaseDate: string): TimeLeft => {
-    const difference = new Date(releaseDate).getTime() - currentTime.getTime();
-    
-    if (difference <= 0) {
-      return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-    }
-
-    return {
-      days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-      hours: Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-      minutes: Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)),
-      seconds: Math.floor((difference % (1000 * 60)) / 1000)
-    };
-  };
-
-  const isUserEligible = (targetPlans: string[]) => {
-    return targetPlans.includes(userPlan);
-  };
-
-  const getPlanBadgeColor = (plan: string) => {
+  const getPlanIcon = (plan: string) => {
     switch (plan) {
-      case 'free': return 'bg-plan-free text-white';
-      case 'vip': return 'bg-plan-vip text-white';
+      case 'pro': return <Crown className="w-4 h-4" />;
+      case 'vip': return <Gem className="w-4 h-4" />;
+      default: return <Star className="w-4 h-4" />;
+    }
+  };
+
+  const getPlanColor = (plan: string) => {
+    switch (plan) {
       case 'pro': return 'bg-plan-pro text-white';
+      case 'vip': return 'bg-plan-vip text-white';
       default: return 'bg-plan-free text-white';
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatReleaseDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const today = new Date();
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (date.toDateString() === today.toDateString()) {
+      return "Hoje";
+    } else if (date.toDateString() === tomorrow.toDateString()) {
+      return "Amanhã";
+    } else {
+      return date.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+    }
+  };
+
+  const getDaysUntilRelease = (dateString: string) => {
+    const releaseDate = new Date(dateString);
+    const today = new Date();
+    const diffTime = releaseDate.getTime() - today.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background relative">
-        <MagneticBackground />
-        <div className="relative z-10 flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-futuristic-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">Carregando próximos lançamentos...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (releases.length === 0) {
-    return (
-      <div className="min-h-screen bg-background relative">
-        <MagneticBackground />
-        <div className="relative z-10 flex items-center justify-center min-h-screen">
-          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20 max-w-md mx-4">
-            <CardContent className="flex flex-col items-center justify-center p-8">
-              <Rocket className="w-16 h-16 text-futuristic-primary mb-4" />
-              <h2 className="text-2xl font-bold text-futuristic-primary mb-2">Em Breve</h2>
-              <p className="text-muted-foreground text-center">
-                Não há novos lançamentos programados no momento. Fique atento às nossas atualizações!
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background relative">
-      <MagneticBackground />
-      <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <Star className="w-8 h-8 text-futuristic-neon" />
-            <h1 className="text-4xl font-bold bg-futuristic-gradient bg-clip-text text-transparent">
-              Próximos Lançamentos
-            </h1>
-            <Star className="w-8 h-8 text-futuristic-neon" />
-          </div>
-          <p className="text-xl text-muted-foreground">
-            Novidades incríveis estão chegando! Veja o que temos preparado para você.
-          </p>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto p-6 space-y-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao Dashboard
+          </Button>
         </div>
 
-        <div className="grid gap-8 max-w-4xl mx-auto">
-          {releases.map((release) => {
-            const timeLeft = calculateTimeLeft(release.release_date);
-            const isEligible = isUserEligible(release.target_plans);
+        <div className="flex items-center gap-3">
+          <Calendar className="w-8 h-8 text-primary" />
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Próximos Lançamentos</h1>
+            <p className="text-muted-foreground">Confira o que está por vir na plataforma</p>
+          </div>
+        </div>
 
-            return (
-              <Card 
-                key={release.id} 
-                className={`bg-background/60 backdrop-blur-sm border-2 transition-all duration-300 hover:scale-105 ${
-                  isEligible 
-                    ? 'border-futuristic-primary/40 hover:border-futuristic-primary' 
-                    : 'border-muted/40 opacity-75'
-                }`}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div className="space-y-2">
-                      <CardTitle className="text-2xl text-futuristic-primary flex items-center gap-2">
-                        <Rocket className="w-6 h-6" />
-                        {release.title}
-                      </CardTitle>
-                      <div className="flex gap-2">
-                        {release.target_plans.map((plan) => (
-                          <Badge key={plan} className={getPlanBadgeColor(plan)}>
-                            {plan === 'free' ? 'Gratuito' : plan.toUpperCase()}
+        {upcomingContent.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">Nenhum lançamento programado</h3>
+              <p className="text-muted-foreground">
+                Não há novos conteúdos programados para lançamento no momento. 
+                Fique atento às atualizações!
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {upcomingContent.map((item) => {
+              const daysUntilRelease = getDaysUntilRelease(item.release_date!);
+              
+              return (
+                <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+                  {item.hero_image_url && (
+                    <div className="h-48 bg-cover bg-center relative" 
+                         style={{ backgroundImage: `url(${item.hero_image_url})` }}>
+                      <div className="absolute top-2 right-2">
+                        {daysUntilRelease === 0 && (
+                          <Badge className="bg-success text-white">
+                            Disponível Hoje!
                           </Badge>
-                        ))}
-                        {!isEligible && (
-                          <Badge variant="outline" className="text-yellow-500 border-yellow-500">
-                            Upgrade necessário
+                        )}
+                        {daysUntilRelease === 1 && (
+                          <Badge className="bg-warning text-white">
+                            Amanhã
+                          </Badge>
+                        )}
+                        {daysUntilRelease > 1 && (
+                          <Badge className="bg-primary text-white">
+                            {daysUntilRelease} dias
                           </Badge>
                         )}
                       </div>
                     </div>
-                    <Calendar className="w-8 h-8 text-futuristic-accent" />
-                  </div>
-                </CardHeader>
-
-                <CardContent className="space-y-6">
-                  {release.announcement_image && (
-                    <div className="relative rounded-lg overflow-hidden">
-                      <img 
-                        src={release.announcement_image} 
-                        alt={release.title}
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="absolute inset-0 bg-futuristic-gradient opacity-20"></div>
-                    </div>
                   )}
-
-                  {release.description && (
-                    <p className="text-muted-foreground text-lg">{release.description}</p>
-                  )}
-
-                  {release.content_preview && (
-                    <div className="p-4 bg-futuristic-primary/10 rounded-lg border border-futuristic-primary/20">
-                      <h4 className="font-semibold text-futuristic-primary mb-2">Preview do Conteúdo:</h4>
-                      <p className="text-sm">{release.content_preview}</p>
+                  <CardHeader>
+                    <div className="flex justify-between items-start gap-2">
+                      <CardTitle className="text-lg">{item.title}</CardTitle>
+                      <Badge className={getPlanColor(item.required_plan)}>
+                        {getPlanIcon(item.required_plan)}
+                        <span className="ml-1 uppercase">{item.required_plan}</span>
+                      </Badge>
                     </div>
-                  )}
-
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        Lançamento: {formatDate(release.release_date)}
-                      </span>
+                    {item.description && (
+                      <CardDescription>{item.description}</CardDescription>
+                    )}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Calendar className="w-4 h-4" />
+                      Lançamento: {formatReleaseDate(item.release_date!)}
                     </div>
-                  </div>
-
-                  {release.countdown_enabled && timeLeft.days >= 0 && (
-                    <div className="p-6 bg-futuristic-gradient/10 rounded-lg border border-futuristic-primary/20">
-                      <div className="text-center">
-                        <Clock className="w-8 h-8 text-futuristic-neon mx-auto mb-4" />
-                        <h3 className="text-lg font-semibold text-futuristic-primary mb-4">
-                          Tempo restante:
-                        </h3>
-                        <div className="grid grid-cols-4 gap-4">
-                          <div className="text-center">
-                            <div className="text-3xl font-bold text-futuristic-neon">{timeLeft.days}</div>
-                            <div className="text-sm text-muted-foreground">Dias</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-3xl font-bold text-futuristic-neon">{timeLeft.hours}</div>
-                            <div className="text-sm text-muted-foreground">Horas</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-3xl font-bold text-futuristic-neon">{timeLeft.minutes}</div>
-                            <div className="text-sm text-muted-foreground">Minutos</div>
-                          </div>
-                          <div className="text-center">
-                            <div className="text-3xl font-bold text-futuristic-neon">{timeLeft.seconds}</div>
-                            <div className="text-sm text-muted-foreground">Segundos</div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {!isEligible && (
-                    <div className="p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                      <p className="text-sm text-yellow-600 dark:text-yellow-400 text-center">
-                        Este lançamento é exclusivo para planos {release.target_plans.join(', ').toUpperCase()}. 
-                        Faça upgrade para ter acesso!
-                      </p>
-                      <Button 
-                        className="w-full mt-3 bg-futuristic-gradient hover:opacity-90"
-                        onClick={() => window.location.href = '/dashboard'}
-                      >
-                        Fazer Upgrade
+                  </CardHeader>
+                  <CardContent>
+                    {daysUntilRelease === 0 ? (
+                      <Button className="w-full">
+                        Acessar Agora
                       </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        <div className="text-center mt-12">
-          <Button 
-            onClick={() => window.location.href = '/dashboard'}
-            className="bg-futuristic-gradient hover:opacity-90"
-            size="lg"
-          >
-            Voltar ao Dashboard
-          </Button>
-        </div>
+                    ) : (
+                      <Button variant="outline" className="w-full" disabled>
+                        <Calendar className="w-4 h-4 mr-2" />
+                        Aguardando Lançamento
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 };
+
+export default ComingSoon;

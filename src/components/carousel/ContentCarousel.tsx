@@ -1,168 +1,223 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { supabase } from "@/integrations/supabase/client";
-import { Eye, Lock } from "lucide-react";
+import { Loader2, Crown, Gem, Star, ChevronLeft, ChevronRight, Images } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-interface Content {
+interface CarouselContent {
   id: string;
   title: string;
   description: string | null;
-  content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  carousel_image_url: string | null;
+  content_type: string;
+  status: 'active' | 'maintenance' | 'blocked';
   required_plan: 'free' | 'vip' | 'pro';
+  hero_image_url: string | null;
+  carousel_image_url: string | null;
   carousel_order: number;
+  created_at: string;
+  updated_at: string;
 }
 
-interface ContentCarouselProps {
-  userPlan: 'free' | 'vip' | 'pro';
-  onContentClick: (contentId: string) => void;
-}
-
-export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselProps) => {
-  const [contents, setContents] = useState<Content[]>([]);
+export const ContentCarousel = () => {
+  const [carouselContent, setCarouselContent] = useState<CarouselContent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchCarouselContents();
+    fetchCarouselContent();
   }, []);
 
-  const fetchCarouselContents = async () => {
+  const fetchCarouselContent = async () => {
     try {
-      setLoading(true);
+      console.log('Fetching carousel content...');
+      
       const { data, error } = await supabase
         .from('content')
         .select('*')
-        .eq('is_active', true)
         .eq('show_in_carousel', true)
-        .not('carousel_image_url', 'is', null)
+        .eq('status', 'active')
         .order('carousel_order', { ascending: true });
 
-      if (error) throw error;
-      setContents(data || []);
+      console.log('Carousel content result:', { data, error });
+
+      if (error) {
+        console.error('Error fetching carousel content:', error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar conteúdo do carrossel",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setCarouselContent(data || []);
     } catch (error) {
-      console.error('Error fetching carousel contents:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar conteúdos do carrossel",
-        variant: "destructive",
-      });
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const hasAccess = (content: Content) => {
-    const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
-    return planHierarchy[userPlan] >= planHierarchy[content.required_plan];
-  };
-
-  const handleContentClick = (content: Content) => {
-    if (!hasAccess(content)) {
-      toast({
-        title: "Acesso Restrito",
-        description: `Este conteúdo requer o plano ${content.required_plan.toUpperCase()}`,
-        variant: "destructive",
-      });
-      return;
-    }
-    onContentClick(content.id);
-  };
-
-  const getPlanBadgeColor = (plan: string) => {
+  const getPlanIcon = (plan: string) => {
     switch (plan) {
-      case 'free': return 'bg-gray-100 text-gray-800';
-      case 'vip': return 'bg-blue-100 text-blue-800';
-      case 'pro': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pro': return <Crown className="w-4 h-4" />;
+      case 'vip': return <Gem className="w-4 h-4" />;
+      default: return <Star className="w-4 h-4" />;
     }
+  };
+
+  const getPlanColor = (plan: string) => {
+    switch (plan) {
+      case 'pro': return 'bg-plan-pro text-white';
+      case 'vip': return 'bg-plan-vip text-white';
+      default: return 'bg-plan-free text-white';
+    }
+  };
+
+  const nextSlide = () => {
+    setCurrentIndex((prev) => (prev + 1) % carouselContent.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentIndex((prev) => (prev - 1 + carouselContent.length) % carouselContent.length);
   };
 
   if (loading) {
     return (
-      <div className="w-full h-64 flex items-center justify-center">
-        <p className="text-muted-foreground">Carregando carrossel...</p>
-      </div>
-    );
-  }
-
-  if (contents.length === 0) {
-    return (
-      <div className="w-full h-64 flex items-center justify-center">
-        <p className="text-muted-foreground">Nenhum conteúdo disponível no carrossel</p>
+      <div className="flex items-center justify-center min-h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4">
-      <Carousel className="w-full">
-        <CarouselContent>
-          {contents.map((content) => (
-            <CarouselItem key={content.id} className="md:basis-1/2 lg:basis-1/3">
-              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
-                <CardContent className="p-0">
-                  <div className="relative aspect-video overflow-hidden rounded-t-lg">
-                    <img
-                      src={content.carousel_image_url || '/placeholder.svg'}
-                      alt={content.title}
-                      className="w-full h-full object-cover"
-                      style={{ aspectRatio: '16/9' }}
-                    />
-                    <div className="absolute inset-0 bg-black/20 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                      <Button
-                        onClick={() => handleContentClick(content)}
-                        variant={hasAccess(content) ? "default" : "outline"}
-                        className="bg-white/90 text-black hover:bg-white"
-                      >
-                        {hasAccess(content) ? (
-                          <>
-                            <Eye className="w-4 h-4 mr-2" />
-                            Ver Tópicos
-                          </>
-                        ) : (
-                          <>
-                            <Lock className="w-4 h-4 mr-2" />
-                            Upgrade
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-lg truncate">{content.title}</h3>
-                      {!hasAccess(content) && (
-                        <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0 ml-2" />
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        <Images className="w-6 h-6" />
+        <h1 className="text-3xl font-bold text-foreground">Carrossel de Conteúdo</h1>
+      </div>
+
+      {carouselContent.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <Images className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-lg font-semibold mb-2">Nenhum conteúdo no carrossel</h3>
+            <p className="text-muted-foreground">
+              Não há conteúdo configurado para exibição no carrossel no momento.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {/* Carousel Principal */}
+          <div className="relative">
+            <Card className="overflow-hidden">
+              <div className="relative h-96">
+                {carouselContent[currentIndex]?.carousel_image_url || carouselContent[currentIndex]?.hero_image_url ? (
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center"
+                    style={{ 
+                      backgroundImage: `url(${carouselContent[currentIndex]?.carousel_image_url || carouselContent[currentIndex]?.hero_image_url})` 
+                    }}
+                  />
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-primary/10" />
+                )}
+                <div className="absolute inset-0 bg-black/40" />
+                <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">{carouselContent[currentIndex]?.title}</h2>
+                      {carouselContent[currentIndex]?.description && (
+                        <p className="text-white/90 mb-4">{carouselContent[currentIndex]?.description}</p>
                       )}
                     </div>
-                    <div className="flex items-center justify-between">
-                      <Badge className={getPlanBadgeColor(content.required_plan)}>
-                        {content.required_plan.toUpperCase()}
-                      </Badge>
-                      <span className="text-sm text-muted-foreground capitalize">
-                        {content.content_type}
-                      </span>
-                    </div>
-                    {content.description && (
-                      <p className="text-sm text-muted-foreground mt-2 line-clamp-2">
-                        {content.description}
-                      </p>
-                    )}
+                    <Badge className={getPlanColor(carouselContent[currentIndex]?.required_plan)}>
+                      {getPlanIcon(carouselContent[currentIndex]?.required_plan)}
+                      <span className="ml-1 uppercase">{carouselContent[currentIndex]?.required_plan}</span>
+                    </Badge>
                   </div>
+                </div>
+              </div>
+            </Card>
+
+            {/* Navigation Buttons */}
+            {carouselContent.length > 1 && (
+              <>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-background/80 backdrop-blur-sm"
+                  onClick={prevSlide}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-background/80 backdrop-blur-sm"
+                  onClick={nextSlide}
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Indicators */}
+          {carouselContent.length > 1 && (
+            <div className="flex justify-center gap-2">
+              {carouselContent.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-3 h-3 rounded-full transition-colors ${
+                    index === currentIndex ? 'bg-primary' : 'bg-muted'
+                  }`}
+                  onClick={() => setCurrentIndex(index)}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Grid de Conteúdo do Carrossel */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {carouselContent.map((item, index) => (
+              <Card key={item.id} className={`overflow-hidden hover:shadow-lg transition-shadow ${
+                index === currentIndex ? 'ring-2 ring-primary' : ''
+              }`}>
+                {(item.carousel_image_url || item.hero_image_url) && (
+                  <div className="h-48 bg-cover bg-center" 
+                       style={{ backgroundImage: `url(${item.carousel_image_url || item.hero_image_url})` }} />
+                )}
+                <CardHeader>
+                  <div className="flex justify-between items-start gap-2">
+                    <CardTitle className="text-lg">{item.title}</CardTitle>
+                    <Badge className={getPlanColor(item.required_plan)}>
+                      {getPlanIcon(item.required_plan)}
+                      <span className="ml-1 uppercase">{item.required_plan}</span>
+                    </Badge>
+                  </div>
+                  {item.description && (
+                    <CardDescription>{item.description}</CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    className="w-full"
+                    onClick={() => setCurrentIndex(index)}
+                  >
+                    {index === currentIndex ? 'Visualizando' : 'Ver no Carrossel'}
+                  </Button>
                 </CardContent>
               </Card>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <CarouselPrevious />
-        <CarouselNext />
-      </Carousel>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

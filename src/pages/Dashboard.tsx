@@ -1,34 +1,32 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { User } from '@supabase/supabase-js';
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
-import { ContentCarouselPage } from "./ContentCarouselPage";
+import { TopicsGallery } from "@/components/topics/TopicsGallery";
+import { ContentCarousel } from "@/components/carousel/ContentCarousel";
 import { Loader2 } from "lucide-react";
-import { OptimizedSupportChat } from "@/components/support/OptimizedSupportChat";
+import { useToast } from "@/hooks/use-toast";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { validateProfileData } from "@/lib/typeGuards";
 
-type DashboardSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'carousel' | 'settings';
-
-interface User {
-  id: string;
-  email?: string;
-}
+type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'rules' | 'coming-soon' | 'carousel' | 'settings';
 
 interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
-  plan: 'free' | 'vip' | 'pro';
-  role: string;
-  referral_code: string;
-  referral_earnings: number;
-  pix_key: string | null;
   avatar_url: string | null;
+  plan: 'free' | 'vip' | 'pro';
+  pix_key: string | null;
   total_session_time: number;
   areas_accessed: number;
+  referral_code: string;
+  referral_earnings: number;
   loyalty_level: string;
   total_points: number;
   last_activity: string | null;
@@ -40,62 +38,71 @@ interface Profile {
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [activeSection, setActiveSection] = useState<DashboardSection>('dashboard');
   const [loading, setLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState<ActiveSection>('dashboard');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { handleAsyncError } = useErrorHandler();
 
   useEffect(() => {
-    checkUser();
+    checkAuth();
   }, []);
 
-  const checkUser = async () => {
-    try {
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
+  const checkAuth = async () => {
+    const result = await handleAsyncError(async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
       
-      if (userError || !user) {
-        navigate('/auth');
-        return;
+      if (error || !session) {
+        navigate("/auth");
+        return null;
       }
 
-      setUser(user);
-
-      // Fetch user profile with all new fields
+      setUser(session.user);
+      
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', session.user.id)
         .single();
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
+        navigate("/auth");
+        return null;
+      }
+
+      if (!validateProfileData(profileData)) {
+        console.error('Invalid profile data:', profileData);
         toast({
           title: "Erro",
-          description: "Erro ao carregar perfil do usuário",
+          description: "Dados do perfil inválidos",
           variant: "destructive",
         });
-      } else {
-        setProfile(profileData);
+        navigate("/auth");
+        return null;
       }
-    } catch (error) {
-      console.error('Error checking user:', error);
-      navigate('/auth');
-    } finally {
-      setLoading(false);
+
+      setProfile(profileData as Profile);
+      return profileData;
+    }, {
+      title: "Erro de Autenticação",
+      showToast: false
+    });
+
+    if (!result) {
+      navigate("/auth");
     }
+    
+    setLoading(false);
   };
 
-  const handleSectionChange = (section: DashboardSection) => {
+  const handleSectionChange = (section: ActiveSection) => {
     setActiveSection(section);
-  };
-
-  const handleProfileUpdate = (updatedProfile: Profile) => {
-    setProfile(updatedProfile);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
@@ -110,35 +117,36 @@ const Dashboard = () => {
       case 'dashboard':
         return <DashboardContent profile={profile} />;
       case 'products':
-        return <ContentSection contentType="product" userPlan={profile.plan} />;
+        return <ContentSection type="products" userPlan={profile.plan} />;
       case 'tools':
-        return <ContentSection contentType="tool" userPlan={profile.plan} />;
+        return <ContentSection type="tools" userPlan={profile.plan} />;
       case 'courses':
-        return <ContentSection contentType="course" userPlan={profile.plan} />;
+        return <ContentSection type="courses" userPlan={profile.plan} />;
       case 'tutorials':
-        return <ContentSection contentType="tutorial" userPlan={profile.plan} />;
+        return <TopicsGallery userPlan={profile.plan} />;
+      case 'rules':
+        return <ContentSection type="rules" userPlan={profile.plan} />;
+      case 'coming-soon':
+        return <ContentSection type="coming-soon" userPlan={profile.plan} />;
       case 'carousel':
-        return <ContentCarouselPage userPlan={profile.plan} />;
+        return <ContentCarousel />;
       case 'settings':
-        return <ProfileSettings profile={profile} onProfileUpdate={handleProfileUpdate} />;
+        return <ProfileSettings profile={profile} onProfileUpdate={setProfile} />;
       default:
         return <DashboardContent profile={profile} />;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-background relative">
-      <Sidebar
-        profile={profile}
-        activeSection={activeSection === 'carousel' ? 'dashboard' : activeSection}
+    <div className="flex h-screen bg-background">
+      <Sidebar 
+        profile={profile} 
+        activeSection={activeSection} 
         onSectionChange={handleSectionChange}
       />
-      <div className="flex-1 flex flex-col relative z-10">
-        <main className="flex-1 overflow-auto">
-          {renderActiveSection()}
-        </main>
-      </div>
-      <OptimizedSupportChat userId={user.id} userPlan={profile.plan} />
+      <main className="flex-1 overflow-auto">
+        {renderActiveSection()}
+      </main>
     </div>
   );
 };

@@ -15,7 +15,10 @@ import {
   LogOut,
   Crown,
   Gem,
-  Star
+  Star,
+  FileText,
+  Calendar,
+  Images
 } from "lucide-react";
 
 interface Profile {
@@ -37,7 +40,7 @@ interface Profile {
   updated_at: string;
 }
 
-type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'settings';
+type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'rules' | 'coming-soon' | 'carousel' | 'settings';
 
 interface SidebarProps {
   profile: Profile | null;
@@ -90,6 +93,9 @@ export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProp
     { id: 'tools', icon: Wrench, label: 'Ferramentas' },
     { id: 'courses', icon: GraduationCap, label: 'Cursos' },
     { id: 'tutorials', icon: BookOpen, label: 'Tutoriais' },
+    { id: 'rules', icon: FileText, label: 'Regras' },
+    { id: 'coming-soon', icon: Calendar, label: 'Em Breve' },
+    { id: 'carousel', icon: Images, label: 'Carrossel' },
   ];
 
   return (

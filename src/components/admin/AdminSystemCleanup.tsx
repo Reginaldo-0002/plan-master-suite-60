@@ -20,7 +20,6 @@ export const AdminSystemCleanup = () => {
   const [loading, setLoading] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [keepAdmin, setKeepAdmin] = useState(true);
-  const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const { toast } = useToast();
   const { handleAsyncError } = useErrorHandler();
 
@@ -56,10 +55,11 @@ export const AdminSystemCleanup = () => {
   ];
 
   const executeCleanup = async (cleanupType: string) => {
-    if (confirmText !== 'DELETAR TUDO') {
+    // Validação de entrada mais robusta
+    if (confirmText.trim() !== 'DELETAR TUDO') {
       toast({
-        title: "Erro",
-        description: "Digite 'DELETAR TUDO' para confirmar",
+        title: "Erro de Confirmação",
+        description: "Digite exatamente 'DELETAR TUDO' para confirmar (sem aspas)",
         variant: "destructive",
       });
       return;
@@ -72,11 +72,11 @@ export const AdminSystemCleanup = () => {
     setLoading(true);
     
     try {
-      console.log('Executing system cleanup:', { cleanupType, keepAdmin, selectedTables });
+      console.log('Executing system cleanup:', { cleanupType, keepAdmin });
       
       const { data, error } = await supabase.rpc('system_cleanup', {
         cleanup_type: cleanupType,
-        target_tables: selectedTables.length > 0 ? selectedTables : null,
+        target_tables: null,
         keep_admin: keepAdmin
       });
 
@@ -84,10 +84,26 @@ export const AdminSystemCleanup = () => {
 
       if (error) {
         console.error('Cleanup error:', error);
-        throw error;
+        
+        // Tratamento de erros específicos
+        let errorMessage = "Falha ao executar limpeza do sistema";
+        if (error.message.includes('WHERE clause')) {
+          errorMessage = "Erro interno: Cláusula WHERE necessária. Contate o administrador.";
+        } else if (error.message.includes('permission')) {
+          errorMessage = "Permissão insuficiente para executar esta operação";
+        } else if (error.message.includes('admin')) {
+          errorMessage = "Apenas administradores podem executar limpeza do sistema";
+        }
+        
+        toast({
+          title: "Erro na Limpeza",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        return;
       }
       
-      // Safely convert the JSON result to CleanupResult
+      // Conversão segura do resultado
       let cleanupResult: CleanupResult;
       if (data && typeof data === 'object' && !Array.isArray(data)) {
         const cleanupData = data as Record<string, any>;
@@ -97,7 +113,6 @@ export const AdminSystemCleanup = () => {
           cleanup_type: String(cleanupData.cleanup_type) || cleanupType
         };
       } else {
-        // Fallback result if data structure is unexpected
         cleanupResult = {
           success: true,
           records_deleted: 0,
@@ -106,18 +121,21 @@ export const AdminSystemCleanup = () => {
       }
 
       toast({
-        title: "Limpeza Executada",
-        description: `${cleanupResult.records_deleted} registros foram removidos com sucesso`,
+        title: "Limpeza Executada com Sucesso",
+        description: `${cleanupResult.records_deleted} registros foram removidos. Tipo: ${cleanupResult.cleanup_type}`,
       });
       
+      // Reset do formulário
       setConfirmText("");
-      setSelectedTables([]);
       
     } catch (error) {
       console.error('System cleanup failed:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+      
       toast({
-        title: "Erro na Limpeza",
-        description: "Falha ao executar limpeza do sistema. Verifique os logs.",
+        title: "Erro Crítico na Limpeza",
+        description: `Falha inesperada: ${errorMessage}. Verifique os logs do sistema.`,
         variant: "destructive",
       });
     } finally {
@@ -125,13 +143,7 @@ export const AdminSystemCleanup = () => {
     }
   };
 
-  const handleTableSelection = (tableId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedTables(prev => [...prev, tableId]);
-    } else {
-      setSelectedTables(prev => prev.filter(id => id !== tableId));
-    }
-  };
+  const isConfirmationValid = confirmText.trim() === 'DELETAR TUDO';
 
   return (
     <div className="space-y-6">
@@ -146,6 +158,61 @@ export const AdminSystemCleanup = () => {
             <strong> ESTAS AÇÕES SÃO IRREVERSÍVEIS!</strong>
           </CardDescription>
         </CardHeader>
+      </Card>
+
+      <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
+        <CardHeader>
+          <CardTitle className="text-futuristic-primary">Configurações de Segurança</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="keep_admin"
+              checked={keepAdmin}
+              onCheckedChange={(checked) => setKeepAdmin(checked as boolean)}
+            />
+            <Label htmlFor="keep_admin">
+              Manter conta do administrador atual (ALTAMENTE RECOMENDADO)
+            </Label>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="confirm_text" className="text-red-500 font-bold">
+              Digite exatamente "DELETAR TUDO" para habilitar as operações:
+            </Label>
+            <Input
+              id="confirm_text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder="DELETAR TUDO"
+              className={`border-red-500 focus:border-red-600 ${
+                isConfirmationValid ? 'bg-green-50 border-green-500' : ''
+              }`}
+            />
+            {isConfirmationValid && (
+              <p className="text-sm text-green-600 flex items-center gap-1">
+                ✓ Operações de limpeza habilitadas
+              </p>
+            )}
+            {confirmText && !isConfirmationValid && (
+              <p className="text-sm text-red-500 flex items-center gap-1">
+                ✗ Texto de confirmação incorreto
+              </p>
+            )}
+          </div>
+
+          <div className="p-4 bg-red-50/10 border border-red-500/20 rounded-lg">
+            <h4 className="text-red-500 font-bold mb-2">⚠️ AVISOS IMPORTANTES:</h4>
+            <ul className="text-sm text-red-400 space-y-1">
+              <li>• Backup automático será criado antes da limpeza</li>
+              <li>• Todas as ações são registradas nos logs do sistema</li>
+              <li>• É OBRIGATÓRIO fazer backup manual antes de operações críticas</li>
+              <li>• O sistema pode demorar alguns minutos para processar limpezas grandes</li>
+              <li>• Digite exatamente "DELETAR TUDO" (sem aspas) para habilitar</li>
+              <li>• Operações só funcionam com permissões de administrador</li>
+            </ul>
+          </div>
+        </CardContent>
       </Card>
 
       <div className="grid gap-4">
@@ -165,8 +232,8 @@ export const AdminSystemCleanup = () => {
                   <Button
                     variant="destructive"
                     onClick={() => executeCleanup(option.id)}
-                    disabled={loading || confirmText !== 'DELETAR TUDO'}
-                    className="bg-red-600 hover:bg-red-700"
+                    disabled={loading || !isConfirmationValid}
+                    className="bg-red-600 hover:bg-red-700 disabled:opacity-50"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     {loading ? 'Executando...' : 'Executar'}
@@ -177,51 +244,6 @@ export const AdminSystemCleanup = () => {
           );
         })}
       </div>
-
-      <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
-        <CardHeader>
-          <CardTitle className="text-futuristic-primary">Configurações de Segurança</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="keep_admin"
-              checked={keepAdmin}
-              onCheckedChange={(checked) => setKeepAdmin(checked as boolean)}
-            />
-            <Label htmlFor="keep_admin">
-              Manter conta do administrador atual (RECOMENDADO)
-            </Label>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="confirm_text" className="text-red-500 font-bold">
-              Digite "DELETAR TUDO" para habilitar as operações de limpeza:
-            </Label>
-            <Input
-              id="confirm_text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              placeholder="DELETAR TUDO"
-              className="border-red-500 focus:border-red-600"
-            />
-            {confirmText === 'DELETAR TUDO' && (
-              <p className="text-sm text-green-600">✓ Operações de limpeza habilitadas</p>
-            )}
-          </div>
-
-          <div className="p-4 bg-red-50/10 border border-red-500/20 rounded-lg">
-            <h4 className="text-red-500 font-bold mb-2">⚠️ AVISO IMPORTANTE:</h4>
-            <ul className="text-sm text-red-400 space-y-1">
-              <li>• Backup automático será criado antes da limpeza</li>
-              <li>• Todas as ações são registradas nos logs do sistema</li>
-              <li>• É recomendado fazer backup manual antes de operações críticas</li>
-              <li>• O sistema pode demorar alguns minutos para processar limpezas grandes</li>
-              <li>• Digite exatamente "DELETAR TUDO" para habilitar as operações</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

@@ -3,10 +3,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Play, Lock, Eye } from "lucide-react";
+import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Content {
@@ -14,233 +12,198 @@ interface Content {
   title: string;
   description: string | null;
   content_type: string;
-  video_url: string | null;
-  required_plan: string;
-  is_active: boolean;
-  order_index: number;
+  status: 'active' | 'maintenance' | 'blocked';
+  required_plan: 'free' | 'vip' | 'pro';
+  hero_image_url: string | null;
+  release_date: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface ContentSectionProps {
-  contentType: 'product' | 'tool' | 'course' | 'tutorial';
+interface ContentSectionProps {
+  type: 'products' | 'tools' | 'courses' | 'rules' | 'coming-soon';
   userPlan: 'free' | 'vip' | 'pro';
 }
 
-export const ContentSection = ({ contentType, userPlan }: ContentSectionProps) => {
-  const [contents, setContents] = useState<Content[]>([]);
-  const [filteredContents, setFilteredContents] = useState<Content[]>([]);
+export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
+  const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const { toast } = useToast();
 
-  useEffect(() => {
-    fetchContents();
-  }, [contentType]);
+  const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
   useEffect(() => {
-    const filtered = contents.filter(content =>
-      content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (content.description && content.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-    setFilteredContents(filtered);
-  }, [contents, searchTerm]);
+    fetchContent();
+  }, [type]);
 
-  const fetchContents = async () => {
+  const fetchContent = async () => {
     try {
-      setLoading(true);
-      const { data, error } = await supabase
+      let query = supabase
         .from('content')
         .select('*')
-        .eq('content_type', contentType)
-        .eq('is_active', true)
-        .order('order_index', { ascending: true });
+        .eq('content_type', type)
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setContents(data || []);
+      // Para "coming-soon", buscar por data de lançamento futura
+      if (type === 'coming-soon') {
+        const today = new Date().toISOString().split('T')[0];
+        query = query.gte('release_date', today);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching content:', error);
+        toast({
+          title: "Erro",
+          description: "Falha ao carregar conteúdo",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setContent(data || []);
     } catch (error) {
-      console.error('Error fetching contents:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar conteúdos",
-        variant: "destructive",
-      });
+      console.error('Error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const hasAccess = (content: Content) => {
-    const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
-    return planHierarchy[userPlan as keyof typeof planHierarchy] >= 
-           planHierarchy[content.required_plan as keyof typeof planHierarchy];
-  };
-
-  const openContent = (content: Content) => {
-    if (!hasAccess(content)) {
-      toast({
-        title: "Acesso Restrito",
-        description: `Este conteúdo requer o plano ${content.required_plan.toUpperCase()}`,
-        variant: "destructive",
-      });
-      return;
-    }
-    setSelectedContent(content);
-  };
-
-  const getPlanBadgeColor = (plan: string) => {
+  const getPlanIcon = (plan: string) => {
     switch (plan) {
-      case 'free': return 'bg-gray-100 text-gray-800';
-      case 'vip': return 'bg-blue-100 text-blue-800';
-      case 'pro': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pro': return <Crown className="w-4 h-4" />;
+      case 'vip': return <Gem className="w-4 h-4" />;
+      default: return <Star className="w-4 h-4" />;
     }
   };
 
-  const getContentTypeTitle = () => {
-    switch (contentType) {
-      case 'product': return 'Produtos';
-      case 'tool': return 'Ferramentas';
-      case 'course': return 'Cursos';
-      case 'tutorial': return 'Tutoriais';
+  const getPlanColor = (plan: string) => {
+    switch (plan) {
+      case 'pro': return 'bg-plan-pro text-white';
+      case 'vip': return 'bg-plan-vip text-white';
+      default: return 'bg-plan-free text-white';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-success text-white';
+      case 'maintenance': return 'bg-warning text-white';
+      case 'blocked': return 'bg-destructive text-white';
+      default: return 'bg-muted text-muted-foreground';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'active': return 'Ativo';
+      case 'maintenance': return 'Manutenção';
+      case 'blocked': return 'Bloqueado';
+      default: return status;
+    }
+  };
+
+  const getSectionTitle = () => {
+    switch (type) {
+      case 'products': return 'Produtos';
+      case 'tools': return 'Ferramentas';
+      case 'courses': return 'Cursos';
+      case 'rules': return 'Regras';
+      case 'coming-soon': return 'Em Breve';
       default: return 'Conteúdo';
     }
   };
 
-  const getContentTypeDescription = () => {
-    switch (contentType) {
-      case 'product': return 'Explore nossos produtos e soluções';
-      case 'tool': return 'Acesse ferramentas úteis para seu dia a dia';
-      case 'course': return 'Aprenda com nossos cursos especializados';
-      case 'tutorial': return 'Guias passo a passo para ajudar você';
-      default: return 'Conteúdo disponível na plataforma';
+  const getSectionIcon = () => {
+    switch (type) {
+      case 'coming-soon': return <Calendar className="w-6 h-6" />;
+      case 'rules': return <FileText className="w-6 h-6" />;
+      default: return null;
     }
+  };
+
+  const canAccess = (contentPlan: string) => {
+    return planHierarchy[userPlan] >= planHierarchy[contentPlan as keyof typeof planHierarchy];
   };
 
   if (loading) {
     return (
-      <div className="flex-1 space-y-8 p-8">
-        <div className="text-center">
-          <p className="text-muted-foreground">Carregando conteúdos...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
-            {getContentTypeTitle()}
-          </h2>
-          <p className="text-muted-foreground">
-            {getContentTypeDescription()}
-          </p>
-        </div>
-        <Badge className={getPlanBadgeColor(userPlan)}>
-          Plano {userPlan.toUpperCase()}
-        </Badge>
+    <div className="container mx-auto p-6 space-y-6">
+      <div className="flex items-center gap-3">
+        {getSectionIcon()}
+        <h1 className="text-3xl font-bold text-foreground">{getSectionTitle()}</h1>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={`Buscar ${getContentTypeTitle().toLowerCase()}...`}
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-8"
-        />
-      </div>
-
-      {/* Content Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredContents.map((content) => (
-          <Card key={content.id} className="cursor-pointer hover:shadow-md transition-shadow">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">{content.title}</CardTitle>
-                {!hasAccess(content) && (
-                  <Lock className="h-4 w-4 text-muted-foreground" />
+      {content.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-12">
+            <p className="text-muted-foreground">
+              {type === 'coming-soon' 
+                ? 'Nenhum lançamento programado no momento.' 
+                : `Nenhum ${getSectionTitle().toLowerCase()} disponível no momento.`
+              }
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {content.map((item) => (
+            <Card key={item.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              {item.hero_image_url && (
+                <div className="h-48 bg-cover bg-center" 
+                     style={{ backgroundImage: `url(${item.hero_image_url})` }} />
+              )}
+              <CardHeader>
+                <div className="flex justify-between items-start gap-2">
+                  <CardTitle className="text-lg">{item.title}</CardTitle>
+                  <div className="flex flex-col gap-2">
+                    <Badge className={getPlanColor(item.required_plan)}>
+                      {getPlanIcon(item.required_plan)}
+                      <span className="ml-1 uppercase">{item.required_plan}</span>
+                    </Badge>
+                    <Badge className={getStatusColor(item.status)}>
+                      {getStatusText(item.status)}
+                    </Badge>
+                  </div>
+                </div>
+                {item.description && (
+                  <CardDescription>{item.description}</CardDescription>
                 )}
-              </div>
-              <Badge className={getPlanBadgeColor(content.required_plan)}>
-                {content.required_plan.toUpperCase()}
-              </Badge>
-            </CardHeader>
-            <CardContent>
-              <CardDescription className="mb-4">
-                {content.description || "Sem descrição disponível"}
-              </CardDescription>
-              <Button 
-                onClick={() => openContent(content)}
-                className="w-full"
-                variant={hasAccess(content) ? "default" : "outline"}
-                disabled={!hasAccess(content)}
-              >
-                {hasAccess(content) ? (
-                  <>
-                    <Play className="w-4 h-4 mr-2" />
-                    Acessar
-                  </>
-                ) : (
-                  <>
+                {item.release_date && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Calendar className="w-4 h-4" />
+                    Lançamento: {new Date(item.release_date).toLocaleDateString('pt-BR')}
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent>
+                {canAccess(item.required_plan) && item.status === 'active' ? (
+                  <Button className="w-full">
+                    {type === 'coming-soon' ? 'Aguardando Lançamento' : 'Acessar'}
+                  </Button>
+                ) : !canAccess(item.required_plan) ? (
+                  <Button variant="outline" className="w-full" disabled>
                     <Lock className="w-4 h-4 mr-2" />
                     Upgrade Necessário
-                  </>
+                  </Button>
+                ) : (
+                  <Button variant="outline" className="w-full" disabled>
+                    {getStatusText(item.status)}
+                  </Button>
                 )}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredContents.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">
-            {searchTerm 
-              ? `Nenhum resultado encontrado para "${searchTerm}"` 
-              : `Nenhum ${getContentTypeTitle().toLowerCase()} disponível no momento`
-            }
-          </p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       )}
-
-      {/* Content Viewer Dialog */}
-      <Dialog open={!!selectedContent} onOpenChange={() => setSelectedContent(null)}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>{selectedContent?.title}</DialogTitle>
-            <DialogDescription>
-              {selectedContent?.description}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedContent?.video_url ? (
-              <div className="aspect-video">
-                <iframe
-                  src={selectedContent.video_url}
-                  className="w-full h-full rounded-lg"
-                  allowFullScreen
-                  title={selectedContent.title}
-                />
-              </div>
-            ) : (
-              <div className="aspect-video bg-muted rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <Eye className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Conteúdo em desenvolvimento
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };
