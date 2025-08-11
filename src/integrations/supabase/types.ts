@@ -16,6 +16,8 @@ export type Database = {
     Tables: {
       admin_settings: {
         Row: {
+          auto_status_config: Json | null
+          chat_blocked_until: string | null
           created_at: string
           id: string
           key: string
@@ -23,6 +25,8 @@ export type Database = {
           value: Json
         }
         Insert: {
+          auto_status_config?: Json | null
+          chat_blocked_until?: string | null
           created_at?: string
           id?: string
           key: string
@@ -30,11 +34,49 @@ export type Database = {
           value: Json
         }
         Update: {
+          auto_status_config?: Json | null
+          chat_blocked_until?: string | null
           created_at?: string
           id?: string
           key?: string
           updated_at?: string
           value?: Json
+        }
+        Relationships: []
+      }
+      auto_status_schedules: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean | null
+          next_execution: string
+          schedule_type: string
+          schedule_value: number
+          target_status: string
+          tool_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          next_execution: string
+          schedule_type: string
+          schedule_value: number
+          target_status: string
+          tool_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          next_execution?: string
+          schedule_type?: string
+          schedule_value?: number
+          target_status?: string
+          tool_name?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -263,6 +305,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_bot: boolean | null
           is_internal: boolean | null
           message: string
           sender_id: string
@@ -271,6 +314,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_bot?: boolean | null
           is_internal?: boolean | null
           message: string
           sender_id: string
@@ -279,6 +323,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_bot?: boolean | null
           is_internal?: boolean | null
           message?: string
           sender_id?: string
@@ -450,6 +495,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_chat_restrictions: {
+        Row: {
+          blocked_until: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          blocked_until?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          blocked_until?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       user_content_visibility: {
         Row: {

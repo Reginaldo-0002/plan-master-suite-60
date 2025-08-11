@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Session } from '@supabase/supabase-js';
+import { useToast } from "@/hooks/use-toast";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ContentSection } from "@/components/dashboard/ContentSection";
@@ -11,110 +11,102 @@ import { SupportChat } from "@/components/support/SupportChat";
 import { ContentCarouselPage } from "./ContentCarouselPage";
 import { Loader2 } from "lucide-react";
 
-type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'carousel' | 'settings';
+type DashboardSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'carousel' | 'settings';
+
+interface User {
+  id: string;
+  email?: string;
+}
 
 interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
-  avatar_url: string | null;
   plan: 'free' | 'vip' | 'pro';
-  pix_key: string | null;
-  total_session_time: number;
-  areas_accessed: number;
+  role: string;
   referral_code: string;
   referral_earnings: number;
+  pix_key: string | null;
+  avatar_url: string | null;
   created_at: string;
   updated_at: string;
 }
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [activeSection, setActiveSection] = useState<DashboardSection>('dashboard');
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<ActiveSection>('dashboard');
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        
-        if (!session) {
-          navigate("/auth");
-        } else {
-          // Defer profile fetch with setTimeout
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
-        }
-      }
-    );
+    checkUser();
+  }, []);
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      
-      if (!session) {
-        navigate("/auth");
-      } else {
-        fetchProfile(session.user.id);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const fetchProfile = async (userId: string) => {
+  const checkUser = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        navigate('/auth');
         return;
       }
 
-      setProfile(data);
+      setUser(user);
+
+      // Fetch user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (profileError) {
+        console.error('Error fetching profile:', profileError);
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar perfil do usuário",
+          variant: "destructive",
+        });
+      } else {
+        setProfile(profileData);
+      }
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Error checking user:', error);
+      navigate('/auth');
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleSectionChange = (section: DashboardSection) => {
+    setActiveSection(section);
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
-  if (!user || !session) {
+  if (!user || !profile) {
     return null;
   }
 
-  const renderContent = () => {
+  const renderActiveSection = () => {
     switch (activeSection) {
       case 'dashboard':
         return <DashboardContent profile={profile} />;
       case 'products':
-        return <ContentSection contentType="product" userPlan={profile?.plan || 'free'} />;
       case 'tools':
-        return <ContentSection contentType="tool" userPlan={profile?.plan || 'free'} />;
       case 'courses':
-        return <ContentSection contentType="course" userPlan={profile?.plan || 'free'} />;
       case 'tutorials':
-        return <ContentSection contentType="tutorial" userPlan={profile?.plan || 'free'} />;
+        return <ContentSection activeSection={activeSection} userPlan={profile.plan} />;
       case 'carousel':
-        return <ContentCarouselPage userPlan={profile?.plan || 'free'} />;
+        return <ContentCarouselPage />;
       case 'settings':
         return <ProfileSettings profile={profile} onProfileUpdate={setProfile} />;
       default:
@@ -123,15 +115,17 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <Sidebar 
-        profile={profile} 
-        activeSection={activeSection} 
-        onSectionChange={setActiveSection}
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar
+        activeSection={activeSection}
+        onSectionChange={handleSectionChange}
+        userPlan={profile.plan}
       />
-      <main className="flex-1 overflow-auto">
-        {renderContent()}
-      </main>
+      <div className="flex-1 ml-64">
+        <div className="p-6">
+          {renderActiveSection()}
+        </div>
+      </div>
       <SupportChat />
     </div>
   );
