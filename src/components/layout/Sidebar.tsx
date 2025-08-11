@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { Profile } from "@/types/profile";
 import {
   LayoutDashboard,
   Package,
@@ -21,26 +22,7 @@ import {
   Images
 } from "lucide-react";
 
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  plan: 'free' | 'vip' | 'pro';
-  pix_key: string | null;
-  total_session_time: number;
-  areas_accessed: number;
-  referral_code: string;
-  referral_earnings: number;
-  loyalty_level: string;
-  total_points: number;
-  last_activity: string | null;
-  preferences: any;
-  created_at: string;
-  updated_at: string;
-}
-
-type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'rules' | 'coming-soon' | 'carousel' | 'settings';
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings";
 
 interface SidebarProps {
   profile: Profile | null;

@@ -25,6 +25,11 @@ interface Content {
   show_in_carousel: boolean;
   carousel_order: number;
   carousel_image_url?: string;
+  difficulty_level: 'beginner' | 'intermediate' | 'advanced';
+  estimated_duration?: number;
+  tags?: string[];
+  published_at?: string;
+  scheduled_publish_at?: string;
 }
 
 interface AdminContentManagementProps {

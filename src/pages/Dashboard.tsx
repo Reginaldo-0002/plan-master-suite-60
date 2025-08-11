@@ -10,7 +10,7 @@ import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 
-type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile";
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -83,6 +83,10 @@ export default function Dashboard() {
     setProfile(updatedProfile);
   };
 
+  const handleSectionChange = (section: ActiveSection) => {
+    setActiveSection(section);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -113,8 +117,21 @@ export default function Dashboard() {
       case "courses":
         return <ContentSection type="courses" userPlan={profile.plan} />;
       case "tutorials":
+        return <ContentSection type="tutorials" userPlan={profile.plan} />;
+      case "rules":
         return <ContentSection type="rules" userPlan={profile.plan} />;
+      case "coming-soon":
+        return <ContentSection type="coming-soon" userPlan={profile.plan} />;
+      case "carousel":
+        return <ContentSection type="carousel" userPlan={profile.plan} />;
       case "profile":
+        return (
+          <ProfileSettings 
+            profile={profile} 
+            onProfileUpdate={handleProfileUpdate} 
+          />
+        );
+      case "settings":
         return (
           <ProfileSettings 
             profile={profile} 
@@ -129,17 +146,16 @@ export default function Dashboard() {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar 
+        profile={profile}
         activeSection={activeSection} 
-        onSectionChange={setActiveSection}
-        userPlan={profile.plan}
-        userRole={profile.role}
+        onSectionChange={handleSectionChange}
       />
       
       <main className="flex-1 overflow-y-auto p-6">
         {renderContent()}
       </main>
 
-      <SupportChat userId={profile.user_id} />
+      <SupportChat profile={profile} />
     </div>
   );
 }

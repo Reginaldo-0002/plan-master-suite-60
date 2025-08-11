@@ -1,335 +1,157 @@
 
 import { useState, useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageCircle, Send, X, Plus, MinusCircle, User, Bot, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Send, MessageCircle, X, Minimize2 } from "lucide-react";
+import { Profile } from "@/types/profile";
 
-interface ChatMessage {
-  id: string;
-  content: string;
-  isBot: boolean;
-  timestamp: Date;
-}
-
-interface ChatbotOption {
-  id: string;
-  title: string;
-  response: string;
-}
-
-interface SupportTicket {
-  id: string;
-  subject: string;
-  description: string | null;
-  status: 'open' | 'in_progress' | 'closed';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  created_at: string;
-}
-
-interface TicketMessage {
+interface Message {
   id: string;
   message: string;
+  sender_id: string;
   created_at: string;
-  profiles?: {
-    full_name: string | null;
-    role: string;
-  } | null;
+  is_bot: boolean;
 }
 
-export const SupportChat = () => {
+interface SupportChatProps {
+  profile: Profile;
+}
+
+export const SupportChat = ({ profile }: SupportChatProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [currentView, setCurrentView] = useState<'chat' | 'tickets' | 'create-ticket' | 'ticket-detail'>('chat');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputMessage, setInputMessage] = useState("");
-  const [chatbotOptions, setChatbotOptions] = useState<ChatbotOption[]>([]);
-  const [tickets, setTickets] = useState<SupportTicket[]>([]);
-  const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
-  const [ticketMessages, setTicketMessages] = useState<TicketMessage[]>([]);
-  const [newTicketMessage, setNewTicketMessage] = useState("");
-  const [newTicket, setNewTicket] = useState({
-    subject: "",
-    description: "",
-    priority: "normal" as "low" | "normal" | "high" | "urgent"
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [ticketId, setTicketId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (isOpen) {
-      fetchChatbotOptions();
-      fetchUserTickets();
+    if (isOpen && !ticketId) {
+      createOrGetTicket();
     }
-  }, [isOpen]);
-
-  useEffect(() => {
-    if (currentView === 'chat' && messages.length === 0) {
-      initializeChat();
-    }
-  }, [currentView]);
+  }, [isOpen, profile.user_id]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, ticketMessages]);
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const fetchChatbotOptions = async () => {
+  const createOrGetTicket = async () => {
     try {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('value')
-        .eq('key', 'chatbot_config')
-        .single();
+      // Primeiro, verificar se já existe um ticket aberto
+      const { data: existingTickets, error: fetchError } = await supabase
+        .from('support_tickets')
+        .select('id')
+        .eq('user_id', profile.user_id)
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(1);
 
-      if (error && error.code !== 'PGRST116') throw error;
-      
-      if (data?.value && typeof data.value === 'object' && 'menu_options' in data.value) {
-        const menuOptions = data.value.menu_options;
-        if (Array.isArray(menuOptions)) {
-          // Safe type conversion with validation
-          const validOptions = menuOptions.filter((option: any) => 
-            option && typeof option === 'object' && 
-            typeof option.id === 'string' && 
-            typeof option.title === 'string' && 
-            typeof option.response === 'string'
-          ).map((option: any) => ({
-            id: option.id as string,
-            title: option.title as string,
-            response: option.response as string
-          }));
-          setChatbotOptions(validOptions);
-        }
+      if (fetchError) throw fetchError;
+
+      if (existingTickets && existingTickets.length > 0) {
+        setTicketId(existingTickets[0].id);
+        await loadMessages(existingTickets[0].id);
       } else {
-        // Default options if none configured
-        setChatbotOptions([
-          {
-            id: "1",
-            title: "Como alterar meu plano?",
-            response: "Para alterar seu plano, acesse as configurações da sua conta e selecione a opção 'Alterar Plano'. Você pode fazer upgrade ou downgrade a qualquer momento."
-          },
-          {
-            id: "2", 
-            title: "Como funciona o programa de indicações?",
-            response: "Nosso programa de indicações oferece 10% de comissão sobre todas as vendas de usuários que você indicar. As comissões são creditadas automaticamente e podem ser sacadas via PIX."
-          },
-          {
-            id: "3",
-            title: "Problemas técnicos",
-            response: "Se você está enfrentando problemas técnicos, tente limpar o cache do navegador ou usar o modo incógnito. Se o problema persistir, abra um ticket de suporte."
-          },
-          {
-            id: "4",
-            title: "Falar com atendente",
-            response: "Entendi que você precisa falar com um atendente. Vou te direcionar para criar um ticket de suporte onde nossa equipe poderá te ajudar de forma personalizada."
-          }
-        ]);
+        // Criar novo ticket
+        const { data: newTicket, error: createError } = await supabase
+          .from('support_tickets')
+          .insert([
+            {
+              user_id: profile.user_id,
+              subject: 'Chat de Suporte',
+              description: 'Conversa iniciada pelo chat',
+              status: 'open',
+              priority: 'normal'
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        
+        setTicketId(newTicket.id);
+        
+        // Adicionar mensagem de boas-vindas
+        const welcomeMessage = {
+          id: 'welcome',
+          message: 'Olá! Como posso ajudá-lo hoje?',
+          sender_id: 'bot',
+          created_at: new Date().toISOString(),
+          is_bot: true
+        };
+        setMessages([welcomeMessage]);
       }
     } catch (error) {
-      console.error('Error fetching chatbot options:', error);
+      console.error('Error creating/getting ticket:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao iniciar chat de suporte",
+        variant: "destructive",
+      });
     }
   };
 
-  const fetchUserTickets = async () => {
+  const loadMessages = async (ticketId: string) => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data, error } = await supabase
-        .from('support_tickets')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      // Type assertion to ensure proper typing
-      const typedTickets = (data || []).map(ticket => ({
-        ...ticket,
-        status: ticket.status as 'open' | 'in_progress' | 'closed',
-        priority: ticket.priority as 'low' | 'normal' | 'high' | 'urgent'
-      }));
-      
-      setTickets(typedTickets);
-    } catch (error) {
-      console.error('Error fetching tickets:', error);
-    }
-  };
-
-  const fetchTicketMessages = async (ticketId: string) => {
-    try {
-      // First get messages
-      const { data: messagesData, error: messagesError } = await supabase
+      const { data: messagesData, error } = await supabase
         .from('support_messages')
         .select('*')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
-      if (messagesError) throw messagesError;
-
-      // Then get profiles separately
-      const senderIds = messagesData?.map(message => message.sender_id) || [];
-      const { data: profilesData } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, role')
-        .in('user_id', senderIds);
-
-      // Combine the data
-      const messagesWithProfiles = (messagesData || []).map(message => ({
-        ...message,
-        profiles: profilesData?.find(p => p.user_id === message.sender_id) || null
-      }));
-      
-      setTicketMessages(messagesWithProfiles);
-    } catch (error) {
-      console.error('Error fetching ticket messages:', error);
-    }
-  };
-
-  const initializeChat = () => {
-    const welcomeMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: "Olá! 👋 Sou o assistente virtual da plataforma. Como posso te ajudar hoje?",
-      isBot: true,
-      timestamp: new Date()
-    };
-    setMessages([welcomeMessage]);
-  };
-
-  const sendMessage = () => {
-    if (!inputMessage.trim()) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: inputMessage,
-      isBot: false,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
-    setInputMessage("");
-
-    // Simulate bot response
-    setTimeout(() => {
-      const botResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        content: "Obrigado pela sua mensagem! Para melhor te ajudar, selecione uma das opções abaixo ou descreva seu problema com mais detalhes.",
-        isBot: true,
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, botResponse]);
-    }, 1000);
-  };
-
-  const selectChatbotOption = (option: ChatbotOption) => {
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      content: option.title,
-      isBot: false,
-      timestamp: new Date()
-    };
-
-    const botResponse: ChatMessage = {
-      id: (Date.now() + 1).toString(),
-      content: option.response,
-      isBot: true,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage, botResponse]);
-
-    // If it's the "talk to agent" option, suggest creating a ticket
-    if (option.title.toLowerCase().includes('atendente') || option.title.toLowerCase().includes('humano')) {
-      setTimeout(() => {
-        const ticketSuggestion: ChatMessage = {
-          id: (Date.now() + 2).toString(),
-          content: "Gostaria de abrir um ticket de suporte para falar diretamente com nossa equipe?",
-          isBot: true,
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, ticketSuggestion]);
-      }, 2000);
-    }
-  };
-
-  const createTicket = async () => {
-    if (!newTicket.subject.trim()) {
-      toast({
-        title: "Erro",
-        description: "O assunto é obrigatório",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
-        .from('support_tickets')
-        .insert({
-          user_id: user.id,
-          subject: newTicket.subject,
-          description: newTicket.description || null,
-          priority: newTicket.priority,
-          status: 'open'
-        });
-
       if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Ticket criado com sucesso! Nossa equipe entrará em contato em breve.",
-      });
-
-      setNewTicket({ subject: "", description: "", priority: "normal" });
-      setCurrentView('tickets');
-      fetchUserTickets();
+      setMessages(messagesData || []);
     } catch (error) {
-      console.error('Error creating ticket:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar ticket. Tente novamente.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+      console.error('Error loading messages:', error);
     }
   };
 
-  const sendTicketMessage = async () => {
-    if (!selectedTicket || !newTicketMessage.trim()) return;
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !ticketId || loading) return;
 
-    setIsLoading(true);
+    setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      const { error } = await supabase
+      const { data: messageData, error } = await supabase
         .from('support_messages')
-        .insert({
-          ticket_id: selectedTicket.id,
-          sender_id: user.id,
-          message: newTicketMessage,
-          is_internal: false
-        });
+        .insert([
+          {
+            ticket_id: ticketId,
+            sender_id: profile.user_id,
+            message: newMessage.trim(),
+            is_bot: false
+          }
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setNewTicketMessage("");
-      fetchTicketMessages(selectedTicket.id);
+      setMessages(prev => [...prev, messageData]);
+      setNewMessage("");
+
+      // Simular resposta automática após 1 segundo
+      setTimeout(() => {
+        const autoReply = {
+          id: `auto-${Date.now()}`,
+          message: 'Recebemos sua mensagem! Um de nossos atendentes responderá em breve.',
+          sender_id: 'bot',
+          created_at: new Date().toISOString(),
+          is_bot: true
+        };
+        setMessages(prev => [...prev, autoReply]);
+      }, 1000);
+
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -338,32 +160,14 @@ export const SupportChat = () => {
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const openTicketDetail = (ticket: SupportTicket) => {
-    setSelectedTicket(ticket);
-    fetchTicketMessages(ticket.id);
-    setCurrentView('ticket-detail');
-  };
-
-  const getStatusBadgeColor = (status: string) => {
-    switch (status) {
-      case 'open': return 'bg-red-100 text-red-800';
-      case 'in_progress': return 'bg-yellow-100 text-yellow-800';
-      case 'closed': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityBadgeColor = (priority: string) => {
-    switch (priority) {
-      case 'urgent': return 'bg-red-100 text-red-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'normal': return 'bg-blue-100 text-blue-800';
-      case 'low': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
     }
   };
 
@@ -372,8 +176,7 @@ export const SupportChat = () => {
       <div className="fixed bottom-4 right-4 z-50">
         <Button
           onClick={() => setIsOpen(true)}
-          className="rounded-full w-14 h-14 shadow-lg"
-          size="lg"
+          className="rounded-full w-14 h-14 bg-primary hover:bg-primary/90 shadow-lg"
         >
           <MessageCircle className="w-6 h-6" />
         </Button>
@@ -382,288 +185,97 @@ export const SupportChat = () => {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50">
-      <Card className="w-96 h-[600px] shadow-xl">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5" />
-            <CardTitle className="text-lg">
-              {currentView === 'chat' ? 'Suporte - Chat' :
-               currentView === 'tickets' ? 'Meus Tickets' :
-               currentView === 'create-ticket' ? 'Novo Ticket' :
-               'Detalhes do Ticket'}
-            </CardTitle>
-          </div>
-          <div className="flex items-center gap-1">
-            {currentView !== 'chat' && (
+    <div className={`fixed bottom-4 right-4 z-50 w-80 ${isMinimized ? 'h-12' : 'h-96'} transition-all duration-300`}>
+      <Card className="h-full flex flex-col shadow-xl">
+        <CardHeader className="p-3 border-b cursor-pointer" onClick={() => setIsMinimized(!isMinimized)}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <MessageCircle className="w-5 h-5" />
+              <CardTitle className="text-sm">Suporte</CardTitle>
+            </div>
+            <div className="flex items-center gap-1">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setCurrentView('chat')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsMinimized(!isMinimized);
+                }}
               >
-                Chat
+                <Minimize2 className="w-4 h-4" />
               </Button>
-            )}
-            {currentView !== 'tickets' && (
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setCurrentView('tickets')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsOpen(false);
+                }}
               >
-                Tickets
+                <X className="w-4 h-4" />
               </Button>
-            )}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsOpen(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
+            </div>
           </div>
         </CardHeader>
 
-        <CardContent className="p-4 h-[520px] flex flex-col">
-          {currentView === 'chat' && (
-            <>
-              <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-                {messages.map((message) => (
-                  <div key={message.id} className={`flex ${message.isBot ? 'justify-start' : 'justify-end'}`}>
-                    <div className={`flex items-start gap-2 max-w-[80%] ${message.isBot ? 'flex-row' : 'flex-row-reverse'}`}>
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${message.isBot ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                        {message.isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
-                      </div>
-                      <div className={`p-3 rounded-lg ${message.isBot ? 'bg-blue-50 text-blue-900' : 'bg-gray-100 text-gray-900'}`}>
-                        <p className="text-sm">{message.content}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {message.timestamp.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                        </span>
+        {!isMinimized && (
+          <>
+            <CardContent className="flex-1 p-0">
+              <ScrollArea className="h-64 p-3">
+                <div className="space-y-3">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex gap-2 ${
+                        message.sender_id === profile.user_id || !message.is_bot
+                          ? 'justify-end'
+                          : 'justify-start'
+                      }`}
+                    >
+                      {(message.is_bot || message.sender_id !== profile.user_id) && (
+                        <Avatar className="w-6 h-6">
+                          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                            S
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                      <div
+                        className={`max-w-[70%] rounded-lg p-2 text-sm ${
+                          message.sender_id === profile.user_id || !message.is_bot
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        }`}
+                      >
+                        {message.message}
                       </div>
                     </div>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {chatbotOptions.length > 0 && (
-                <div className="mb-4">
-                  <p className="text-sm text-muted-foreground mb-2">Opções rápidas:</p>
-                  <div className="space-y-2">
-                    {chatbotOptions.map((option) => (
-                      <Button
-                        key={option.id}
-                        variant="outline"
-                        size="sm"
-                        className="w-full text-left justify-start h-auto p-2"
-                        onClick={() => selectChatbotOption(option)}
-                      >
-                        <span className="text-xs">{option.title}</span>
-                      </Button>
-                    ))}
-                  </div>
+                  ))}
+                  <div ref={messagesEndRef} />
                 </div>
-              )}
+              </ScrollArea>
+            </CardContent>
 
+            <div className="p-3 border-t">
               <div className="flex gap-2">
                 <Input
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
                   placeholder="Digite sua mensagem..."
-                  onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                  className="text-sm"
+                  disabled={loading}
                 />
-                <Button onClick={sendMessage}>
+                <Button
+                  onClick={sendMessage}
+                  size="sm"
+                  disabled={loading || !newMessage.trim()}
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>
-
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-2"
-                onClick={() => setCurrentView('create-ticket')}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Criar Ticket
-              </Button>
-            </>
-          )}
-
-          {currentView === 'tickets' && (
-            <div className="flex flex-col h-full">
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-medium">Meus Tickets</h3>
-                <Button
-                  size="sm"
-                  onClick={() => setCurrentView('create-ticket')}
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Novo
-                </Button>
-              </div>
-              <div className="flex-1 overflow-y-auto space-y-3">
-                {tickets.map((ticket) => (
-                  <div
-                    key={ticket.id}
-                    className="p-3 border rounded-lg cursor-pointer hover:bg-gray-50"
-                    onClick={() => openTicketDetail(ticket)}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <h4 className="font-medium text-sm">{ticket.subject}</h4>
-                      <Badge className={getStatusBadgeColor(ticket.status)}>
-                        {ticket.status === 'open' ? 'Aberto' : 
-                         ticket.status === 'in_progress' ? 'Andamento' : 'Fechado'}
-                      </Badge>
-                    </div>
-                    {ticket.description && (
-                      <p className="text-xs text-muted-foreground mb-2 truncate">
-                        {ticket.description}
-                      </p>
-                    )}
-                    <div className="flex justify-between items-center">
-                      <Badge className={getPriorityBadgeColor(ticket.priority)}>
-                        {ticket.priority === 'urgent' ? 'Urgente' : 
-                         ticket.priority === 'high' ? 'Alta' :
-                         ticket.priority === 'normal' ? 'Normal' : 'Baixa'}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
-          )}
-
-          {currentView === 'create-ticket' && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="subject">Assunto *</Label>
-                <Input
-                  id="subject"
-                  value={newTicket.subject}
-                  onChange={(e) => setNewTicket({...newTicket, subject: e.target.value})}
-                  placeholder="Descreva brevemente o problema..."
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  value={newTicket.description}
-                  onChange={(e) => setNewTicket({...newTicket, description: e.target.value})}
-                  placeholder="Descreva o problema em detalhes..."
-                  rows={4}
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="priority">Prioridade</Label>
-                <Select 
-                  value={newTicket.priority} 
-                  onValueChange={(value: any) => setNewTicket({...newTicket, priority: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="low">Baixa</SelectItem>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="high">Alta</SelectItem>
-                    <SelectItem value="urgent">Urgente</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div className="flex gap-2">
-                <Button 
-                  onClick={createTicket} 
-                  className="flex-1"
-                  disabled={isLoading}
-                >
-                  {isLoading ? 'Criando...' : 'Criar Ticket'}
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => setCurrentView('chat')}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {currentView === 'ticket-detail' && selectedTicket && (
-            <div className="flex flex-col h-full">
-              <div className="mb-4 p-3 border rounded-lg">
-                <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-medium">{selectedTicket.subject}</h3>
-                  <Badge className={getStatusBadgeColor(selectedTicket.status)}>
-                    {selectedTicket.status === 'open' ? 'Aberto' : 
-                     selectedTicket.status === 'in_progress' ? 'Andamento' : 'Fechado'}
-                  </Badge>
-                </div>
-                {selectedTicket.description && (
-                  <p className="text-sm text-muted-foreground mb-2">
-                    {selectedTicket.description}
-                  </p>
-                )}
-                <div className="flex justify-between items-center">
-                  <Badge className={getPriorityBadgeColor(selectedTicket.priority)}>
-                    {selectedTicket.priority === 'urgent' ? 'Urgente' : 
-                     selectedTicket.priority === 'high' ? 'Alta' :
-                     selectedTicket.priority === 'normal' ? 'Normal' : 'Baixa'}
-                  </Badge>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(selectedTicket.created_at).toLocaleString('pt-BR')}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-3 mb-4">
-                {ticketMessages.map((message) => (
-                  <div key={message.id} className="p-3 border rounded-lg">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">
-                          {message.profiles?.full_name || "Usuário"}
-                        </span>
-                        {message.profiles?.role === 'admin' && (
-                          <Badge variant="secondary">Admin</Badge>
-                        )}
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(message.created_at).toLocaleString('pt-BR')}
-                      </span>
-                    </div>
-                    <p className="text-sm">{message.message}</p>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
-              </div>
-
-              {selectedTicket.status !== 'closed' && (
-                <div className="space-y-2">
-                  <Textarea
-                    value={newTicketMessage}
-                    onChange={(e) => setNewTicketMessage(e.target.value)}
-                    placeholder="Digite sua mensagem..."
-                    rows={3}
-                  />
-                  <Button 
-                    onClick={sendTicketMessage} 
-                    className="w-full"
-                    disabled={isLoading}
-                  >
-                    <Send className="w-4 h-4 mr-2" />
-                    {isLoading ? 'Enviando...' : 'Enviar'}
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
+          </>
+        )}
       </Card>
     </div>
   );
