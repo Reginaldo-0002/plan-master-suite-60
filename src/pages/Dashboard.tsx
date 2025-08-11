@@ -6,6 +6,7 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
+import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 
 type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'settings';
@@ -127,6 +128,7 @@ const Dashboard = () => {
       <main className="flex-1 overflow-auto">
         {renderContent()}
       </main>
+      <SupportChat />
     </div>
   );
 };

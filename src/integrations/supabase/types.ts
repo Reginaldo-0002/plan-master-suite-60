@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       content: {
         Row: {
           content_type: Database["public"]["Enums"]["content_type"]
@@ -53,6 +77,48 @@ export type Database = {
         }
         Relationships: []
       }
+      notifications: {
+        Row: {
+          created_at: string
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          is_popup: boolean | null
+          message: string
+          popup_duration: number | null
+          target_plans: string[] | null
+          target_users: string[] | null
+          title: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_popup?: boolean | null
+          message: string
+          popup_duration?: number | null
+          target_plans?: string[] | null
+          target_users?: string[] | null
+          title: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_popup?: boolean | null
+          message?: string
+          popup_duration?: number | null
+          target_plans?: string[] | null
+          target_users?: string[] | null
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           areas_accessed: number | null
@@ -64,6 +130,7 @@ export type Database = {
           plan: Database["public"]["Enums"]["user_plan"]
           referral_code: string | null
           referral_earnings: number | null
+          role: string | null
           total_session_time: number | null
           updated_at: string | null
           user_id: string
@@ -78,6 +145,7 @@ export type Database = {
           plan?: Database["public"]["Enums"]["user_plan"]
           referral_code?: string | null
           referral_earnings?: number | null
+          role?: string | null
           total_session_time?: number | null
           updated_at?: string | null
           user_id: string
@@ -92,6 +160,7 @@ export type Database = {
           plan?: Database["public"]["Enums"]["user_plan"]
           referral_code?: string | null
           referral_earnings?: number | null
+          role?: string | null
           total_session_time?: number | null
           updated_at?: string | null
           user_id?: string
@@ -136,6 +205,107 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      support_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_internal: boolean | null
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_internal?: boolean | null
+          message: string
+          sender_id: string
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_internal?: boolean | null
+          message?: string
+          sender_id?: string
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "support_tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      support_tickets: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          id: string
+          priority: string
+          status: string
+          subject: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          subject: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          subject?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tool_status: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          scheduled_maintenance: Json | null
+          status: string
+          tool_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          scheduled_maintenance?: Json | null
+          status?: string
+          tool_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          scheduled_maintenance?: Json | null
+          status?: string
+          tool_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_activity_logs: {
         Row: {
