@@ -24,7 +24,7 @@ interface Ticket {
   updated_at: string;
   profiles?: {
     full_name: string | null;
-  };
+  } | null;
 }
 
 interface TicketMessage {
@@ -37,7 +37,7 @@ interface TicketMessage {
   profiles?: {
     full_name: string | null;
     role: string;
-  };
+  } | null;
 }
 
 interface ChatbotOption {
@@ -93,24 +93,30 @@ export const AdminSupportManagement = () => {
 
   const fetchTickets = async () => {
     try {
-      const { data, error } = await supabase
+      // First get tickets
+      const { data: ticketsData, error: ticketsError } = await supabase
         .from('support_tickets')
-        .select(`
-          *,
-          profiles(full_name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      
-      // Type assertion to ensure proper typing
-      const typedTickets = (data || []).map(ticket => ({
+      if (ticketsError) throw ticketsError;
+
+      // Then get profiles separately to avoid relation errors
+      const userIds = ticketsData?.map(ticket => ticket.user_id) || [];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name')
+        .in('user_id', userIds);
+
+      // Combine the data
+      const ticketsWithProfiles = (ticketsData || []).map(ticket => ({
         ...ticket,
         status: ticket.status as 'open' | 'in_progress' | 'closed',
-        priority: ticket.priority as 'low' | 'normal' | 'high' | 'urgent'
+        priority: ticket.priority as 'low' | 'normal' | 'high' | 'urgent',
+        profiles: profilesData?.find(p => p.user_id === ticket.user_id) || null
       }));
       
-      setTickets(typedTickets);
+      setTickets(ticketsWithProfiles);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
@@ -125,27 +131,29 @@ export const AdminSupportManagement = () => {
 
   const fetchTicketMessages = async (ticketId: string) => {
     try {
-      const { data, error } = await supabase
+      // First get messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('support_messages')
-        .select(`
-          *,
-          profiles(full_name, role)
-        `)
+        .select('*')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      
-      // Type assertion and null safety
-      const typedMessages = (data || []).map(message => ({
+      if (messagesError) throw messagesError;
+
+      // Then get profiles separately
+      const senderIds = messagesData?.map(message => message.sender_id) || [];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, role')
+        .in('user_id', senderIds);
+
+      // Combine the data
+      const messagesWithProfiles = (messagesData || []).map(message => ({
         ...message,
-        profiles: message.profiles ? {
-          full_name: message.profiles.full_name || null,
-          role: message.profiles.role || 'user'
-        } : undefined
+        profiles: profilesData?.find(p => p.user_id === message.sender_id) || null
       }));
       
-      setTicketMessages(typedMessages);
+      setTicketMessages(messagesWithProfiles);
     } catch (error) {
       console.error('Error fetching ticket messages:', error);
       toast({
@@ -167,10 +175,16 @@ export const AdminSupportManagement = () => {
       if (error && error.code !== 'PGRST116') throw error;
       
       if (data?.value && typeof data.value === 'object' && 'menu_options' in data.value) {
-        // Safe type conversion
         const menuOptions = data.value.menu_options;
         if (Array.isArray(menuOptions)) {
-          setChatbotConfig(menuOptions as ChatbotOption[]);
+          // Safe type conversion with validation
+          const validOptions = menuOptions.filter((option: any) => 
+            option && typeof option === 'object' && 
+            typeof option.id === 'string' && 
+            typeof option.title === 'string' && 
+            typeof option.response === 'string'
+          ) as ChatbotOption[];
+          setChatbotConfig(validOptions);
         }
       } else {
         // Set default chatbot options
@@ -230,7 +244,6 @@ export const AdminSupportManagement = () => {
     if (!selectedTicket || !newMessage.trim()) return;
 
     try {
-      // Get current user profile
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
@@ -282,7 +295,7 @@ export const AdminSupportManagement = () => {
         .from('admin_settings')
         .upsert({ 
           key: 'chatbot_config',
-          value: { menu_options: updatedOptions } as any
+          value: { menu_options: updatedOptions }
         });
 
       if (error) throw error;
@@ -312,7 +325,7 @@ export const AdminSupportManagement = () => {
         .from('admin_settings')
         .upsert({ 
           key: 'chatbot_config',
-          value: { menu_options: updatedOptions } as any
+          value: { menu_options: updatedOptions }
         });
 
       if (error) throw error;

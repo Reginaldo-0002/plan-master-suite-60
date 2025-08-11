@@ -40,7 +40,7 @@ interface TicketMessage {
   profiles?: {
     full_name: string | null;
     role: string;
-  };
+  } | null;
 }
 
 export const SupportChat = () => {
@@ -94,10 +94,16 @@ export const SupportChat = () => {
       if (error && error.code !== 'PGRST116') throw error;
       
       if (data?.value && typeof data.value === 'object' && 'menu_options' in data.value) {
-        // Safe type conversion
         const menuOptions = data.value.menu_options;
         if (Array.isArray(menuOptions)) {
-          setChatbotOptions(menuOptions as ChatbotOption[]);
+          // Safe type conversion with validation
+          const validOptions = menuOptions.filter((option: any) => 
+            option && typeof option === 'object' && 
+            typeof option.id === 'string' && 
+            typeof option.title === 'string' && 
+            typeof option.response === 'string'
+          ) as ChatbotOption[];
+          setChatbotOptions(validOptions);
         }
       } else {
         // Default options if none configured
@@ -157,27 +163,29 @@ export const SupportChat = () => {
 
   const fetchTicketMessages = async (ticketId: string) => {
     try {
-      const { data, error } = await supabase
+      // First get messages
+      const { data: messagesData, error: messagesError } = await supabase
         .from('support_messages')
-        .select(`
-          *,
-          profiles(full_name, role)
-        `)
+        .select('*')
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
-      if (error) throw error;
-      
-      // Type assertion and null safety
-      const typedMessages = (data || []).map(message => ({
+      if (messagesError) throw messagesError;
+
+      // Then get profiles separately
+      const senderIds = messagesData?.map(message => message.sender_id) || [];
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, role')
+        .in('user_id', senderIds);
+
+      // Combine the data
+      const messagesWithProfiles = (messagesData || []).map(message => ({
         ...message,
-        profiles: message.profiles ? {
-          full_name: message.profiles.full_name || null,
-          role: message.profiles.role || 'user'
-        } : undefined
+        profiles: profilesData?.find(p => p.user_id === message.sender_id) || null
       }));
       
-      setTicketMessages(typedMessages);
+      setTicketMessages(messagesWithProfiles);
     } catch (error) {
       console.error('Error fetching ticket messages:', error);
     }
