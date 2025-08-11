@@ -28,6 +28,8 @@ interface Profile {
   referral_earnings: number;
   pix_key: string | null;
   avatar_url: string | null;
+  total_session_time: number;
+  areas_accessed: number;
   created_at: string;
   updated_at: string;
 }
@@ -84,6 +86,10 @@ const Dashboard = () => {
     setActiveSection(section);
   };
 
+  const handleProfileUpdate = (updatedProfile: Profile) => {
+    setProfile(updatedProfile);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -104,11 +110,11 @@ const Dashboard = () => {
       case 'tools':
       case 'courses':
       case 'tutorials':
-        return <ContentSection activeSection={activeSection} userPlan={profile.plan} />;
+        return <ContentSection section={activeSection} userPlan={profile.plan} />;
       case 'carousel':
-        return <ContentCarouselPage />;
+        return <ContentCarouselPage userPlan={profile.plan} />;
       case 'settings':
-        return <ProfileSettings profile={profile} onProfileUpdate={setProfile} />;
+        return <ProfileSettings profile={profile} onProfileUpdate={handleProfileUpdate} />;
       default:
         return <DashboardContent profile={profile} />;
     }

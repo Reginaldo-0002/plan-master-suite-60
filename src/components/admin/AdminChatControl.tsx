@@ -17,10 +17,16 @@ interface ChatRestriction {
   blocked_until: string | null;
   reason: string | null;
   created_at: string;
-  profiles?: {
+  user_profile?: {
     full_name: string | null;
     plan: string;
   } | null;
+}
+
+interface UserProfile {
+  user_id: string;
+  full_name: string | null;
+  plan: string;
 }
 
 export const AdminChatControl = () => {
@@ -31,7 +37,7 @@ export const AdminChatControl = () => {
   const [blockDuration, setBlockDuration] = useState("");
   const [blockUnit, setBlockUnit] = useState<"minutes" | "hours" | "days">("hours");
   const [blockReason, setBlockReason] = useState("");
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -63,19 +69,34 @@ export const AdminChatControl = () => {
 
   const fetchUserRestrictions = async () => {
     try {
-      const { data, error } = await supabase
+      // First get the restrictions
+      const { data: restrictions, error: restrictionsError } = await supabase
         .from('user_chat_restrictions')
-        .select(`
-          *,
-          profiles (
-            full_name,
-            plan
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUserRestrictions(data || []);
+      if (restrictionsError) throw restrictionsError;
+
+      // Then get user profiles for those restrictions
+      if (restrictions && restrictions.length > 0) {
+        const userIds = restrictions.map(r => r.user_id);
+        const { data: profiles, error: profilesError } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, plan')
+          .in('user_id', userIds);
+
+        if (profilesError) throw profilesError;
+
+        // Combine the data
+        const enrichedRestrictions = restrictions.map(restriction => ({
+          ...restriction,
+          user_profile: profiles?.find(p => p.user_id === restriction.user_id) || null
+        }));
+
+        setUserRestrictions(enrichedRestrictions);
+      } else {
+        setUserRestrictions([]);
+      }
     } catch (error) {
       console.error('Error fetching user restrictions:', error);
     }
@@ -349,10 +370,10 @@ export const AdminChatControl = () => {
               <div key={restriction.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div>
                   <p className="font-medium">
-                    {restriction.profiles?.full_name || 'Usuário sem nome'}
+                    {restriction.user_profile?.full_name || 'Usuário sem nome'}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    Plano: {restriction.profiles?.plan} | 
+                    Plano: {restriction.user_profile?.plan} | 
                     Bloqueado até: {new Date(restriction.blocked_until!).toLocaleString('pt-BR')}
                   </p>
                   {restriction.reason && (
