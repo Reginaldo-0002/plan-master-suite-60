@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,13 +19,13 @@ interface Content {
   description: string | null;
   content_type: 'product' | 'tool' | 'course' | 'tutorial';
   video_url: string | null;
-  content_url: string | null;
+  content_url?: string | null;
   hero_image_url: string | null;
-  hero_image_alt: string | null;
-  image_url: string | null;
+  hero_image_alt?: string | null;
+  image_url?: string | null;
   carousel_image_url: string | null;
   is_active: boolean;
-  is_premium: boolean;
+  is_premium?: boolean;
   required_plan: 'free' | 'vip' | 'pro';
   status: string | null;
   published_at: string | null;
@@ -83,13 +82,9 @@ export const AdminContentManagement = () => {
           description,
           content_type,
           video_url,
-          content_url,
           hero_image_url,
-          hero_image_alt,
-          image_url,
           carousel_image_url,
           is_active,
-          is_premium,
           required_plan,
           status,
           published_at,
@@ -108,7 +103,16 @@ export const AdminContentManagement = () => {
 
       if (error) throw error;
       
-      setContent(data || []);
+      // Transform data to match our interface, adding optional fields
+      const transformedData = (data || []).map(item => ({
+        ...item,
+        content_url: null,
+        hero_image_alt: null,
+        image_url: null,
+        is_premium: false
+      }));
+      
+      setContent(transformedData);
     } catch (error) {
       console.error('Error fetching content:', error);
       toast({
@@ -132,26 +136,30 @@ export const AdminContentManagement = () => {
     }
 
     try {
+      const insertData: any = {
+        title,
+        description,
+        content_type: contentType,
+        video_url: videoUrl || null,
+        hero_image_url: heroImageUrl || null,
+        carousel_image_url: carouselImageUrl || null,
+        is_active: isActive,
+        required_plan: requiredPlan,
+        show_in_carousel: showInCarousel,
+        difficulty_level: difficultyLevel,
+        estimated_duration: estimatedDuration,
+        status: 'draft'
+      };
+
+      // Only add optional fields if they exist
+      if (contentUrl) insertData.content_url = contentUrl;
+      if (heroImageAlt) insertData.hero_image_alt = heroImageAlt;
+      if (imageUrl) insertData.image_url = imageUrl;
+      if (isPremium !== undefined) insertData.is_premium = isPremium;
+
       const { error } = await supabase
         .from('content')
-        .insert([{
-          title,
-          description,
-          content_type: contentType,
-          video_url: videoUrl,
-          content_url: contentUrl,
-          hero_image_url: heroImageUrl,
-          hero_image_alt: heroImageAlt,
-          image_url: imageUrl,
-          carousel_image_url: carouselImageUrl,
-          is_active: isActive,
-          is_premium: isPremium,
-          required_plan: requiredPlan,
-          show_in_carousel: showInCarousel,
-          difficulty_level: difficultyLevel,
-          estimated_duration: estimatedDuration,
-          status: 'draft'
-        }]);
+        .insert([insertData]);
 
       if (error) throw error;
 
@@ -177,26 +185,30 @@ export const AdminContentManagement = () => {
     if (!selectedContent) return;
 
     try {
+      const updateData: any = {
+        title,
+        description,
+        content_type: contentType,
+        video_url: videoUrl || null,
+        hero_image_url: heroImageUrl || null,
+        carousel_image_url: carouselImageUrl || null,
+        is_active: isActive,
+        required_plan: requiredPlan,
+        show_in_carousel: showInCarousel,
+        difficulty_level: difficultyLevel,
+        estimated_duration: estimatedDuration,
+        updated_at: new Date().toISOString()
+      };
+
+      // Only add optional fields if they exist
+      if (contentUrl) updateData.content_url = contentUrl;
+      if (heroImageAlt) updateData.hero_image_alt = heroImageAlt;
+      if (imageUrl) updateData.image_url = imageUrl;
+      if (isPremium !== undefined) updateData.is_premium = isPremium;
+
       const { error } = await supabase
         .from('content')
-        .update({
-          title,
-          description,
-          content_type: contentType,
-          video_url: videoUrl,
-          content_url: contentUrl,
-          hero_image_url: heroImageUrl,
-          hero_image_alt: heroImageAlt,
-          image_url: imageUrl,
-          carousel_image_url: carouselImageUrl,
-          is_active: isActive,
-          is_premium: isPremium,
-          required_plan: requiredPlan,
-          show_in_carousel: showInCarousel,
-          difficulty_level: difficultyLevel,
-          estimated_duration: estimatedDuration,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', selectedContent.id);
 
       if (error) throw error;
@@ -248,26 +260,29 @@ export const AdminContentManagement = () => {
 
   const duplicateContent = async (content: Content) => {
     try {
+      const insertData: any = {
+        title: `${content.title} (Cópia)`,
+        description: content.description,
+        content_type: content.content_type,
+        video_url: content.video_url,
+        hero_image_url: content.hero_image_url,
+        carousel_image_url: content.carousel_image_url,
+        is_active: content.is_active,
+        required_plan: content.required_plan,
+        show_in_carousel: content.show_in_carousel,
+        difficulty_level: content.difficulty_level,
+        estimated_duration: content.estimated_duration,
+        status: 'draft'
+      };
+
+      if (content.content_url) insertData.content_url = content.content_url;
+      if (content.hero_image_alt) insertData.hero_image_alt = content.hero_image_alt;
+      if (content.image_url) insertData.image_url = content.image_url;
+      if (content.is_premium !== undefined) insertData.is_premium = content.is_premium;
+
       const { error } = await supabase
         .from('content')
-        .insert([{
-          title: `${content.title} (Cópia)`,
-          description: content.description,
-          content_type: content.content_type,
-          video_url: content.video_url,
-          content_url: content.content_url,
-          hero_image_url: content.hero_image_url,
-          hero_image_alt: content.hero_image_alt,
-          image_url: content.image_url,
-          carousel_image_url: content.carousel_image_url,
-          is_active: content.is_active,
-          is_premium: content.is_premium,
-          required_plan: content.required_plan,
-          show_in_carousel: content.show_in_carousel,
-          difficulty_level: content.difficulty_level,
-          estimated_duration: content.estimated_duration,
-          status: 'draft'
-        }]);
+        .insert([insertData]);
 
       if (error) throw error;
 
@@ -299,7 +314,7 @@ export const AdminContentManagement = () => {
     setImageUrl(content.image_url || "");
     setCarouselImageUrl(content.carousel_image_url || "");
     setIsActive(content.is_active);
-    setIsPremium(content.is_premium);
+    setIsPremium(content.is_premium || false);
     setRequiredPlan(content.required_plan);
     setShowInCarousel(content.show_in_carousel);
     setDifficultyLevel(content.difficulty_level || "beginner");
@@ -343,6 +358,10 @@ export const AdminContentManagement = () => {
     setSelectedContentForTopics(content);
     setShowTopicsEditor(true);
   };
+
+  if (loading) {
+    return <div className="flex justify-center p-8">Carregando...</div>;
+  }
 
   return (
     <div className="flex-1 space-y-8 p-8">

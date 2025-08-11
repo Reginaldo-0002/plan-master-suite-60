@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -118,7 +117,14 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         .order('resource_order', { ascending: true });
 
       if (error) throw error;
-      setResources(data || []);
+      
+      // Transform the data to ensure proper typing
+      const typedResources: Resource[] = (data || []).map(item => ({
+        ...item,
+        resource_type: item.resource_type as Resource['resource_type']
+      }));
+      
+      setResources(typedResources);
     } catch (error) {
       console.error('Error fetching resources:', error);
       toast({
