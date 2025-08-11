@@ -1,67 +1,116 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, FileText, MessageSquare, TrendingUp, Clock, Database } from "lucide-react";
+import { 
+  Users, 
+  DollarSign, 
+  TrendingUp, 
+  Bell,
+  FileText,
+  MessageSquare,
+  Activity,
+  Shield
+} from "lucide-react";
 
 interface DashboardStats {
   totalUsers: number;
-  newUsersToday: number;
+  activeUsers: number;
+  totalEarnings: number;
+  pendingWithdrawals: number;
   totalContent: number;
+  activeContent: number;
   openTickets: number;
-  onlineUsers: number;
-  revenue: number;
+  activeNotifications: number;
 }
 
 export const AdminDashboardContent = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
-    newUsersToday: 0,
+    activeUsers: 0,
+    totalEarnings: 0,
+    pendingWithdrawals: 0,
     totalContent: 0,
+    activeContent: 0,
     openTickets: 0,
-    onlineUsers: 0,
-    revenue: 0,
+    activeNotifications: 0
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardStats();
+    
+    // Set up real-time updates
+    const channels = [
+      supabase.channel('dashboard-profiles').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'profiles'
+      }, fetchDashboardStats),
+      
+      supabase.channel('dashboard-content').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'content'
+      }, fetchDashboardStats),
+      
+      supabase.channel('dashboard-tickets').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'support_tickets'
+      }, fetchDashboardStats),
+      
+      supabase.channel('dashboard-withdrawals').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'withdrawal_requests'
+      }, fetchDashboardStats),
+      
+      supabase.channel('dashboard-notifications').on('postgres_changes', {
+        event: '*', schema: 'public', table: 'notifications'
+      }, fetchDashboardStats)
+    ];
+
+    channels.forEach(channel => channel.subscribe());
+
+    return () => {
+      channels.forEach(channel => supabase.removeChannel(channel));
+    };
   }, []);
 
   const fetchDashboardStats = async () => {
     try {
-      // Fetch total users
-      const { count: totalUsers } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true });
+      // Fetch all stats in parallel
+      const [
+        profilesResult,
+        contentResult,
+        ticketsResult,
+        withdrawalsResult,
+        notificationsResult
+      ] = await Promise.all([
+        supabase.from('profiles').select('*'),
+        supabase.from('content').select('*'),
+        supabase.from('support_tickets').select('*'),
+        supabase.from('withdrawal_requests').select('*'),
+        supabase.from('notifications').select('*')
+      ]);
 
-      // Fetch new users today
-      const today = new Date().toISOString().split('T')[0];
-      const { count: newUsersToday } = await supabase
-        .from('profiles')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', today);
+      const profiles = profilesResult.data || [];
+      const content = contentResult.data || [];
+      const tickets = ticketsResult.data || [];
+      const withdrawals = withdrawalsResult.data || [];
+      const notifications = notificationsResult.data || [];
 
-      // Fetch total content
-      const { count: totalContent } = await supabase
-        .from('content')
-        .select('*', { count: 'exact', head: true });
+      // Calculate earnings
+      const totalEarnings = profiles.reduce((sum, profile) => 
+        sum + (Number(profile.referral_earnings) || 0), 0
+      );
 
-      // Fetch open tickets
-      const { count: openTickets } = await supabase
-        .from('support_tickets')
-        .select('*', { count: 'exact', head: true })
-        .neq('status', 'closed');
+      const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending').length;
 
       setStats({
-        totalUsers: totalUsers || 0,
-        newUsersToday: newUsersToday || 0,
-        totalContent: totalContent || 0,
-        openTickets: openTickets || 0,
-        onlineUsers: 0, // This would need real-time presence tracking
-        revenue: 0, // This would come from payment integration
+        totalUsers: profiles.length,
+        activeUsers: profiles.filter(p => p.plan !== 'free').length,
+        totalEarnings,
+        pendingWithdrawals,
+        totalContent: content.length,
+        activeContent: content.filter(c => c.is_active).length,
+        openTickets: tickets.filter(t => t.status === 'open').length,
+        activeNotifications: notifications.filter(n => n.is_active).length
       });
+
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -69,55 +118,49 @@ export const AdminDashboardContent = () => {
     }
   };
 
-  const cleanupOldLogs = async () => {
-    try {
-      const nineDaysAgo = new Date();
-      nineDaysAgo.setDate(nineDaysAgo.getDate() - 90);
-
-      const { error } = await supabase
-        .from('user_activity_logs')
-        .delete()
-        .lt('created_at', nineDaysAgo.toISOString());
-
-      if (error) throw error;
-
-      alert('Logs antigos removidos com sucesso!');
-      fetchDashboardStats();
-    } catch (error) {
-      console.error('Error cleaning up logs:', error);
-      alert('Erro ao limpar logs antigos');
-    }
-  };
-
-  const statsCards = [
+  const statCards = [
     {
       title: "Total de Usuários",
       value: stats.totalUsers,
-      description: `+${stats.newUsersToday} hoje`,
+      description: `${stats.activeUsers} usuários pagantes`,
       icon: Users,
-      color: "text-blue-600",
+      color: "text-blue-600"
+    },
+    {
+      title: "Ganhos Totais",
+      value: `R$ ${stats.totalEarnings.toFixed(2)}`,
+      description: `${stats.pendingWithdrawals} saques pendentes`,
+      icon: DollarSign,
+      color: "text-green-600"
     },
     {
       title: "Conteúdos",
       value: stats.totalContent,
-      description: "Produtos, cursos, ferramentas",
+      description: `${stats.activeContent} ativos`,
       icon: FileText,
-      color: "text-green-600",
+      color: "text-purple-600"
     },
     {
       title: "Tickets Abertos",
       value: stats.openTickets,
-      description: "Suporte pendente",
+      description: "Suporte necessário",
       icon: MessageSquare,
-      color: "text-orange-600",
+      color: "text-yellow-600"
     },
     {
-      title: "Usuários Online",
-      value: stats.onlineUsers,
-      description: "Última hora",
-      icon: Clock,
-      color: "text-purple-600",
+      title: "Notificações Ativas",
+      value: stats.activeNotifications,
+      description: "Sendo exibidas",
+      icon: Bell,
+      color: "text-red-600"
     },
+    {
+      title: "Taxa de Conversão",
+      value: stats.totalUsers > 0 ? `${((stats.activeUsers / stats.totalUsers) * 100).toFixed(1)}%` : "0%",
+      description: "Free para Pago",
+      icon: TrendingUp,
+      color: "text-orange-600"
+    }
   ];
 
   return (
@@ -126,104 +169,121 @@ export const AdminDashboardContent = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard Administrativo</h2>
           <p className="text-muted-foreground">
-            Visão geral do sistema e métricas principais
+            Visão geral da plataforma e métricas principais
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Badge variant="secondary" className="text-sm">
-            <Database className="w-4 h-4 mr-1" />
-            Sistema Ativo
-          </Badge>
+        <div className="flex items-center gap-2">
+          <Shield className="w-8 h-8 text-primary" />
+          <div>
+            <div className="text-sm font-medium text-foreground">Sistema Seguro</div>
+            <div className="text-xs text-muted-foreground">RLS Ativo</div>
+          </div>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statsCards.map((stat, index) => {
-          const Icon = stat.icon;
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {statCards.map((card, index) => {
+          const Icon = card.icon;
           return (
             <Card key={index} className="border-border">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {stat.title}
+                  {card.title}
                 </CardTitle>
-                <Icon className={`h-4 w-4 ${stat.color}`} />
+                <Icon className={`h-5 w-5 ${card.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-                <p className="text-xs text-muted-foreground">
-                  {stat.description}
-                </p>
+                <div className="text-2xl font-bold text-foreground">
+                  {card.value}
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  {card.description}
+                </div>
               </CardContent>
             </Card>
           );
         })}
       </div>
 
-      {/* Management Cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-border">
           <CardHeader>
-            <CardTitle className="text-lg text-foreground">Limpeza de Dados</CardTitle>
+            <CardTitle className="text-lg text-foreground flex items-center gap-2">
+              <Activity className="w-5 h-5" />
+              Atividade Recente
+            </CardTitle>
             <CardDescription>
-              Gerencie e limpe dados antigos do sistema
+              Últimas atividades na plataforma
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Button 
-              onClick={cleanupOldLogs}
-              variant="outline"
-              className="w-full"
-            >
-              Limpar Logs Antigos (90+ dias)
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border">
-          <CardHeader>
-            <CardTitle className="text-lg text-foreground">Atividade Recente</CardTitle>
-            <CardDescription>
-              Últimas ações dos usuários
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-sm text-muted-foreground">
-              Sistema monitorando em tempo real...
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <Users className="w-4 h-4 text-blue-600" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">Novos usuários hoje</div>
+                  <div className="text-xs text-muted-foreground">Sistema em crescimento</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <DollarSign className="w-4 h-4 text-green-600" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">Ganhos em tempo real</div>
+                  <div className="text-xs text-muted-foreground">Sistema de afiliados ativo</div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 border rounded-lg">
+                <MessageSquare className="w-4 h-4 text-yellow-600" />
+                <div className="flex-1">
+                  <div className="text-sm font-medium">Suporte ativo</div>
+                  <div className="text-xs text-muted-foreground">Chat em tempo real</div>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         <Card className="border-border">
           <CardHeader>
-            <CardTitle className="text-lg text-foreground">Performance</CardTitle>
+            <CardTitle className="text-lg text-foreground flex items-center gap-2">
+              <Shield className="w-5 h-5" />
+              Status do Sistema
+            </CardTitle>
             <CardDescription>
-              Status dos serviços do sistema
+              Saúde e segurança da plataforma
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              <span className="text-sm text-foreground">Todos os serviços operacionais</span>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <div className="text-sm font-medium">Banco de Dados</div>
+                  <div className="text-xs text-muted-foreground">Supabase RLS</div>
+                </div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <div className="text-sm font-medium">Autenticação</div>
+                  <div className="text-xs text-muted-foreground">JWT + RLS</div>
+                </div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
+              
+              <div className="flex items-center justify-between p-3 border rounded-lg">
+                <div>
+                  <div className="text-sm font-medium">Tempo Real</div>
+                  <div className="text-xs text-muted-foreground">WebSockets</div>
+                </div>
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
-
-      {/* Recent Activity */}
-      <Card className="border-border">
-        <CardHeader>
-          <CardTitle className="text-lg text-foreground">Logs de Atividade Recentes</CardTitle>
-          <CardDescription>
-            Últimas ações registradas no sistema
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-sm text-muted-foreground text-center py-8">
-            Sistema de logs em tempo real ativo
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };

@@ -1,243 +1,324 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Lock, Play, Search, Filter } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { Video, FileText, Lock, Play, BookOpen } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface Content {
   id: string;
   title: string;
   description: string | null;
+  content_type: string;
   video_url: string | null;
-  content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: string;
   is_active: boolean;
   order_index: number;
   created_at: string;
-  updated_at: string;
 }
 
 interface ContentSectionProps {
-  type: 'product' | 'tool' | 'course' | 'tutorial';
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: string;
 }
 
-const planHierarchy = { free: 0, vip: 1, pro: 2 };
-
-export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
-  const [content, setContent] = useState<Content[]>([]);
+export const ContentSection = ({ userPlan }: ContentSectionProps) => {
+  const [contents, setContents] = useState<Content[]>([]);
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterPlan, setFilterPlan] = useState<'all' | 'free' | 'vip' | 'pro'>('all');
+  const { toast } = useToast();
 
   useEffect(() => {
-    fetchContent();
-  }, [type]);
+    fetchContents();
+    
+    const channel = supabase
+      .channel('content-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'content'
+      }, () => {
+        fetchContents();
+      })
+      .subscribe();
 
-  const fetchContent = async () => {
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchContents = async () => {
     try {
-      setLoading(true);
       const { data, error } = await supabase
         .from('content')
         .select('*')
-        .eq('content_type', type)
         .eq('is_active', true)
         .order('order_index', { ascending: true });
 
-      if (error) {
-        console.error('Error fetching content:', error);
-        return;
-      }
-
-      setContent(data || []);
+      if (error) throw error;
+      setContents(data || []);
     } catch (error) {
-      console.error('Error fetching content:', error);
+      console.error('Error fetching contents:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar conteúdos",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const canAccess = (requiredPlan: string) => {
-    return planHierarchy[userPlan] >= planHierarchy[requiredPlan as keyof typeof planHierarchy];
+  const canAccessContent = (requiredPlan: string) => {
+    const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
+    return planHierarchy[userPlan as keyof typeof planHierarchy] >= planHierarchy[requiredPlan as keyof typeof planHierarchy];
+  };
+
+  const openContentViewer = (content: Content) => {
+    if (!canAccessContent(content.required_plan)) {
+      toast({
+        title: "Acesso Restrito",
+        description: `Este conteúdo requer plano ${content.required_plan.toUpperCase()}`,
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setSelectedContent(content);
+    setIsViewerOpen(true);
   };
 
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
-      case 'pro':
-        return 'bg-plan-pro text-white';
-      case 'vip':
-        return 'bg-plan-vip text-white';
-      default:
-        return 'bg-plan-free text-white';
+      case 'free': return 'bg-gray-100 text-gray-800';
+      case 'vip': return 'bg-blue-100 text-blue-800';
+      case 'pro': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getTypeTitle = () => {
+  const getContentTypeIcon = (type: string) => {
     switch (type) {
-      case 'product':
-        return 'Produtos';
-      case 'tool':
-        return 'Ferramentas';
-      case 'course':
-        return 'Cursos';
-      case 'tutorial':
-        return 'Tutoriais';
-      default:
-        return 'Conteúdo';
+      case 'video': return <Video className="w-5 h-5" />;
+      case 'course': return <BookOpen className="w-5 h-5" />;
+      default: return <FileText className="w-5 h-5" />;
     }
   };
 
-  const getTypeDescription = () => {
-    switch (type) {
-      case 'product':
-        return 'Descubra nossos produtos exclusivos e materiais de apoio';
-      case 'tool':
-        return 'Acesse ferramentas poderosas para acelerar seus resultados';
-      case 'course':
-        return 'Aprenda com nossos cursos estruturados e completos';
-      case 'tutorial':
-        return 'Tutoriais passo a passo para dominar nossa plataforma';
-      default:
-        return 'Explore nosso conteúdo exclusivo';
-    }
-  };
-
-  const filteredContent = content.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
-    const matchesFilter = filterPlan === 'all' || item.required_plan === filterPlan;
-    return matchesSearch && matchesFilter;
-  });
-
-  if (loading) {
-    return (
-      <div className="p-6">
-        <div className="space-y-4">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="shadow-card border-card-border">
-              <CardContent className="p-6">
-                <div className="animate-pulse space-y-3">
-                  <div className="h-4 bg-muted rounded w-3/4"></div>
-                  <div className="h-3 bg-muted rounded w-1/2"></div>
-                  <div className="h-8 bg-muted rounded w-24"></div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const freeContents = contents.filter(c => c.required_plan === 'free');
+  const vipContents = contents.filter(c => c.required_plan === 'vip');
+  const proContents = contents.filter(c => c.required_plan === 'pro');
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="space-y-4">
-        <div>
-          <h1 className="text-3xl font-bold font-heading text-foreground">
-            {getTypeTitle()}
-          </h1>
-          <p className="text-muted-foreground">
-            {getTypeDescription()}
-          </p>
-        </div>
-
-        {/* Search and Filter */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder={`Buscar ${getTypeTitle().toLowerCase()}...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-muted-foreground" />
-            <select
-              value={filterPlan}
-              onChange={(e) => setFilterPlan(e.target.value as any)}
-              className="px-3 py-2 border border-border rounded-md bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-            >
-              <option value="all">Todos os planos</option>
-              <option value="free">Free</option>
-              <option value="vip">VIP</option>
-              <option value="pro">Pro</option>
-            </select>
-          </div>
-        </div>
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground mb-2">Conteúdos Disponíveis</h2>
+        <p className="text-muted-foreground">
+          Acesse vídeos, cursos e materiais exclusivos baseados no seu plano
+        </p>
       </div>
 
-      {/* Content Grid */}
-      {filteredContent.length === 0 ? (
-        <Card className="shadow-card border-card-border">
-          <CardContent className="p-12 text-center">
-            <div className="text-muted-foreground">
-              {searchTerm || filterPlan !== 'all' 
-                ? "Nenhum conteúdo encontrado com os filtros aplicados."
-                : `Nenhum ${getTypeTitle().toLowerCase()} disponível no momento.`
-              }
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredContent.map((item) => {
-            const hasAccess = canAccess(item.required_plan);
-            
-            return (
-              <Card 
-                key={item.id} 
-                className={`shadow-card border-card-border transition-all duration-200 hover:shadow-card-hover ${
-                  hasAccess ? 'cursor-pointer' : 'opacity-75'
-                }`}
-              >
-                <CardHeader className="space-y-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg font-semibold text-foreground line-clamp-2">
-                      {item.title}
-                    </CardTitle>
-                    <Badge className={`${getPlanBadgeColor(item.required_plan)} text-xs shrink-0 ml-2`}>
-                      {item.required_plan.toUpperCase()}
-                    </Badge>
+      {/* Free Content */}
+      {freeContents.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-foreground">Conteúdo Gratuito</h3>
+            <Badge className="bg-gray-100 text-gray-800">FREE</Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {freeContents.map((content) => (
+              <Card key={content.id} className="border-border cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getContentTypeIcon(content.content_type)}
+                      <Badge className={getPlanBadgeColor(content.required_plan)}>
+                        {content.required_plan.toUpperCase()}
+                      </Badge>
+                    </div>
                   </div>
-                  {item.description && (
-                    <CardDescription className="line-clamp-3">
-                      {item.description}
+                  <CardTitle className="text-lg text-foreground">{content.title}</CardTitle>
+                  {content.description && (
+                    <CardDescription className="text-sm">
+                      {content.description}
                     </CardDescription>
                   )}
                 </CardHeader>
-                <CardContent className="pt-0">
-                  {hasAccess ? (
-                    <Button 
-                      className="w-full gradient-primary"
-                      onClick={() => {
-                        // TODO: Open content modal or navigate to content page
-                        console.log('Open content:', item.id);
-                      }}
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      Acessar Conteúdo
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="outline" 
-                      className="w-full" 
-                      disabled
-                    >
-                      <Lock className="w-4 h-4 mr-2" />
-                      Requer plano {item.required_plan.toUpperCase()}
-                    </Button>
-                  )}
+                <CardContent>
+                  <Button 
+                    onClick={() => openContentViewer(content)}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    <Play className="w-4 h-4 mr-2" />
+                    Acessar Conteúdo
+                  </Button>
                 </CardContent>
               </Card>
-            );
-          })}
+            ))}
+          </div>
         </div>
       )}
+
+      {/* VIP Content */}
+      {vipContents.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-foreground">Conteúdo VIP</h3>
+            <Badge className="bg-blue-100 text-blue-800">VIP</Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {vipContents.map((content) => (
+              <Card key={content.id} className="border-border cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getContentTypeIcon(content.content_type)}
+                      <Badge className={getPlanBadgeColor(content.required_plan)}>
+                        {content.required_plan.toUpperCase()}
+                      </Badge>
+                    </div>
+                    {!canAccessContent(content.required_plan) && (
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <CardTitle className="text-lg text-foreground">{content.title}</CardTitle>
+                  {content.description && (
+                    <CardDescription className="text-sm">
+                      {content.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    onClick={() => openContentViewer(content)}
+                    className="w-full"
+                    variant={canAccessContent(content.required_plan) ? "outline" : "secondary"}
+                    disabled={!canAccessContent(content.required_plan)}
+                  >
+                    {canAccessContent(content.required_plan) ? (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Acessar Conteúdo
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4 mr-2" />
+                        Upgrade Necessário
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Pro Content */}
+      {proContents.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-foreground">Conteúdo PRO</h3>
+            <Badge className="bg-purple-100 text-purple-800">PRO</Badge>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {proContents.map((content) => (
+              <Card key={content.id} className="border-border cursor-pointer hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      {getContentTypeIcon(content.content_type)}
+                      <Badge className={getPlanBadgeColor(content.required_plan)}>
+                        {content.required_plan.toUpperCase()}
+                      </Badge>
+                    </div>
+                    {!canAccessContent(content.required_plan) && (
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  <CardTitle className="text-lg text-foreground">{content.title}</CardTitle>
+                  {content.description && (
+                    <CardDescription className="text-sm">
+                      {content.description}
+                    </CardDescription>
+                  )}
+                </CardHeader>
+                <CardContent>
+                  <Button 
+                    onClick={() => openContentViewer(content)}
+                    className="w-full"
+                    variant={canAccessContent(content.required_plan) ? "outline" : "secondary"}
+                    disabled={!canAccessContent(content.required_plan)}
+                  >
+                    {canAccessContent(content.required_plan) ? (
+                      <>
+                        <Play className="w-4 h-4 mr-2" />
+                        Acessar Conteúdo
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4 mr-2" />
+                        Upgrade Necessário
+                      </>
+                    )}
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Content Viewer Dialog */}
+      <Dialog open={isViewerOpen} onOpenChange={setIsViewerOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {selectedContent && getContentTypeIcon(selectedContent.content_type)}
+              {selectedContent?.title}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedContent?.description}
+            </DialogDescription>
+          </DialogHeader>
+          {selectedContent && (
+            <div className="space-y-4">
+              {selectedContent.content_type === 'video' && selectedContent.video_url && (
+                <div className="aspect-video">
+                  <iframe
+                    src={selectedContent.video_url}
+                    className="w-full h-full rounded-lg"
+                    allowFullScreen
+                    title={selectedContent.title}
+                  />
+                </div>
+              )}
+              
+              {selectedContent.content_type === 'text' && (
+                <div className="prose max-w-none">
+                  <p className="text-foreground">
+                    {selectedContent.description}
+                  </p>
+                </div>
+              )}
+              
+              {selectedContent.content_type === 'course' && (
+                <div className="text-center p-8 border-2 border-dashed border-border rounded-lg">
+                  <BookOpen className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Curso Completo</h3>
+                  <p className="text-muted-foreground">
+                    Este é um curso completo com múltiplas lições e exercícios práticos.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

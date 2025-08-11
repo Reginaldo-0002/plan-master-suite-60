@@ -1,290 +1,367 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  Clock,
-  Eye,
-  Users,
-  DollarSign,
-  Copy,
-  TrendingUp,
-  Star,
-  Gem,
-  Crown
+import { 
+  DollarSign, 
+  Users, 
+  TrendingUp, 
+  BookOpen, 
+  MessageSquare, 
+  Bell,
+  Gift,
+  Crown,
+  Zap
 } from "lucide-react";
+import { ContentSection } from "./ContentSection";
 import { useToast } from "@/hooks/use-toast";
 
 interface Profile {
   id: string;
   user_id: string;
   full_name: string | null;
-  avatar_url: string | null;
-  plan: 'free' | 'vip' | 'pro';
-  pix_key: string | null;
-  total_session_time: number;
-  areas_accessed: number;
+  plan: string;
   referral_code: string;
   referral_earnings: number;
+  total_session_time: number;
+  areas_accessed: number;
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  is_active: boolean;
   created_at: string;
-  updated_at: string;
 }
 
-interface DashboardContentProps {
-  profile: Profile | null;
-}
-
-export const DashboardContent = ({ profile }: DashboardContentProps) => {
-  const [referralCount, setReferralCount] = useState(0);
+export const DashboardContent = () => {
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [activeSection, setActiveSection] = useState<'overview' | 'content' | 'referrals'>('overview');
+  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    if (profile?.id) {
-      fetchReferralCount();
-    }
-  }, [profile?.id]);
+    fetchUserData();
+    fetchNotifications();
+    
+    const channel = supabase
+      .channel('dashboard-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'profiles'
+      }, fetchUserData)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'notifications'
+      }, fetchNotifications)
+      .subscribe();
 
-  const fetchReferralCount = async () => {
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchUserData = async () => {
     try {
-      const { count, error } = await supabase
-        .from('referrals')
-        .select('*', { count: 'exact', head: true })
-        .eq('referrer_id', profile?.id);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
-      if (error) {
-        console.error('Error fetching referral count:', error);
-        return;
-      }
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-      setReferralCount(count || 0);
+      if (error) throw error;
+      setProfile(data);
     } catch (error) {
-      console.error('Error fetching referral count:', error);
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchNotifications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setNotifications(data || []);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
+
+  const getPlanBadgeColor = (plan: string) => {
+    switch (plan) {
+      case 'free': return 'bg-gray-100 text-gray-800';
+      case 'vip': return 'bg-blue-100 text-blue-800';
+      case 'pro': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getPlanIcon = (plan: string) => {
+    switch (plan) {
+      case 'vip': return <Crown className="w-4 h-4" />;
+      case 'pro': return <Zap className="w-4 h-4" />;
+      default: return <Users className="w-4 h-4" />;
     }
   };
 
   const copyReferralLink = () => {
-    if (profile?.referral_code) {
-      const referralLink = `${window.location.origin}/auth?ref=${profile.referral_code}`;
-      navigator.clipboard.writeText(referralLink);
-      toast({
-        title: "Link copiado!",
-        description: "Seu link de indicação foi copiado para a área de transferência.",
-      });
-    }
+    if (!profile) return;
+    const link = `${window.location.origin}?ref=${profile.referral_code}`;
+    navigator.clipboard.writeText(link);
+    toast({
+      title: "Link copiado!",
+      description: "O link de indicação foi copiado para a área de transferência",
+    });
   };
 
-  const formatTime = (seconds: number) => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${minutes}m`;
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
-  const getPlanInfo = (plan: string) => {
-    switch (plan) {
-      case 'pro':
-        return {
-          name: 'Pro',
-          icon: <Crown className="w-5 h-5" />,
-          color: 'bg-plan-pro',
-          description: 'Acesso completo a todos os recursos'
-        };
-      case 'vip':
-        return {
-          name: 'VIP',
-          icon: <Gem className="w-5 h-5" />,
-          color: 'bg-plan-vip',
-          description: 'Acesso a conteúdo premium'
-        };
-      default:
-        return {
-          name: 'Free',
-          icon: <Star className="w-5 h-5" />,
-          color: 'bg-plan-free',
-          description: 'Acesso básico à plataforma'
-        };
-    }
-  };
-
-  const planInfo = getPlanInfo(profile?.plan || 'free');
-  const showReferralProgram = profile?.plan === 'vip' || profile?.plan === 'pro';
+  if (!profile) {
+    return (
+      <div className="text-center text-muted-foreground">
+        Erro ao carregar dados do usuário
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-bold font-heading text-foreground">
-          Bem-vindo de volta, {profile?.full_name || 'Usuário'}!
-        </h1>
-        <p className="text-muted-foreground">
-          Aqui está um resumo da sua atividade na plataforma.
-        </p>
-      </div>
-
-      {/* Plan Status Card */}
-      <Card className="shadow-card border-card-border">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-12 h-12 rounded-lg ${planInfo.color} flex items-center justify-center text-white`}>
-                {planInfo.icon}
-              </div>
-              <div>
-                <CardTitle className="text-xl">Plano {planInfo.name}</CardTitle>
-                <CardDescription>{planInfo.description}</CardDescription>
-              </div>
-            </div>
-            <Button variant="outline" size="sm">
-              Alterar Plano
-            </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            Olá, {profile.full_name || "Usuário"}!
+          </h1>
+          <p className="text-muted-foreground">
+            Bem-vindo de volta à sua plataforma
+          </p>
+        </div>
+        <Badge className={getPlanBadgeColor(profile.plan)}>
+          <div className="flex items-center gap-1">
+            {getPlanIcon(profile.plan)}
+            Plano {profile.plan.toUpperCase()}
           </div>
-        </CardHeader>
-      </Card>
-
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="shadow-card border-card-border">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Clock className="w-8 h-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">
-                  {formatTime(profile?.total_session_time || 0)}
-                </p>
-                <p className="text-sm text-muted-foreground">Tempo Total</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-card border-card-border">
-          <CardContent className="p-6">
-            <div className="flex items-center gap-3">
-              <Eye className="w-8 h-8 text-primary" />
-              <div>
-                <p className="text-2xl font-bold text-foreground">
-                  {profile?.areas_accessed || 0}
-                </p>
-                <p className="text-sm text-muted-foreground">Áreas Acessadas</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {showReferralProgram && (
-          <>
-            <Card className="shadow-card border-card-border">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <Users className="w-8 h-8 text-primary" />
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      {referralCount}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Indicações</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-card border-card-border">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-3">
-                  <DollarSign className="w-8 h-8 text-success" />
-                  <div>
-                    <p className="text-2xl font-bold text-foreground">
-                      R$ {(profile?.referral_earnings || 0).toFixed(2)}
-                    </p>
-                    <p className="text-sm text-muted-foreground">Ganhos</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </>
-        )}
+        </Badge>
       </div>
 
-      {/* Referral Program Card */}
-      {showReferralProgram && (
-        <Card className="shadow-card border-card-border">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-primary" />
-              Programa de Indicação
-            </CardTitle>
-            <CardDescription>
-              Convide amigos e ganhe dinheiro com cada nova assinatura!
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="p-4 bg-primary-light rounded-lg border">
-              <p className="text-sm font-medium text-foreground mb-2">Seu link de indicação:</p>
-              <div className="flex items-center gap-2">
-                <code className="flex-1 p-2 bg-background rounded border text-sm">
-                  {`${window.location.origin}/auth?ref=${profile?.referral_code}`}
-                </code>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={copyReferralLink}
-                  className="shrink-0"
-                >
-                  <Copy className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+      {/* Navigation */}
+      <div className="flex gap-2">
+        <Button
+          variant={activeSection === 'overview' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('overview')}
+        >
+          Visão Geral
+        </Button>
+        <Button
+          variant={activeSection === 'content' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('content')}
+        >
+          <BookOpen className="w-4 h-4 mr-2" />
+          Conteúdos
+        </Button>
+        <Button
+          variant={activeSection === 'referrals' ? 'default' : 'outline'}
+          onClick={() => setActiveSection('referrals')}
+        >
+          <Gift className="w-4 h-4 mr-2" />
+          Indicações
+        </Button>
+      </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
-              <div>
-                <div className="text-2xl font-bold text-foreground">{referralCount}</div>
-                <div className="text-sm text-muted-foreground">Indicações</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-success">
-                  R$ {(profile?.referral_earnings || 0).toFixed(2)}
+      {/* Content Sections */}
+      {activeSection === 'overview' && (
+        <div className="space-y-8">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Ganhos Totais
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-green-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  R$ {profile.referral_earnings.toFixed(2)}
                 </div>
-                <div className="text-sm text-muted-foreground">Ganhos Totais</div>
-              </div>
-              <div>
-                <Button size="sm" className="gradient-primary">
-                  Solicitar Saque
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                <p className="text-xs text-muted-foreground">
+                  Através de indicações
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Tempo Online
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-blue-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {Math.floor(profile.total_session_time / 60)}h
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Total na plataforma
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Áreas Acessadas
+                </CardTitle>
+                <BookOpen className="h-4 w-4 text-purple-600" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {profile.areas_accessed}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Diferentes seções
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Seu Plano
+                </CardTitle>
+                {getPlanIcon(profile.plan)}
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {profile.plan.toUpperCase()}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Acesso a recursos
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Notifications */}
+          {notifications.length > 0 && (
+            <Card className="border-border">
+              <CardHeader>
+                <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                  <Bell className="w-5 h-5" />
+                  Notificações Recentes
+                </CardTitle>
+                <CardDescription>
+                  Fique por dentro das novidades da plataforma
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {notifications.map((notification) => (
+                    <div key={notification.id} className="flex items-start gap-3 p-4 border rounded-lg">
+                      <Bell className="w-4 h-4 mt-1 text-primary" />
+                      <div className="flex-1">
+                        <h4 className="font-medium text-foreground">{notification.title}</h4>
+                        <p className="text-sm text-muted-foreground">{notification.message}</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {new Date(notification.created_at).toLocaleDateString('pt-BR')}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       )}
 
-      {/* Quick Actions */}
-      <Card className="shadow-card border-card-border">
-        <CardHeader>
-          <CardTitle>Ações Rápidas</CardTitle>
-          <CardDescription>
-            Acesse rapidamente as seções mais populares
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Button variant="outline" size="sm" className="h-auto p-4 flex-col gap-2">
-              <Star className="w-6 h-6 text-primary" />
-              <span>Tutoriais</span>
-            </Button>
-            <Button variant="outline" size="sm" className="h-auto p-4 flex-col gap-2">
-              <Gem className="w-6 h-6 text-primary" />
-              <span>Ferramentas</span>
-            </Button>
-            <Button variant="outline" size="sm" className="h-auto p-4 flex-col gap-2">
-              <Crown className="w-6 h-6 text-primary" />
-              <span>Cursos</span>
-            </Button>
-            <Button variant="outline" size="sm" className="h-auto p-4 flex-col gap-2">
-              <TrendingUp className="w-6 h-6 text-primary" />
-              <span>Produtos</span>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {activeSection === 'content' && (
+        <ContentSection userPlan={profile.plan} />
+      )}
+
+      {activeSection === 'referrals' && (
+        <div className="space-y-8">
+          <Card className="border-border">
+            <CardHeader>
+              <CardTitle className="text-lg text-foreground flex items-center gap-2">
+                <Gift className="w-5 h-5" />
+                Programa de Indicações
+              </CardTitle>
+              <CardDescription>
+                Ganhe comissões indicando novos usuários para a plataforma
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold text-foreground mb-2">Seus Ganhos</h3>
+                  <div className="text-2xl font-bold text-green-600">
+                    R$ {profile.referral_earnings.toFixed(2)}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Total acumulado em comissões
+                  </p>
+                </div>
+                
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-semibold text-foreground mb-2">Seu Código</h3>
+                  <div className="text-2xl font-bold text-primary">
+                    {profile.referral_code}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Código único para suas indicações
+                  </p>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="font-semibold text-foreground">Link de Indicação</h3>
+                <div className="flex gap-2">
+                  <div className="flex-1 p-2 bg-muted rounded text-sm text-muted-foreground">
+                    {window.location.origin}?ref={profile.referral_code}
+                  </div>
+                  <Button onClick={copyReferralLink} variant="outline">
+                    Copiar Link
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="p-4 bg-primary/5 rounded-lg">
+                <h3 className="font-semibold text-foreground mb-2">Como Funciona</h3>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Compartilhe seu link de indicação</li>
+                  <li>• Ganhe 10% de comissão sobre vendas de indicados</li>
+                  <li>• Saque mínimo de R$ 50,00</li>
+                  <li>• Pagamentos via PIX em até 48h</li>
+                </ul>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

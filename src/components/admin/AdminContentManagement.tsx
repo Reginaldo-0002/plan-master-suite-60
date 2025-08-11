@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,16 +11,16 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit2, Trash2, Eye, Search, Upload, ExternalLink } from "lucide-react";
+import { Plus, Edit2, Trash2, Video, FileText, Eye, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Content {
   id: string;
   title: string;
   description: string | null;
-  content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  required_plan: 'free' | 'vip' | 'pro';
+  content_type: string;
   video_url: string | null;
+  required_plan: string;
   is_active: boolean;
   order_index: number;
   created_at: string;
@@ -29,28 +30,22 @@ interface Content {
 export const AdminContentManagement = () => {
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [planFilter, setPlanFilter] = useState<string>("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
+  const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    content_type: "product" as "product" | "tool" | "course" | "tutorial",
-    required_plan: "free" as "free" | "vip" | "pro",
+    content_type: "video",
     video_url: "",
+    required_plan: "free",
     is_active: true,
-    order_index: 0,
+    order_index: 0
   });
   const { toast } = useToast();
 
   useEffect(() => {
     fetchContents();
     
-    // Set up real-time subscription
     const channel = supabase
       .channel('content-management')
       .on('postgres_changes', {
@@ -89,23 +84,10 @@ export const AdminContentManagement = () => {
   };
 
   const createContent = async () => {
-    if (!formData.title.trim()) {
-      toast({
-        title: "Erro",
-        description: "O título é obrigatório",
-        variant: "destructive",
-      });
-      return;
-    }
-
     try {
       const { error } = await supabase
         .from('content')
-        .insert([{
-          ...formData,
-          description: formData.description || null,
-          video_url: formData.video_url || null
-        }]);
+        .insert([formData]);
 
       if (error) throw error;
 
@@ -128,17 +110,13 @@ export const AdminContentManagement = () => {
   };
 
   const updateContent = async () => {
-    if (!selectedContent) return;
+    if (!editingContent) return;
 
     try {
       const { error } = await supabase
         .from('content')
-        .update({
-          ...formData,
-          description: formData.description || null,
-          video_url: formData.video_url || null
-        })
-        .eq('id', selectedContent.id);
+        .update(formData)
+        .eq('id', editingContent.id);
 
       if (error) throw error;
 
@@ -147,8 +125,7 @@ export const AdminContentManagement = () => {
         description: "Conteúdo atualizado com sucesso",
       });
       
-      setIsEditDialogOpen(false);
-      setSelectedContent(null);
+      setEditingContent(null);
       resetForm();
       fetchContents();
     } catch (error) {
@@ -190,18 +167,18 @@ export const AdminContentManagement = () => {
     }
   };
 
-  const toggleContentStatus = async (id: string, currentStatus: boolean) => {
+  const toggleContentStatus = async (content: Content) => {
     try {
       const { error } = await supabase
         .from('content')
-        .update({ is_active: !currentStatus })
-        .eq('id', id);
+        .update({ is_active: !content.is_active })
+        .eq('id', content.id);
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: `Conteúdo ${!currentStatus ? 'ativado' : 'desativado'} com sucesso`,
+        description: `Conteúdo ${!content.is_active ? 'ativado' : 'desativado'} com sucesso`,
       });
       
       fetchContents();
@@ -215,88 +192,30 @@ export const AdminContentManagement = () => {
     }
   };
 
-  const duplicateContent = async (content: Content) => {
-    try {
-      const { error } = await supabase
-        .from('content')
-        .insert([{
-          title: `${content.title} (Cópia)`,
-          description: content.description,
-          content_type: content.content_type,
-          required_plan: content.required_plan,
-          video_url: content.video_url,
-          is_active: false,
-          order_index: content.order_index + 1
-        }]);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Conteúdo duplicado com sucesso",
-      });
-      
-      fetchContents();
-    } catch (error) {
-      console.error('Error duplicating content:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao duplicar conteúdo",
-        variant: "destructive",
-      });
-    }
+  const openEditDialog = (content: Content) => {
+    setEditingContent(content);
+    setFormData({
+      title: content.title,
+      description: content.description || "",
+      content_type: content.content_type,
+      video_url: content.video_url || "",
+      required_plan: content.required_plan,
+      is_active: content.is_active,
+      order_index: content.order_index
+    });
   };
 
   const resetForm = () => {
     setFormData({
       title: "",
       description: "",
-      content_type: "product",
-      required_plan: "free",
+      content_type: "video",
       video_url: "",
+      required_plan: "free",
       is_active: true,
-      order_index: 0,
+      order_index: 0
     });
-  };
-
-  const openEditDialog = (content: Content) => {
-    setSelectedContent(content);
-    setFormData({
-      title: content.title,
-      description: content.description || "",
-      content_type: content.content_type,
-      required_plan: content.required_plan,
-      video_url: content.video_url || "",
-      is_active: content.is_active,
-      order_index: content.order_index,
-    });
-    setIsEditDialogOpen(true);
-  };
-
-  const openViewDialog = (content: Content) => {
-    setSelectedContent(content);
-    setIsViewDialogOpen(true);
-  };
-
-  const filteredContents = contents.filter(content => {
-    const matchesSearch = !searchTerm || 
-      content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      content.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = typeFilter === "all" || content.content_type === typeFilter;
-    const matchesPlan = planFilter === "all" || content.required_plan === planFilter;
-    
-    return matchesSearch && matchesType && matchesPlan;
-  });
-
-  const getTypeBadgeColor = (type: string) => {
-    switch (type) {
-      case 'product': return 'bg-blue-100 text-blue-800';
-      case 'tool': return 'bg-green-100 text-green-800';
-      case 'course': return 'bg-purple-100 text-purple-800';
-      case 'tutorial': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+    setEditingContent(null);
   };
 
   const getPlanBadgeColor = (plan: string) => {
@@ -308,22 +227,12 @@ export const AdminContentManagement = () => {
     }
   };
 
-  const getTypeLabel = (type: string) => {
+  const getContentTypeIcon = (type: string) => {
     switch (type) {
-      case 'product': return 'Produto';
-      case 'tool': return 'Ferramenta';
-      case 'course': return 'Curso';
-      case 'tutorial': return 'Tutorial';
-      default: return type;
+      case 'video': return <Video className="w-4 h-4" />;
+      case 'text': return <FileText className="w-4 h-4" />;
+      default: return <FileText className="w-4 h-4" />;
     }
-  };
-
-  const contentStats = {
-    total: contents.length,
-    active: contents.filter(c => c.is_active).length,
-    products: contents.filter(c => c.content_type === 'product').length,
-    tools: contents.filter(c => c.content_type === 'tool').length,
-    courses: contents.filter(c => c.content_type === 'course').length,
   };
 
   return (
@@ -332,7 +241,7 @@ export const AdminContentManagement = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Gestão de Conteúdo</h2>
           <p className="text-muted-foreground">
-            Gerencie produtos, ferramentas, cursos e tutoriais
+            Gerencie vídeos, cursos e materiais da plataforma
           </p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
@@ -341,108 +250,11 @@ export const AdminContentManagement = () => {
         </Button>
       </div>
 
-      {/* Content Stats */}
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{contentStats.total}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ativos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{contentStats.active}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Produtos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{contentStats.products}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Ferramentas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{contentStats.tools}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Cursos
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">{contentStats.courses}</div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
       <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-lg text-foreground">Filtros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Buscar por título ou descrição..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
-            </div>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os tipos</SelectItem>
-                <SelectItem value="product">Produtos</SelectItem>
-                <SelectItem value="tool">Ferramentas</SelectItem>
-                <SelectItem value="course">Cursos</SelectItem>
-                <SelectItem value="tutorial">Tutoriais</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os planos</SelectItem>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="vip">VIP</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Content Table */}
-      <Card className="border-border">
-        <CardHeader>
-          <CardTitle className="text-lg text-foreground">Conteúdos ({filteredContents.length})</CardTitle>
+          <CardTitle className="text-lg text-foreground">Conteúdos ({contents.length})</CardTitle>
           <CardDescription>
-            Lista completa de conteúdos com detalhes e ações
+            Lista de todos os conteúdos da plataforma
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -454,26 +266,26 @@ export const AdminContentManagement = () => {
                 <TableHead>Plano</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Ordem</TableHead>
+                <TableHead>Criado em</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredContents.map((content) => (
+              {contents.map((content) => (
                 <TableRow key={content.id}>
                   <TableCell>
                     <div>
                       <div className="font-medium text-foreground">{content.title}</div>
-                      {content.description && (
-                        <div className="text-sm text-muted-foreground truncate max-w-xs">
-                          {content.description}
-                        </div>
-                      )}
+                      <div className="text-sm text-muted-foreground truncate max-w-xs">
+                        {content.description}
+                      </div>
                     </div>
                   </TableCell>
                   <TableCell>
-                    <Badge className={getTypeBadgeColor(content.content_type)}>
-                      {getTypeLabel(content.content_type)}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {getContentTypeIcon(content.content_type)}
+                      <span className="capitalize">{content.content_type}</span>
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge className={getPlanBadgeColor(content.required_plan)}>
@@ -481,27 +293,19 @@ export const AdminContentManagement = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={content.is_active}
-                        onCheckedChange={() => toggleContentStatus(content.id, content.is_active)}
-                      />
-                      <span className="text-sm">
-                        {content.is_active ? "Ativo" : "Inativo"}
-                      </span>
-                    </div>
+                    <Switch
+                      checked={content.is_active}
+                      onCheckedChange={() => toggleContentStatus(content)}
+                    />
                   </TableCell>
-                  <TableCell>{content.order_index}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openViewDialog(content)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      
+                    {content.order_index}
+                  </TableCell>
+                  <TableCell>
+                    {new Date(content.created_at).toLocaleDateString('pt-BR')}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -509,16 +313,6 @@ export const AdminContentManagement = () => {
                       >
                         <Edit2 className="w-4 h-4" />
                       </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => duplicateContent(content)}
-                        className="text-blue-600 hover:text-blue-700"
-                      >
-                        <Upload className="w-4 h-4" />
-                      </Button>
-                      
                       <Button
                         variant="ghost"
                         size="sm"
@@ -536,103 +330,26 @@ export const AdminContentManagement = () => {
         </CardContent>
       </Card>
 
-      {/* View Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Visualizar Conteúdo</DialogTitle>
-          </DialogHeader>
-          {selectedContent && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Tipo</Label>
-                  <Badge className={getTypeBadgeColor(selectedContent.content_type)}>
-                    {getTypeLabel(selectedContent.content_type)}
-                  </Badge>
-                </div>
-                <div>
-                  <Label>Plano Necessário</Label>
-                  <Badge className={getPlanBadgeColor(selectedContent.required_plan)}>
-                    {selectedContent.required_plan.toUpperCase()}
-                  </Badge>
-                </div>
-              </div>
-              
-              <div>
-                <Label>Título</Label>
-                <div className="font-medium">{selectedContent.title}</div>
-              </div>
-              
-              {selectedContent.description && (
-                <div>
-                  <Label>Descrição</Label>
-                  <div className="text-sm text-muted-foreground">
-                    {selectedContent.description}
-                  </div>
-                </div>
-              )}
-              
-              {selectedContent.video_url && (
-                <div>
-                  <Label>URL do Vídeo</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground truncate">
-                      {selectedContent.video_url}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open(selectedContent.video_url!, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Status</Label>
-                  <div>
-                    <Badge variant={selectedContent.is_active ? "default" : "secondary"}>
-                      {selectedContent.is_active ? "Ativo" : "Inativo"}
-                    </Badge>
-                  </div>
-                </div>
-                <div>
-                  <Label>Ordem</Label>
-                  <div>{selectedContent.order_index}</div>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-                <div>
-                  <Label>Criado em</Label>
-                  <div>{new Date(selectedContent.created_at).toLocaleString('pt-BR')}</div>
-                </div>
-                <div>
-                  <Label>Atualizado em</Label>
-                  <div>{new Date(selectedContent.updated_at).toLocaleString('pt-BR')}</div>
-                </div>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+      {/* Create/Edit Dialog */}
+      <Dialog open={isCreateDialogOpen || !!editingContent} onOpenChange={(open) => {
+        if (!open) {
+          setIsCreateDialogOpen(false);
+          setEditingContent(null);
+          resetForm();
+        }
+      }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Criar Novo Conteúdo</DialogTitle>
+            <DialogTitle>
+              {editingContent ? 'Editar Conteúdo' : 'Criar Novo Conteúdo'}
+            </DialogTitle>
             <DialogDescription>
-              Adicione um novo conteúdo à plataforma
+              {editingContent ? 'Atualize as informações do conteúdo' : 'Configure um novo conteúdo para a plataforma'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="title">Título *</Label>
+              <Label htmlFor="title">Título</Label>
               <Input
                 id="title"
                 value={formData.title}
@@ -648,194 +365,88 @@ export const AdminContentManagement = () => {
                 value={formData.description}
                 onChange={(e) => setFormData({...formData, description: e.target.value})}
                 placeholder="Digite a descrição..."
-                rows={3}
               />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="type">Tipo de Conteúdo</Label>
-                <Select 
-                  value={formData.content_type} 
-                  onValueChange={(value: any) => setFormData({...formData, content_type: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="product">Produto</SelectItem>
-                    <SelectItem value="tool">Ferramenta</SelectItem>
-                    <SelectItem value="course">Curso</SelectItem>
-                    <SelectItem value="tutorial">Tutorial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="plan">Plano Necessário</Label>
-                <Select 
-                  value={formData.required_plan} 
-                  onValueChange={(value: any) => setFormData({...formData, required_plan: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             
             <div>
-              <Label htmlFor="video_url">URL do Vídeo</Label>
-              <Input
-                id="video_url"
-                value={formData.video_url}
-                onChange={(e) => setFormData({...formData, video_url: e.target.value})}
-                placeholder="YouTube, Google Drive, etc..."
-              />
+              <Label htmlFor="content_type">Tipo de Conteúdo</Label>
+              <Select 
+                value={formData.content_type} 
+                onValueChange={(value) => setFormData({...formData, content_type: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="video">Vídeo</SelectItem>
+                  <SelectItem value="text">Texto</SelectItem>
+                  <SelectItem value="course">Curso</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
-                />
-                <Label htmlFor="is_active">Ativo</Label>
-              </div>
-              
-              <div>
-                <Label htmlFor="order_index">Ordem</Label>
-                <Input
-                  id="order_index"
-                  type="number"
-                  value={formData.order_index}
-                  onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
-                />
-              </div>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button onClick={createContent} className="flex-1">
-                Criar Conteúdo
-              </Button>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
 
-      {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Editar Conteúdo</DialogTitle>
-            <DialogDescription>
-              Modifique as informações do conteúdo
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="edit-title">Título *</Label>
-              <Input
-                id="edit-title"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                placeholder="Digite o título..."
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-description">Descrição</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={(e) => setFormData({...formData, description: e.target.value})}
-                placeholder="Digite a descrição..."
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+            {formData.content_type === 'video' && (
               <div>
-                <Label htmlFor="edit-type">Tipo de Conteúdo</Label>
-                <Select 
-                  value={formData.content_type} 
-                  onValueChange={(value: any) => setFormData({...formData, content_type: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="product">Produto</SelectItem>
-                    <SelectItem value="tool">Ferramenta</SelectItem>
-                    <SelectItem value="course">Curso</SelectItem>
-                    <SelectItem value="tutorial">Tutorial</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-plan">Plano Necessário</Label>
-                <Select 
-                  value={formData.required_plan} 
-                  onValueChange={(value: any) => setFormData({...formData, required_plan: value})}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="edit-video_url">URL do Vídeo</Label>
-              <Input
-                id="edit-video_url"
-                value={formData.video_url}
-                onChange={(e) => setFormData({...formData, video_url: e.target.value})}
-                placeholder="YouTube, Google Drive, etc..."
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="edit-is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
-                />
-                <Label htmlFor="edit-is_active">Ativo</Label>
-              </div>
-              
-              <div>
-                <Label htmlFor="edit-order_index">Ordem</Label>
+                <Label htmlFor="video_url">URL do Vídeo</Label>
                 <Input
-                  id="edit-order_index"
-                  type="number"
-                  value={formData.order_index}
-                  onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
+                  id="video_url"
+                  value={formData.video_url}
+                  onChange={(e) => setFormData({...formData, video_url: e.target.value})}
+                  placeholder="https://..."
                 />
               </div>
+            )}
+            
+            <div>
+              <Label htmlFor="required_plan">Plano Necessário</Label>
+              <Select 
+                value={formData.required_plan} 
+                onValueChange={(value) => setFormData({...formData, required_plan: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label htmlFor="order_index">Ordem de Exibição</Label>
+              <Input
+                id="order_index"
+                type="number"
+                value={formData.order_index}
+                onChange={(e) => setFormData({...formData, order_index: parseInt(e.target.value) || 0})}
+                placeholder="0"
+              />
+            </div>
+            
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
+              />
+              <Label htmlFor="is_active">Ativo</Label>
             </div>
             
             <div className="flex gap-2">
-              <Button onClick={updateContent} className="flex-1">
-                Atualizar Conteúdo
+              <Button 
+                onClick={editingContent ? updateContent : createContent} 
+                className="flex-1"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {editingContent ? 'Atualizar' : 'Criar'} Conteúdo
               </Button>
-              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              <Button variant="outline" onClick={() => {
+                setIsCreateDialogOpen(false);
+                setEditingContent(null);
+                resetForm();
+              }}>
                 Cancelar
               </Button>
             </div>

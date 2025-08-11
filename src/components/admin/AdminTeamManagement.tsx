@@ -1,14 +1,16 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
-import { Shield, UserPlus, Crown, Users } from "lucide-react";
+import { UserCog, Edit2, Trash2, Shield, Users, Crown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface TeamMember {
@@ -16,17 +18,20 @@ interface TeamMember {
   user_id: string;
   full_name: string | null;
   avatar_url: string | null;
-  role: 'user' | 'admin' | 'moderator';
+  role: string;
+  plan: string;
   created_at: string;
+  total_session_time: number;
+  areas_accessed: number;
 }
 
 export const AdminTeamManagement = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
-  const [newRole, setNewRole] = useState<'user' | 'admin' | 'moderator'>('moderator');
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [newRole, setNewRole] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -56,7 +61,7 @@ export const AdminTeamManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTeamMembers((data || []) as TeamMember[]);
+      setTeamMembers(data || []);
     } catch (error) {
       console.error('Error fetching team members:', error);
       toast({
@@ -70,7 +75,7 @@ export const AdminTeamManagement = () => {
   };
 
   const updateMemberRole = async () => {
-    if (!selectedMember) return;
+    if (!selectedMember || !newRole) return;
 
     try {
       const { error } = await supabase
@@ -82,35 +87,57 @@ export const AdminTeamManagement = () => {
 
       toast({
         title: "Sucesso",
-        description: `Função atualizada para ${newRole}`,
+        description: "Cargo atualizado com sucesso",
       });
       
-      setIsPromoteDialogOpen(false);
+      setIsEditDialogOpen(false);
       setSelectedMember(null);
+      setNewRole("");
       fetchTeamMembers();
     } catch (error) {
       console.error('Error updating member role:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar função do membro",
+        description: "Erro ao atualizar cargo",
         variant: "destructive",
       });
     }
   };
 
-  const openPromoteDialog = (member: TeamMember) => {
-    setSelectedMember(member);
-    setNewRole(member.role === 'user' ? 'moderator' : member.role);
-    setIsPromoteDialogOpen(true);
+  const removeMember = async (userId: string) => {
+    if (!confirm("Tem certeza que deseja remover este membro da equipe?")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role: 'user' })
+        .eq('user_id', userId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Membro removido da equipe",
+      });
+      
+      fetchTeamMembers();
+    } catch (error) {
+      console.error('Error removing member:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao remover membro",
+        variant: "destructive",
+      });
+    }
   };
 
-  const filteredMembers = teamMembers.filter(member => {
-    const matchesSearch = !searchTerm || 
-      member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.user_id.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    return matchesSearch;
-  });
+  const openEditDialog = (member: TeamMember) => {
+    setSelectedMember(member);
+    setNewRole(member.role);
+    setIsEditDialogOpen(true);
+  };
 
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
@@ -121,18 +148,31 @@ export const AdminTeamManagement = () => {
     }
   };
 
+  const getPlanBadgeColor = (plan: string) => {
+    switch (plan) {
+      case 'free': return 'bg-gray-100 text-gray-800';
+      case 'vip': return 'bg-blue-100 text-blue-800';
+      case 'pro': return 'bg-purple-100 text-purple-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin': return <Crown className="w-4 h-4" />;
       case 'moderator': return <Shield className="w-4 h-4" />;
-      case 'user': return <Users className="w-4 h-4" />;
       default: return <Users className="w-4 h-4" />;
     }
   };
 
+  const filteredMembers = teamMembers.filter(member =>
+    member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    member.role.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   const adminCount = teamMembers.filter(m => m.role === 'admin').length;
   const moderatorCount = teamMembers.filter(m => m.role === 'moderator').length;
-  const userCount = teamMembers.filter(m => m.role === 'user').length;
+  const totalMembers = teamMembers.length;
 
   return (
     <div className="flex-1 space-y-8 p-8">
@@ -140,77 +180,39 @@ export const AdminTeamManagement = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Gestão de Equipe</h2>
           <p className="text-muted-foreground">
-            Gerencie funções e permissões dos membros da equipe
+            Gerencie papéis e permissões dos membros da equipe
           </p>
+        </div>
+        <div className="flex gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{adminCount}</div>
+            <div className="text-sm text-muted-foreground">Admins</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{moderatorCount}</div>
+            <div className="text-sm text-muted-foreground">Moderadores</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-foreground">{totalMembers}</div>
+            <div className="text-sm text-muted-foreground">Total</div>
+          </div>
         </div>
       </div>
 
-      {/* Team Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Administradores
-            </CardTitle>
-            <Crown className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {adminCount}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Moderadores
-            </CardTitle>
-            <Shield className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {moderatorCount}
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card className="border-border">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Usuários
-            </CardTitle>
-            <Users className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {userCount}
-            </div>
-          </CardContent>
-        </Card>
+      <div className="flex gap-4 mb-6">
+        <Input
+          placeholder="Buscar por nome ou cargo..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="max-w-md"
+        />
       </div>
 
-      {/* Search */}
-      <Card className="border-border">
-        <CardHeader>
-          <CardTitle className="text-lg text-foreground">Buscar Membros</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Input
-            placeholder="Buscar por nome ou ID..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full"
-          />
-        </CardContent>
-      </Card>
-
-      {/* Team Members Table */}
       <Card className="border-border">
         <CardHeader>
           <CardTitle className="text-lg text-foreground">Membros da Equipe ({filteredMembers.length})</CardTitle>
           <CardDescription>
-            Lista de todos os membros com suas funções
+            Lista de todos os membros com acesso administrativo
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -218,8 +220,10 @@ export const AdminTeamManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Membro</TableHead>
-                <TableHead>Função</TableHead>
-                <TableHead>Data de Entrada</TableHead>
+                <TableHead>Cargo</TableHead>
+                <TableHead>Plano</TableHead>
+                <TableHead>Atividade</TableHead>
+                <TableHead>Membro desde</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
@@ -228,9 +232,9 @@ export const AdminTeamManagement = () => {
                 <TableRow key={member.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
+                      <Avatar className="h-10 w-10">
                         <AvatarImage src={member.avatar_url || ""} />
-                        <AvatarFallback>
+                        <AvatarFallback className="bg-primary/10 text-primary">
                           {member.full_name ? member.full_name.charAt(0).toUpperCase() : "U"}
                         </AvatarFallback>
                       </Avatar>
@@ -245,26 +249,47 @@ export const AdminTeamManagement = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getRoleIcon(member.role)}
-                      <Badge className={getRoleBadgeColor(member.role)}>
-                        {member.role === 'admin' ? 'Administrador' :
-                         member.role === 'moderator' ? 'Moderador' : 'Usuário'}
-                      </Badge>
+                    <Badge className={getRoleBadgeColor(member.role)}>
+                      <div className="flex items-center gap-1">
+                        {getRoleIcon(member.role)}
+                        {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
+                      </div>
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={getPlanBadgeColor(member.plan)}>
+                      {member.plan.toUpperCase()}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      <div className="font-medium">{Math.floor(member.total_session_time / 60)}h online</div>
+                      <div className="text-muted-foreground">{member.areas_accessed} áreas acessadas</div>
                     </div>
                   </TableCell>
                   <TableCell>
                     {new Date(member.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openPromoteDialog(member)}
-                    >
-                      <UserPlus className="w-4 h-4 mr-2" />
-                      Alterar Função
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEditDialog(member)}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      {member.role !== 'admin' && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeMember(member.user_id)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -273,45 +298,67 @@ export const AdminTeamManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Promote Dialog */}
-      <Dialog open={isPromoteDialogOpen} onOpenChange={setIsPromoteDialogOpen}>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Alterar Função do Membro</DialogTitle>
+            <DialogTitle>Editar Cargo do Membro</DialogTitle>
             <DialogDescription>
-              Selecione a nova função para {selectedMember?.full_name || "este membro"}
+              Altere o cargo e permissões do membro selecionado
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="role">Nova Função</Label>
-              <select 
-                id="role"
-                value={newRole}
-                onChange={(e) => setNewRole(e.target.value as 'user' | 'admin' | 'moderator')}
-                className="w-full p-2 border rounded-md"
-              >
-                <option value="user">Usuário</option>
-                <option value="moderator">Moderador</option>
-                <option value="admin">Administrador</option>
-              </select>
+          {selectedMember && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 border rounded-lg">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src={selectedMember.avatar_url || ""} />
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    {selectedMember.full_name ? selectedMember.full_name.charAt(0).toUpperCase() : "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <div className="font-medium text-foreground">
+                    {selectedMember.full_name || "Sem nome"}
+                  </div>
+                  <div className="text-sm text-muted-foreground">
+                    Cargo atual: {selectedMember.role}
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="role">Novo Cargo</Label>
+                <Select value={newRole} onValueChange={setNewRole}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">Usuário</SelectItem>
+                    <SelectItem value="moderator">Moderador</SelectItem>
+                    <SelectItem value="admin">Administrador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="text-sm text-muted-foreground p-3 bg-muted rounded-lg">
+                <strong>Permissões por cargo:</strong>
+                <ul className="mt-2 space-y-1">
+                  <li>• <strong>Usuário:</strong> Acesso básico à plataforma</li>
+                  <li>• <strong>Moderador:</strong> Gerenciar suporte e conteúdo</li>
+                  <li>• <strong>Admin:</strong> Acesso total ao painel administrativo</li>
+                </ul>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button onClick={updateMemberRole} className="flex-1">
+                  <UserCog className="w-4 h-4 mr-2" />
+                  Atualizar Cargo
+                </Button>
+                <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                  Cancelar
+                </Button>
+              </div>
             </div>
-            
-            <div className="text-sm text-muted-foreground">
-              <p><strong>Usuário:</strong> Acesso básico à plataforma</p>
-              <p><strong>Moderador:</strong> Pode gerenciar conteúdo e suporte</p>
-              <p><strong>Administrador:</strong> Acesso total ao sistema</p>
-            </div>
-            
-            <div className="flex gap-2">
-              <Button onClick={updateMemberRole} className="flex-1">
-                Atualizar Função
-              </Button>
-              <Button variant="outline" onClick={() => setIsPromoteDialogOpen(false)}>
-                Cancelar
-              </Button>
-            </div>
-          </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>
