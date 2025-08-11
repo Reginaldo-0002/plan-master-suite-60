@@ -148,7 +148,7 @@ const Dashboard = () => {
             />
           );
         }
-        return <ContentSection type="tutorials" userPlan={profile.plan} />;
+        return <ContentSection type="rules" userPlan={profile.plan} />;
       case 'rules':
         return <ContentSection type="rules" userPlan={profile.plan} />;
       case 'coming-soon':

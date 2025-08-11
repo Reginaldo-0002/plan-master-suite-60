@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +43,7 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
         .from('content')
         .select('id, title, description, content_type, status, required_plan, hero_image_url, carousel_image_url, carousel_order, created_at, updated_at')
         .eq('show_in_carousel', true)
-        .eq('status', 'active')
+        .eq('is_active', true)
         .order('carousel_order', { ascending: true });
 
       console.log('Carousel content result:', { data, error });
@@ -59,7 +58,13 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
         return;
       }
 
-      setCarouselContent(data || []);
+      // Type assertion para garantir que status seja do tipo correto
+      const typedData = (data || []).map(item => ({
+        ...item,
+        status: (item.status as 'active' | 'maintenance' | 'blocked') || 'active'
+      }));
+
+      setCarouselContent(typedData);
     } catch (error) {
       console.error('Error:', error);
     } finally {

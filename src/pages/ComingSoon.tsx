@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +36,7 @@ const ComingSoon = () => {
       
       const { data, error } = await supabase
         .from('content')
-        .select('id, title, description, content_type, required_plan, hero_image_url, scheduled_publish_at as release_date, created_at, updated_at')
+        .select('id, title, description, content_type, required_plan, hero_image_url, scheduled_publish_at, created_at, updated_at')
         .gte('scheduled_publish_at', todayString)
         .order('scheduled_publish_at', { ascending: true });
 
@@ -53,7 +52,13 @@ const ComingSoon = () => {
         return;
       }
 
-      setUpcomingContent(data || []);
+      // Mapear os dados para o formato esperado
+      const mappedData: UpcomingContent[] = (data || []).map(item => ({
+        ...item,
+        release_date: item.scheduled_publish_at
+      }));
+
+      setUpcomingContent(mappedData);
     } catch (error) {
       console.error('Error:', error);
     } finally {

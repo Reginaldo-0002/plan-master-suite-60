@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,14 +35,14 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
     fetchContent();
   }, [type]);
 
-  const getContentTypeForQuery = (type: string) => {
+  const getContentTypeForQuery = (type: string): string | null => {
     switch (type) {
       case 'products': return 'product';
       case 'tools': return 'tool';
       case 'courses': return 'course';
       case 'rules': return 'tutorial'; // Regras são um tipo especial de tutorial
       case 'coming-soon': return null; // Coming soon busca por data futura
-      default: return type;
+      default: return null;
     }
   };
 
@@ -51,7 +50,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
     try {
       let query = supabase
         .from('content')
-        .select('id, title, description, content_type, status, required_plan, hero_image_url, scheduled_publish_at as release_date, created_at, updated_at')
+        .select('id, title, description, content_type, status, required_plan, hero_image_url, scheduled_publish_at, created_at, updated_at')
         .order('created_at', { ascending: false });
 
       const contentType = getContentTypeForQuery(type);
@@ -76,7 +75,14 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
         return;
       }
 
-      setContent(data || []);
+      // Mapear os dados para o formato esperado
+      const mappedData: Content[] = (data || []).map(item => ({
+        ...item,
+        status: (item.status as 'active' | 'maintenance' | 'blocked') || 'active',
+        release_date: item.scheduled_publish_at
+      }));
+
+      setContent(mappedData);
     } catch (error) {
       console.error('Error:', error);
     } finally {
