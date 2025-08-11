@@ -35,7 +35,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
     fetchContent();
   }, [type]);
 
-  const getContentTypeForQuery = (type: string): string | null => {
+  const getContentTypeForQuery = (type: string): 'product' | 'tool' | 'course' | 'tutorial' | null => {
     switch (type) {
       case 'products': return 'product';
       case 'tools': return 'tool';
@@ -60,6 +60,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
         const today = new Date().toISOString();
         query = query.gte('scheduled_publish_at', today);
       } else if (contentType) {
+        // Só aplicar o filtro se contentType não for null
         query = query.eq('content_type', contentType);
       }
 
