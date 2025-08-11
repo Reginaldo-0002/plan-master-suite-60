@@ -64,7 +64,7 @@ export const AdminUserManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setUsers(data || []);
+      setUsers((data || []) as User[]);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -173,7 +173,7 @@ export const AdminUserManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
-                icon={<Search className="w-4 h-4" />}
+                
               />
             </div>
             <Select value={planFilter} onValueChange={setPlanFilter}>

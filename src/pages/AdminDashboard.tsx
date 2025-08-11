@@ -102,7 +102,7 @@ const AdminDashboard = () => {
         return;
       }
 
-      setProfile(profileData);
+      setProfile(profileData as Profile);
     } catch (error) {
       console.error('Authentication error:', error);
       navigate("/auth");

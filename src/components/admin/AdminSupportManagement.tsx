@@ -70,7 +70,7 @@ export const AdminSupportManagement = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTickets(data || []);
+      setTickets((data || []) as Ticket[]);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
@@ -94,7 +94,7 @@ export const AdminSupportManagement = () => {
       if (error) throw error;
       
       if (data?.value && typeof data.value === 'object' && 'menu_options' in data.value) {
-        setChatbotConfig(data.value.menu_options as ChatbotOption[]);
+        setChatbotConfig(data.value.menu_options as any);
       }
     } catch (error) {
       console.error('Error fetching chatbot config:', error);
@@ -145,7 +145,7 @@ export const AdminSupportManagement = () => {
       const { error } = await supabase
         .from('admin_settings')
         .update({ 
-          value: { menu_options: updatedOptions }
+          value: { menu_options: updatedOptions } as any
         })
         .eq('key', 'chatbot_config');
 
@@ -269,7 +269,7 @@ export const AdminSupportManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
-                icon={<Search className="w-4 h-4" />}
+                
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>

@@ -54,7 +54,7 @@ export const SupportChat = () => {
       if (error) throw error;
       
       if (data?.value && typeof data.value === 'object' && 'menu_options' in data.value) {
-        setChatbotOptions(data.value.menu_options as ChatbotOption[]);
+        setChatbotOptions(data.value.menu_options as any);
       }
     } catch (error) {
       console.error('Error fetching chatbot config:', error);

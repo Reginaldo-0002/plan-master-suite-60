@@ -37,8 +37,8 @@ export const AdminContentManagement = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    content_type: "product" as const,
-    required_plan: "free" as const,
+    content_type: "product" as "product" | "tool" | "course" | "tutorial",
+    required_plan: "free" as "free" | "vip" | "pro",
     video_url: "",
     is_active: true,
     order_index: 0,
@@ -253,7 +253,7 @@ export const AdminContentManagement = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full"
-                icon={<Search className="w-4 h-4" />}
+                
               />
             </div>
             <Select value={typeFilter} onValueChange={setTypeFilter}>
