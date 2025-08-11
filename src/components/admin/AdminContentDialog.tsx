@@ -9,14 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 
 interface Content {
   id?: string;
   title: string;
   description: string;
-  content_type: 'video' | 'article' | 'course' | 'tool';
+  content_type: 'product' | 'tool' | 'course' | 'tutorial';
   required_plan: 'free' | 'vip' | 'pro';
   video_url?: string;
   hero_image_url?: string;
@@ -49,7 +49,7 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
   const [formData, setFormData] = useState<Content>({
     title: "",
     description: "",
-    content_type: "article",
+    content_type: "tutorial",
     required_plan: "free",
     video_url: "",
     hero_image_url: "",
@@ -75,7 +75,7 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
       setFormData({
         title: "",
         description: "",
-        content_type: "article",
+        content_type: "tutorial",
         required_plan: "free",
         video_url: "",
         hero_image_url: "",
@@ -122,15 +122,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
       return false;
     }
 
-    if (formData.content_type === 'video' && !formData.video_url?.trim()) {
-      toast({
-        title: "Erro de validação",
-        description: "URL do vídeo é obrigatória para conteúdo do tipo vídeo",
-        variant: "destructive",
-      });
-      return false;
-    }
-
     return true;
   };
 
@@ -164,14 +155,12 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
       let result;
       
       if (content?.id) {
-        // Atualizar conteúdo existente
         result = await supabase
           .from('content')
           .update(dataToSave)
           .eq('id', content.id)
           .select();
       } else {
-        // Criar novo conteúdo
         result = await supabase
           .from('content')
           .insert([dataToSave])
@@ -234,8 +223,8 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="article">Artigo</SelectItem>
-                  <SelectItem value="video">Vídeo</SelectItem>
+                  <SelectItem value="tutorial">Tutorial</SelectItem>
+                  <SelectItem value="product">Produto</SelectItem>
                   <SelectItem value="course">Curso</SelectItem>
                   <SelectItem value="tool">Ferramenta</SelectItem>
                 </SelectContent>

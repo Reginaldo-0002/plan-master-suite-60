@@ -1,115 +1,84 @@
 
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { User } from '@supabase/supabase-js';
+import { useToast } from "@/hooks/use-toast";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
-import { ContentSection } from "@/components/dashboard/ContentSection";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
-import { TopicsGallery } from "@/components/topics/TopicsGallery";
-import { ContentCarousel } from "@/components/carousel/ContentCarousel";
+import { ContentSection } from "@/components/dashboard/ContentSection";
+import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useErrorHandler } from "@/hooks/useErrorHandler";
-import { validateProfileData } from "@/lib/typeGuards";
-
-type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'rules' | 'coming-soon' | 'carousel' | 'settings';
 
 interface Profile {
   id: string;
   user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
+  full_name?: string;
+  avatar_url?: string;
+  pix_key?: string;
   plan: 'free' | 'vip' | 'pro';
-  pix_key: string | null;
-  total_session_time: number;
-  areas_accessed: number;
+  role: string;
   referral_code: string;
   referral_earnings: number;
-  loyalty_level: string;
-  total_points: number;
-  last_activity: string | null;
-  preferences: any;
-  created_at: string;
-  updated_at: string;
 }
 
-const Dashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
+export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<ActiveSection>('dashboard');
-  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState("dashboard");
   const { toast } = useToast();
-  const { handleAsyncError } = useErrorHandler();
 
   useEffect(() => {
-    checkAuth();
+    fetchProfile();
   }, []);
 
-  const checkAuth = async () => {
-    const result = await handleAsyncError(async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
       
-      if (error || !session) {
-        navigate("/auth");
-        return null;
+      if (!user) {
+        window.location.href = '/auth';
+        return;
       }
 
-      setUser(session.user);
-      
-      const { data: profileData, error: profileError } = await supabase
+      const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .single();
 
-      if (profileError) {
-        console.error('Error fetching profile:', profileError);
-        navigate("/auth");
-        return null;
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // Profile doesn't exist, create one
+          const { data: newProfile, error: createError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                user_id: user.id,
+                plan: 'free',
+                role: 'user'
+              }
+            ])
+            .select()
+            .single();
+
+          if (createError) throw createError;
+          setProfile(newProfile);
+        } else {
+          throw error;
+        }
+      } else {
+        setProfile(profileData);
       }
-
-      if (!validateProfileData(profileData)) {
-        console.error('Invalid profile data:', profileData);
-        toast({
-          title: "Erro",
-          description: "Dados do perfil inválidos",
-          variant: "destructive",
-        });
-        navigate("/auth");
-        return null;
-      }
-
-      setProfile(profileData as Profile);
-      return profileData;
-    }, {
-      title: "Erro de Autenticação",
-      showToast: false
-    });
-
-    if (!result) {
-      navigate("/auth");
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao carregar perfil do usuário",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
-  };
-
-  const handleSectionChange = (section: ActiveSection) => {
-    setActiveSection(section);
-    setSelectedContentId(null); // Reset content selection when changing sections
-  };
-
-  const handleContentClick = (contentId: string) => {
-    setSelectedContentId(contentId);
-    setActiveSection('tutorials'); // Navigate to tutorials when content is clicked
-  };
-
-  const handleBackFromTutorials = () => {
-    setSelectedContentId(null);
-    setActiveSection('carousel'); // Go back to carousel when backing out of tutorials
   };
 
   const handleProfileUpdate = (updatedProfile: Profile) => {
@@ -118,50 +87,42 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
       </div>
     );
   }
 
-  if (!user || !profile) {
-    return null;
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Erro ao carregar perfil</h2>
+          <p className="text-muted-foreground">Tente recarregar a página</p>
+        </div>
+      </div>
+    );
   }
 
-  const renderActiveSection = () => {
+  const renderContent = () => {
     switch (activeSection) {
-      case 'dashboard':
+      case "dashboard":
         return <DashboardContent profile={profile} />;
-      case 'products':
-        return <ContentSection type="products" userPlan={profile.plan} />;
-      case 'tools':
-        return <ContentSection type="tools" userPlan={profile.plan} />;
-      case 'courses':
-        return <ContentSection type="courses" userPlan={profile.plan} />;
-      case 'tutorials':
-        if (selectedContentId) {
-          return (
-            <TopicsGallery 
-              contentId={selectedContentId} 
-              userPlan={profile.plan} 
-              onBack={handleBackFromTutorials}
-            />
-          );
-        }
-        return <ContentSection type="rules" userPlan={profile.plan} />;
-      case 'rules':
-        return <ContentSection type="rules" userPlan={profile.plan} />;
-      case 'coming-soon':
-        return <ContentSection type="coming-soon" userPlan={profile.plan} />;
-      case 'carousel':
+      case "products":
+        return <ContentSection contentType="product" userPlan={profile.plan} />;
+      case "tools":
+        return <ContentSection contentType="tool" userPlan={profile.plan} />;
+      case "courses":
+        return <ContentSection contentType="course" userPlan={profile.plan} />;
+      case "tutorials":
+        return <ContentSection contentType="tutorial" userPlan={profile.plan} />;
+      case "profile":
         return (
-          <ContentCarousel 
-            userPlan={profile.plan} 
-            onContentClick={handleContentClick}
+          <ProfileSettings 
+            profile={profile} 
+            onProfileUpdate={handleProfileUpdate} 
           />
         );
-      case 'settings':
-        return <ProfileSettings profile={profile} onProfileUpdate={handleProfileUpdate} />;
       default:
         return <DashboardContent profile={profile} />;
     }
@@ -170,15 +131,18 @@ const Dashboard = () => {
   return (
     <div className="flex h-screen bg-background">
       <Sidebar 
-        profile={profile} 
         activeSection={activeSection} 
-        onSectionChange={handleSectionChange}
+        onSectionChange={setActiveSection}
+        userPlan={profile.plan}
+        userRole={profile.role}
       />
-      <main className="flex-1 overflow-auto">
-        {renderActiveSection()}
+      
+      <main className="flex-1 overflow-y-auto p-6">
+        {renderContent()}
       </main>
+
+      {/* Support Chat */}
+      <SupportChat userId={profile.user_id} />
     </div>
   );
-};
-
-export default Dashboard;
+}
