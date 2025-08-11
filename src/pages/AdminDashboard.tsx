@@ -24,7 +24,20 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { validateProfileData } from "@/lib/typeGuards";
 
-type ActiveAdminSection = 'overview' | 'users' | 'content' | 'support' | 'notifications' | 'tools' | 'financial' | 'rules' | 'team' | 'referral-settings' | 'upcoming-releases' | 'system-cleanup' | 'carousel';
+type ActiveAdminSection = 
+  | 'overview' 
+  | 'users' 
+  | 'content' 
+  | 'support' 
+  | 'notifications' 
+  | 'tools' 
+  | 'financial' 
+  | 'rules' 
+  | 'team' 
+  | 'referral-settings' 
+  | 'upcoming-releases' 
+  | 'system-cleanup' 
+  | 'carousel';
 
 interface Profile {
   id: string;

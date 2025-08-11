@@ -6,10 +6,9 @@ import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
-import { SupportChat } from "@/components/support/SupportChat";
 import { ContentCarouselPage } from "./ContentCarouselPage";
 import { Loader2 } from "lucide-react";
-import { IntelligentSupportChat } from "@/components/support/IntelligentSupportChat";
+import { OptimizedSupportChat } from "@/components/support/OptimizedSupportChat";
 
 type DashboardSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'carousel' | 'settings';
 
@@ -139,7 +138,7 @@ const Dashboard = () => {
           {renderActiveSection()}
         </main>
       </div>
-      <IntelligentSupportChat userId={user.id} userPlan={profile.plan} />
+      <OptimizedSupportChat userId={user.id} userPlan={profile.plan} />
     </div>
   );
 };

@@ -19,7 +19,8 @@ import {
   MessageSquare,
   BarChart3,
   BookOpen,
-  Star
+  Star,
+  HeadphonesIcon
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -60,10 +61,28 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
       category: 'management'
     },
     {
+      id: 'notifications',
+      label: 'Notificações',
+      icon: Bell,
+      category: 'communication'
+    },
+    {
+      id: 'support',
+      label: 'Suporte',
+      icon: HeadphonesIcon,
+      category: 'communication'
+    },
+    {
+      id: 'financial',
+      label: 'Financeiro',
+      icon: BarChart3,
+      category: 'business'
+    },
+    {
       id: 'referral-settings',
       label: 'Configurar Indicações',
       icon: DollarSign,
-      category: 'settings'
+      category: 'business'
     },
     {
       id: 'tools',
@@ -94,7 +113,9 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
 
   const categories = [
     { id: 'main', label: 'Principal' },
-    { id: 'management', label: 'Gestão' },
+    { id: 'management', label: 'Gestão de Conteúdo' },
+    { id: 'communication', label: 'Comunicação' },
+    { id: 'business', label: 'Negócios' },
     { id: 'settings', label: 'Configurações' },
     { id: 'danger', label: 'Zona de Perigo' }
   ];
