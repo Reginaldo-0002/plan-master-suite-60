@@ -9,7 +9,7 @@ import {
   FileText, 
   Calendar,
   Settings,
-  Carousel,
+  Images,
   DollarSign,
   Wrench,
   UserCheck,
@@ -56,7 +56,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     {
       id: 'carousel',
       label: 'Carrossel',
-      icon: Carousel,
+      icon: Images,
       category: 'management'
     },
     {

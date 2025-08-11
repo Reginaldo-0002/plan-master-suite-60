@@ -30,7 +30,7 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/rules" element={<Rules />} />
-              <Route path="/carousel" element={<ContentCarouselPage />} />
+              <Route path="/carousel" element={<ContentCarouselPage userPlan="free" />} />
               <Route path="/em-breve" element={<ComingSoon />} />
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,11 +13,15 @@ import { AdminToolsManagement } from "@/components/admin/AdminToolsManagement";
 import { AdminFinancialManagement } from "@/components/admin/AdminFinancialManagement";
 import { AdminRulesEditor } from "@/components/admin/AdminRulesEditor";
 import { AdminTeamManagement } from "@/components/admin/AdminTeamManagement";
+import { AdminReferralSettings } from "@/components/admin/AdminReferralSettings";
+import { AdminUpcomingReleases } from "@/components/admin/AdminUpcomingReleases";
+import { AdminSystemCleanup } from "@/components/admin/AdminSystemCleanup";
+import { AdminCarouselManagement } from "@/components/admin/AdminCarouselManagement";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagement";
 
-type ActiveAdminSection = 'dashboard' | 'users' | 'content' | 'support' | 'notifications' | 'tools' | 'financial' | 'rules' | 'team';
+type ActiveAdminSection = 'overview' | 'users' | 'content' | 'support' | 'notifications' | 'tools' | 'financial' | 'rules' | 'team' | 'referral-settings' | 'upcoming-releases' | 'system-cleanup' | 'carousel';
 
 interface Profile {
   id: string;
@@ -38,7 +43,7 @@ const AdminDashboard = () => {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState<ActiveAdminSection>('dashboard');
+  const [activeSection, setActiveSection] = useState<ActiveAdminSection>('overview');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -126,7 +131,7 @@ const AdminDashboard = () => {
 
   const renderActiveSection = () => {
     switch (activeSection) {
-      case 'dashboard':
+      case 'overview':
         return <AdminDashboardContent />;
       case 'users':
         return <AdvancedUserManagement />;
@@ -144,6 +149,14 @@ const AdminDashboard = () => {
         return <AdminRulesEditor />;
       case 'team':
         return <AdminTeamManagement />;
+      case 'referral-settings':
+        return <AdminReferralSettings />;
+      case 'upcoming-releases':
+        return <AdminUpcomingReleases />;
+      case 'system-cleanup':
+        return <AdminSystemCleanup />;
+      case 'carousel':
+        return <AdminCarouselManagement />;
       default:
         return <AdminDashboardContent />;
     }
@@ -152,9 +165,8 @@ const AdminDashboard = () => {
   return (
     <div className="flex h-screen bg-background">
       <AdminSidebar 
-        profile={profile} 
-        activeSection={activeSection} 
-        onSectionChange={setActiveSection}
+        activeTab={activeSection} 
+        setActiveTab={setActiveSection}
       />
       <main className="flex-1 overflow-auto">
         {renderActiveSection()}

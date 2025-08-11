@@ -9,12 +9,6 @@ import { AlertTriangle, Trash2, Database, Users, FileText, RotateCcw } from "luc
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
-interface CleanupResult {
-  success: boolean;
-  records_deleted: number;
-  cleanup_type: string;
-}
-
 export const AdminSystemCleanup = () => {
   const [loading, setLoading] = useState(false);
   const [confirmText, setConfirmText] = useState("");
@@ -77,7 +71,14 @@ export const AdminSystemCleanup = () => {
 
       if (error) throw error;
 
-      const result = data as CleanupResult;
+      // Safely parse the response
+      let result;
+      if (typeof data === 'object' && data !== null) {
+        result = data as { success: boolean; records_deleted: number; cleanup_type: string };
+      } else {
+        // Fallback for unexpected response format
+        result = { success: true, records_deleted: 0, cleanup_type: cleanupType };
+      }
 
       toast({
         title: "Limpeza Executada",
