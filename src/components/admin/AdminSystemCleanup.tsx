@@ -40,7 +40,7 @@ const cleanupOptions = [
 export const AdminSystemCleanup = () => {
   const [confirmText, setConfirmText] = useState("");
   const [keepAdmin, setKeepAdmin] = useState(true);
-  const { executeCleanup, loading } = useCleanupLogic();
+  const { executeCleanup, loading, progress } = useCleanupLogic();
 
   const handleCleanupExecution = async (cleanupType: string) => {
     // Validação de entrada mais robusta
@@ -48,9 +48,15 @@ export const AdminSystemCleanup = () => {
       return;
     }
 
-    const confirmed = confirm(
-      `ÚLTIMA CONFIRMAÇÃO: Tem certeza absoluta que deseja executar ${cleanupType}? Esta ação é IRREVERSÍVEL!`
-    );
+    // Confirmação adicional para operações críticas
+    const option = cleanupOptions.find(opt => opt.id === cleanupType);
+    const isHighRisk = cleanupType === 'all' || cleanupType === 'users';
+    
+    const confirmationMessage = isHighRisk 
+      ? `ÚLTIMA CONFIRMAÇÃO: Tem certeza absoluta que deseja executar "${option?.label}"? Esta ação é IRREVERSÍVEL e de ALTO RISCO!`
+      : `Confirma a execução de "${option?.label}"? Esta ação não pode ser desfeita.`;
+    
+    const confirmed = confirm(confirmationMessage);
     
     if (!confirmed) return;
 
@@ -75,6 +81,8 @@ export const AdminSystemCleanup = () => {
           <CardDescription>
             Esta área permite remover dados do sistema de forma permanente. 
             <strong> ESTAS AÇÕES SÃO IRREVERSÍVEIS!</strong>
+            <br />
+            Sistema atualizado com proteções de segurança aprimoradas.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -98,6 +106,7 @@ export const AdminSystemCleanup = () => {
             onExecute={handleCleanupExecution}
             disabled={loading || !isConfirmationValid}
             loading={loading}
+            progress={progress}
           />
         ))}
       </div>
