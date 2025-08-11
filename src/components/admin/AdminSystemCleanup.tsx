@@ -71,47 +71,58 @@ export const AdminSystemCleanup = () => {
 
     setLoading(true);
     
-    const result = await handleAsyncError(async () => {
+    try {
+      console.log('Executing system cleanup:', { cleanupType, keepAdmin, selectedTables });
+      
       const { data, error } = await supabase.rpc('system_cleanup', {
         cleanup_type: cleanupType,
         target_tables: selectedTables.length > 0 ? selectedTables : null,
         keep_admin: keepAdmin
       });
 
-      if (error) throw error;
-      
-      // Safely convert the JSON result to CleanupResult
-      if (data && typeof data === 'object' && !Array.isArray(data)) {
-        const cleanupResult = data as Record<string, any>;
-        return {
-          success: Boolean(cleanupResult.success),
-          records_deleted: Number(cleanupResult.records_deleted) || 0,
-          cleanup_type: String(cleanupResult.cleanup_type) || cleanupType
-        } as CleanupResult;
+      console.log('Cleanup result:', { data, error });
+
+      if (error) {
+        console.error('Cleanup error:', error);
+        throw error;
       }
       
-      // Fallback result if data structure is unexpected
-      return {
-        success: true,
-        records_deleted: 0,
-        cleanup_type: cleanupType
-      } as CleanupResult;
-    }, {
-      title: "Erro na Limpeza",
-      showToast: false
-    });
+      // Safely convert the JSON result to CleanupResult
+      let cleanupResult: CleanupResult;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        const cleanupData = data as Record<string, any>;
+        cleanupResult = {
+          success: Boolean(cleanupData.success),
+          records_deleted: Number(cleanupData.records_deleted) || 0,
+          cleanup_type: String(cleanupData.cleanup_type) || cleanupType
+        };
+      } else {
+        // Fallback result if data structure is unexpected
+        cleanupResult = {
+          success: true,
+          records_deleted: 0,
+          cleanup_type: cleanupType
+        };
+      }
 
-    if (result) {
       toast({
         title: "Limpeza Executada",
-        description: `${result.records_deleted} registros foram removidos`,
+        description: `${cleanupResult.records_deleted} registros foram removidos com sucesso`,
       });
       
       setConfirmText("");
       setSelectedTables([]);
+      
+    } catch (error) {
+      console.error('System cleanup failed:', error);
+      toast({
+        title: "Erro na Limpeza",
+        description: "Falha ao executar limpeza do sistema. Verifique os logs.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const handleTableSelection = (tableId: string, checked: boolean) => {
@@ -154,11 +165,11 @@ export const AdminSystemCleanup = () => {
                   <Button
                     variant="destructive"
                     onClick={() => executeCleanup(option.id)}
-                    disabled={loading}
+                    disabled={loading || confirmText !== 'DELETAR TUDO'}
                     className="bg-red-600 hover:bg-red-700"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
-                    Executar
+                    {loading ? 'Executando...' : 'Executar'}
                   </Button>
                 </div>
               </CardHeader>
@@ -185,7 +196,7 @@ export const AdminSystemCleanup = () => {
 
           <div className="space-y-2">
             <Label htmlFor="confirm_text" className="text-red-500 font-bold">
-              Digite "DELETAR TUDO" para confirmar qualquer limpeza:
+              Digite "DELETAR TUDO" para habilitar as operações de limpeza:
             </Label>
             <Input
               id="confirm_text"
@@ -194,6 +205,9 @@ export const AdminSystemCleanup = () => {
               placeholder="DELETAR TUDO"
               className="border-red-500 focus:border-red-600"
             />
+            {confirmText === 'DELETAR TUDO' && (
+              <p className="text-sm text-green-600">✓ Operações de limpeza habilitadas</p>
+            )}
           </div>
 
           <div className="p-4 bg-red-50/10 border border-red-500/20 rounded-lg">
@@ -203,6 +217,7 @@ export const AdminSystemCleanup = () => {
               <li>• Todas as ações são registradas nos logs do sistema</li>
               <li>• É recomendado fazer backup manual antes de operações críticas</li>
               <li>• O sistema pode demorar alguns minutos para processar limpezas grandes</li>
+              <li>• Digite exatamente "DELETAR TUDO" para habilitar as operações</li>
             </ul>
           </div>
         </CardContent>

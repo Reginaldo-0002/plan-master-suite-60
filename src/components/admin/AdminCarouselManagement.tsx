@@ -48,12 +48,14 @@ export const AdminCarouselManagement = () => {
 
   const fetchContents = async () => {
     try {
+      console.log('Fetching contents for carousel management...');
       const { data, error } = await supabase
         .from('content')
         .select('id, title, carousel_image_url, carousel_order, show_in_carousel, content_type, required_plan, is_active')
         .order('carousel_order', { ascending: true });
 
       if (error) throw error;
+      console.log('Contents fetched:', data?.length || 0);
       setContents(data || []);
     } catch (error) {
       console.error('Error fetching contents:', error);
@@ -71,6 +73,7 @@ export const AdminCarouselManagement = () => {
     if (!editingContent) return;
 
     try {
+      console.log('Updating carousel settings for content:', editingContent.id, formData);
       const { error } = await supabase
         .from('content')
         .update(formData)
@@ -85,7 +88,7 @@ export const AdminCarouselManagement = () => {
       
       setEditingContent(null);
       resetForm();
-      fetchContents();
+      await fetchContents(); // Forçar refresh dos dados
     } catch (error) {
       console.error('Error updating carousel settings:', error);
       toast({
@@ -98,19 +101,29 @@ export const AdminCarouselManagement = () => {
 
   const toggleCarouselVisibility = async (content: Content) => {
     try {
+      const newVisibility = !content.show_in_carousel;
+      console.log('Toggling carousel visibility for:', content.title, 'to:', newVisibility);
+      
       const { error } = await supabase
         .from('content')
-        .update({ show_in_carousel: !content.show_in_carousel })
+        .update({ show_in_carousel: newVisibility })
         .eq('id', content.id);
 
       if (error) throw error;
 
+      // Atualizar estado local imediatamente para feedback visual
+      setContents(prevContents => 
+        prevContents.map(c => 
+          c.id === content.id 
+            ? { ...c, show_in_carousel: newVisibility }
+            : c
+        )
+      );
+
       toast({
         title: "Sucesso",
-        description: `Conteúdo ${!content.show_in_carousel ? 'adicionado ao' : 'removido do'} carrossel`,
+        description: `Conteúdo ${newVisibility ? 'adicionado ao' : 'removido do'} carrossel`,
       });
-      
-      fetchContents();
     } catch (error) {
       console.error('Error toggling carousel visibility:', error);
       toast({

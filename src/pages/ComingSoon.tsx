@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -71,11 +70,18 @@ export const ComingSoon = () => {
         .from('upcoming_releases')
         .select('*')
         .eq('is_active', true)
-        .gte('release_date', new Date().toISOString())
         .order('release_date', { ascending: true });
 
       if (error) throw error;
-      setReleases(data || []);
+      
+      // Filtrar apenas lançamentos que ainda não passaram
+      const now = new Date();
+      const futureReleases = (data || []).filter(release => 
+        new Date(release.release_date) > now
+      );
+      
+      console.log('Upcoming releases found:', futureReleases.length);
+      setReleases(futureReleases);
     } catch (error) {
       console.error('Error fetching upcoming releases:', error);
     } finally {
