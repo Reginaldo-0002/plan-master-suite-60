@@ -1,15 +1,97 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ContentCarousel } from "@/components/carousel/ContentCarousel";
 import { TopicsGallery } from "@/components/topics/TopicsGallery";
 import { Badge } from "@/components/ui/badge";
+import { supabase } from "@/integrations/supabase/client";
+import { Profile } from "@/types/profile";
+import { Loader2 } from "lucide-react";
 
 interface ContentCarouselPageProps {
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan?: 'free' | 'vip' | 'pro';
 }
 
-export const ContentCarouselPage = ({ userPlan }: ContentCarouselPageProps) => {
+export const ContentCarouselPage = ({ userPlan: propUserPlan }: ContentCarouselPageProps) => {
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!propUserPlan) {
+      fetchProfile();
+    } else {
+      setLoading(false);
+    }
+
+    // Check for content parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const contentId = urlParams.get('content');
+    if (contentId) {
+      setSelectedContentId(contentId);
+    }
+  }, [propUserPlan]);
+
+  const fetchProfile = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      const { data: profileData, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error && error.code === 'PGRST116') {
+        const { data: newProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              user_id: user.id,
+              full_name: user.user_metadata?.full_name || user.email?.split('@')[0] || 'Usuário',
+              plan: 'free' as const
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating profile:', createError);
+          return;
+        }
+
+        setProfile(newProfile);
+      } else if (error) {
+        console.error('Error fetching profile:', error);
+        return;
+      } else {
+        setProfile(profileData);
+      }
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const userPlan = propUserPlan || profile?.plan || 'free';
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Carregando...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleContentClick = (contentId: string) => {
     setSelectedContentId(contentId);

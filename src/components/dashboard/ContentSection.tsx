@@ -43,7 +43,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       case 'tools': return 'tool';
       case 'courses': return 'course';
       case 'tutorials': return 'tutorial';
-      case 'rules': return 'tutorial';
+      case 'rules': return null; // Rules should use admin_settings
       case 'carousel': return null; // Special case for carousel content
       default: return null;
     }
@@ -111,7 +111,21 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
           metadata: { content_type: contentItem.content_type }
         }]);
 
-      // Open video or redirect based on content type
+      // Check if content has topics/gallery
+      const { data: topics } = await supabase
+        .from('content_topics')
+        .select('id')
+        .eq('content_id', contentItem.id)
+        .eq('is_active', true)
+        .limit(1);
+
+      if (topics && topics.length > 0) {
+        // Navigate to topics gallery
+        window.location.href = `/carousel?content=${contentItem.id}`;
+        return;
+      }
+
+      // Open video or external link
       if (contentItem.video_url) {
         window.open(contentItem.video_url, '_blank');
       } else {
@@ -170,7 +184,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       case 'tools': return 'Ferramentas';
       case 'courses': return 'Cursos';
       case 'tutorials': return 'Tutoriais';
-      case 'rules': return 'Regras e Tutoriais';
+      case 'rules': return 'Regras';
       case 'coming-soon': return 'Em Breve';
       case 'carousel': return 'Carrossel';
       default: return 'Conteúdo';

@@ -15,6 +15,10 @@ import Rules from "./pages/Rules";
 import { ContentCarouselPage } from "./pages/ContentCarouselPage";
 import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
+import Products from "./pages/Products";
+import Courses from "./pages/Courses";
+import Tools from "./pages/Tools";
+import Tutorials from "./pages/Tutorials";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +64,10 @@ function App() {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/rules" element={<Rules />} />
+                  <Route path="/produtos" element={<Products />} />
+                  <Route path="/cursos" element={<Courses />} />
+                  <Route path="/ferramentas" element={<Tools />} />
+                  <Route path="/tutoriais" element={<Tutorials />} />
                   <Route path="/carousel" element={<ContentCarouselPage userPlan="free" />} />
                   <Route path="/em-breve" element={<ComingSoon />} />
                   <Route path="*" element={<NotFound />} />
