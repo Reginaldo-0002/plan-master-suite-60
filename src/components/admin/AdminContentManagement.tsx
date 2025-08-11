@@ -1,16 +1,11 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit2, Trash2, Eye, EyeOff } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, EyeOff, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminContentDialog } from "./AdminContentDialog";
 
@@ -32,7 +27,11 @@ interface Content {
   carousel_image_url?: string;
 }
 
-export const AdminContentManagement = () => {
+interface AdminContentManagementProps {
+  onEditTopics?: (contentId: string) => void;
+}
+
+export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementProps) => {
   const [contents, setContents] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -150,6 +149,12 @@ export const AdminContentManagement = () => {
     fetchContents(); // Sempre atualizar a lista ao fechar
   };
 
+  const handleEditTopicsClick = (contentId: string) => {
+    if (onEditTopics) {
+      onEditTopics(contentId);
+    }
+  };
+
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
       case 'free': return 'bg-gray-100 text-gray-800';
@@ -248,6 +253,15 @@ export const AdminContentManagement = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditTopicsClick(content.id)}
+                        title="Editar tópicos"
+                        className="text-blue-600 hover:text-blue-700"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

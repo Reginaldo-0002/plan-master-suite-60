@@ -17,17 +17,20 @@ import { AdminReferralSettings } from "@/components/admin/AdminReferralSettings"
 import { AdminUpcomingReleases } from "@/components/admin/AdminUpcomingReleases";
 import { AdminSystemCleanup } from "@/components/admin/AdminSystemCleanup";
 import { AdminCarouselManagement } from "@/components/admin/AdminCarouselManagement";
-import { Loader2 } from "lucide-react";
+import { ContentTopicsEditor } from "@/components/content/ContentTopicsEditor";
+import { Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagement";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useErrorHandler } from "@/hooks/useErrorHandler";
 import { validateProfileData } from "@/lib/typeGuards";
+import { Button } from "@/components/ui/button";
 
 type ActiveAdminSection = 
   | 'overview' 
   | 'users' 
   | 'content' 
+  | 'content-topics'
   | 'support' 
   | 'notifications' 
   | 'tools' 
@@ -60,6 +63,7 @@ const AdminDashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ActiveAdminSection>('overview');
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { handleAsyncError } = useErrorHandler();
@@ -148,14 +152,28 @@ const AdminDashboard = () => {
 
   const handleSectionChange = (tab: string) => {
     const validSections: ActiveAdminSection[] = [
-      'overview', 'users', 'content', 'support', 'notifications', 'tools', 
+      'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
       'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 
       'system-cleanup', 'carousel'
     ];
     
     if (validSections.includes(tab as ActiveAdminSection)) {
       setActiveSection(tab as ActiveAdminSection);
+      // Reset selected content when changing sections
+      if (tab !== 'content-topics') {
+        setSelectedContentId(null);
+      }
     }
+  };
+
+  const handleEditTopics = (contentId: string) => {
+    setSelectedContentId(contentId);
+    setActiveSection('content-topics');
+  };
+
+  const handleBackToContent = () => {
+    setSelectedContentId(null);
+    setActiveSection('content');
   };
 
   if (loading) {
@@ -177,7 +195,29 @@ const AdminDashboard = () => {
       case 'users':
         return <AdvancedUserManagement />;
       case 'content':
-        return <AdminContentManagement />;
+        return <AdminContentManagement onEditTopics={handleEditTopics} />;
+      case 'content-topics':
+        if (selectedContentId) {
+          return (
+            <div className="p-8">
+              <div className="flex items-center gap-4 mb-6">
+                <Button
+                  variant="outline"
+                  onClick={handleBackToContent}
+                  className="flex items-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Voltar para Gestão de Conteúdo
+                </Button>
+              </div>
+              <ContentTopicsEditor 
+                contentId={selectedContentId} 
+                onSave={handleBackToContent} 
+              />
+            </div>
+          );
+        }
+        return <AdminContentManagement onEditTopics={handleEditTopics} />;
       case 'support':
         return <AdminSupportManagement />;
       case 'notifications':
