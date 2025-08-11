@@ -14,6 +14,7 @@ import { AdminRulesEditor } from "@/components/admin/AdminRulesEditor";
 import { AdminTeamManagement } from "@/components/admin/AdminTeamManagement";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagement";
 
 type ActiveAdminSection = 'dashboard' | 'users' | 'content' | 'support' | 'notifications' | 'tools' | 'financial' | 'rules' | 'team';
 
@@ -123,12 +124,12 @@ const AdminDashboard = () => {
     return null;
   }
 
-  const renderContent = () => {
+  const renderActiveSection = () => {
     switch (activeSection) {
       case 'dashboard':
         return <AdminDashboardContent />;
       case 'users':
-        return <AdminUserManagement />;
+        return <AdvancedUserManagement />;
       case 'content':
         return <AdminContentManagement />;
       case 'support':
@@ -156,7 +157,7 @@ const AdminDashboard = () => {
         onSectionChange={setActiveSection}
       />
       <main className="flex-1 overflow-auto">
-        {renderContent()}
+        {renderActiveSection()}
       </main>
     </div>
   );

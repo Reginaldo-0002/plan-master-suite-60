@@ -14,6 +14,64 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_chat_queue: {
+        Row: {
+          assigned_admin: string | null
+          chat_session_id: string | null
+          created_at: string | null
+          id: string
+          message: string
+          priority: string | null
+          responded_at: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          assigned_admin?: string | null
+          chat_session_id?: string | null
+          created_at?: string | null
+          id?: string
+          message: string
+          priority?: string | null
+          responded_at?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          assigned_admin?: string | null
+          chat_session_id?: string | null
+          created_at?: string | null
+          id?: string
+          message?: string
+          priority?: string | null
+          responded_at?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_chat_queue_assigned_admin_fkey"
+            columns: ["assigned_admin"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "admin_chat_queue_chat_session_id_fkey"
+            columns: ["chat_session_id"]
+            isOneToOne: false
+            referencedRelation: "chat_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_chat_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       admin_settings: {
         Row: {
           auto_status_config: Json | null
@@ -116,8 +174,47 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_sessions: {
+        Row: {
+          context_data: Json | null
+          created_at: string | null
+          first_message_sent: boolean | null
+          id: string
+          last_activity: string | null
+          session_status: string | null
+          user_id: string
+        }
+        Insert: {
+          context_data?: Json | null
+          created_at?: string | null
+          first_message_sent?: boolean | null
+          id?: string
+          last_activity?: string | null
+          session_status?: string | null
+          user_id: string
+        }
+        Update: {
+          context_data?: Json | null
+          created_at?: string | null
+          first_message_sent?: boolean | null
+          id?: string
+          last_activity?: string | null
+          session_status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       content: {
         Row: {
+          auto_publish_at: string | null
           carousel_image_url: string | null
           carousel_order: number | null
           content_type: Database["public"]["Enums"]["content_type"]
@@ -131,14 +228,17 @@ export type Database = {
           is_active: boolean | null
           metadata: Json | null
           order_index: number | null
+          published_at: string | null
           required_plan: Database["public"]["Enums"]["user_plan"]
           show_in_carousel: boolean | null
+          status: string | null
           tags: string[] | null
           title: string
           updated_at: string | null
           video_url: string | null
         }
         Insert: {
+          auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
           content_type: Database["public"]["Enums"]["content_type"]
@@ -152,14 +252,17 @@ export type Database = {
           is_active?: boolean | null
           metadata?: Json | null
           order_index?: number | null
+          published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
           show_in_carousel?: boolean | null
+          status?: string | null
           tags?: string[] | null
           title: string
           updated_at?: string | null
           video_url?: string | null
         }
         Update: {
+          auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
           content_type?: Database["public"]["Enums"]["content_type"]
@@ -173,8 +276,10 @@ export type Database = {
           is_active?: boolean | null
           metadata?: Json | null
           order_index?: number | null
+          published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
           show_in_carousel?: boolean | null
+          status?: string | null
           tags?: string[] | null
           title?: string
           updated_at?: string | null
@@ -481,9 +586,51 @@ export type Database = {
         }
         Relationships: []
       }
+      plan_expiration_queue: {
+        Row: {
+          created_at: string | null
+          downgrade_executed: boolean | null
+          expiration_date: string
+          expiration_notice: boolean | null
+          id: string
+          reminder_1_day: boolean | null
+          reminder_7_days: boolean | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          downgrade_executed?: boolean | null
+          expiration_date: string
+          expiration_notice?: boolean | null
+          id?: string
+          reminder_1_day?: boolean | null
+          reminder_7_days?: boolean | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          downgrade_executed?: boolean | null
+          expiration_date?: string
+          expiration_notice?: boolean | null
+          id?: string
+          reminder_1_day?: boolean | null
+          reminder_7_days?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plan_expiration_queue_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           areas_accessed: number | null
+          auto_renewal: boolean | null
           avatar_url: string | null
           created_at: string | null
           full_name: string | null
@@ -492,6 +639,9 @@ export type Database = {
           loyalty_level: string | null
           pix_key: string | null
           plan: Database["public"]["Enums"]["user_plan"]
+          plan_end_date: string | null
+          plan_start_date: string | null
+          plan_status: string | null
           preferences: Json | null
           referral_code: string | null
           referral_earnings: number | null
@@ -503,6 +653,7 @@ export type Database = {
         }
         Insert: {
           areas_accessed?: number | null
+          auto_renewal?: boolean | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
@@ -511,6 +662,9 @@ export type Database = {
           loyalty_level?: string | null
           pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          plan_end_date?: string | null
+          plan_start_date?: string | null
+          plan_status?: string | null
           preferences?: Json | null
           referral_code?: string | null
           referral_earnings?: number | null
@@ -522,6 +676,7 @@ export type Database = {
         }
         Update: {
           areas_accessed?: number | null
+          auto_renewal?: boolean | null
           avatar_url?: string | null
           created_at?: string | null
           full_name?: string | null
@@ -530,6 +685,9 @@ export type Database = {
           loyalty_level?: string | null
           pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          plan_end_date?: string | null
+          plan_start_date?: string | null
+          plan_status?: string | null
           preferences?: Json | null
           referral_code?: string | null
           referral_earnings?: number | null
@@ -585,8 +743,10 @@ export type Database = {
           created_at: string | null
           created_by: string | null
           id: string
+          is_personal_message: boolean | null
           message: string
           notification_type: string | null
+          recipient_user_id: string | null
           scheduled_at: string
           sent: boolean | null
           target_plans: string[] | null
@@ -598,8 +758,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          is_personal_message?: boolean | null
           message: string
           notification_type?: string | null
+          recipient_user_id?: string | null
           scheduled_at: string
           sent?: boolean | null
           target_plans?: string[] | null
@@ -611,8 +773,10 @@ export type Database = {
           created_at?: string | null
           created_by?: string | null
           id?: string
+          is_personal_message?: boolean | null
           message?: string
           notification_type?: string | null
+          recipient_user_id?: string | null
           scheduled_at?: string
           sent?: boolean | null
           target_plans?: string[] | null
@@ -620,7 +784,15 @@ export type Database = {
           template_data?: Json | null
           title?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_notifications_recipient_user_id_fkey"
+            columns: ["recipient_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       support_messages: {
         Row: {

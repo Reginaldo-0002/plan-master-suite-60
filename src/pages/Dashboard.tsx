@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +9,7 @@ import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { SupportChat } from "@/components/support/SupportChat";
 import { ContentCarouselPage } from "./ContentCarouselPage";
 import { Loader2 } from "lucide-react";
+import { IntelligentSupportChat } from "@/components/support/IntelligentSupportChat";
 
 type DashboardSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'carousel' | 'settings';
 
@@ -139,7 +139,7 @@ const Dashboard = () => {
           {renderActiveSection()}
         </main>
       </div>
-      <SupportChat />
+      <IntelligentSupportChat userId={user.id} userPlan={profile.plan} />
     </div>
   );
 };
