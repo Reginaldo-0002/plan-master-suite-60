@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
@@ -142,188 +141,151 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl w-[95vw] h-[95vh] p-0 overflow-hidden bg-gradient-to-br from-background via-background/95 to-background/90 border border-border/50 backdrop-blur-xl shadow-2xl">
-        <div className="flex flex-col h-full">
-          {/* Header fixo */}
-          <DialogHeader className="px-6 py-4 border-b border-border/20 bg-background/95 backdrop-blur-sm shrink-0">
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
-              {contentItem?.id ? 'Editar' : 'Criar'} {getContentTypeLabel(contentType)}
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground text-base">
-              Preencha os campos abaixo para {contentItem?.id ? 'editar' : 'criar'} o conteúdo.
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">
+            {contentItem?.id ? 'Editar' : 'Criar'} {getContentTypeLabel(contentType)}
+          </DialogTitle>
+          <DialogDescription>
+            Preencha os campos abaixo para {contentItem?.id ? 'editar' : 'criar'} o conteúdo.
+          </DialogDescription>
+        </DialogHeader>
 
-          {/* Área de conteúdo com rolagem */}
-          <div className="flex-1 min-h-0">
-            <ScrollArea className="h-full px-6 py-4">
-              <div className="space-y-6 pb-6">
-                {/* Campos básicos */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="title" className="text-sm font-semibold text-foreground">
-                      Título <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="title"
-                      value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                      placeholder="Digite o título..."
-                      className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="required_plan" className="text-sm font-semibold text-foreground">
-                      Plano Necessário
-                    </Label>
-                    <Select 
-                      value={formData.required_plan} 
-                      onValueChange={(value: any) => setFormData({ ...formData, required_plan: value })}
-                    >
-                      <SelectTrigger className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="border border-border/50 bg-background/95 backdrop-blur-xl shadow-xl">
-                        <SelectItem value="free">🆓 Gratuito</SelectItem>
-                        <SelectItem value="vip">⭐ VIP</SelectItem>
-                        <SelectItem value="pro">💎 Pro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                {/* Descrição */}
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm font-semibold text-foreground">
-                    Descrição
-                  </Label>
-                  <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Descreva o conteúdo..."
-                    rows={4}
-                    className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60 resize-none"
-                  />
-                </div>
-
-                {/* URL do vídeo */}
-                <div className="space-y-2">
-                  <Label htmlFor="video_url" className="text-sm font-semibold text-foreground">
-                    🎥 URL do Vídeo (opcional)
-                  </Label>
-                  <Input
-                    id="video_url"
-                    value={formData.video_url || ""}
-                    onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                    placeholder="https://youtube.com/watch?v=..."
-                    className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
-                  />
-                </div>
-
-                {/* Configurações básicas */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="order_index" className="text-sm font-semibold text-foreground">
-                      📊 Ordem de Exibição
-                    </Label>
-                    <Input
-                      id="order_index"
-                      type="number"
-                      value={formData.order_index}
-                      onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
-                      className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
-                    />
-                  </div>
-                  <div className="flex items-center space-x-3 pt-8">
-                    <Switch
-                      id="is_active"
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                      className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-purple-500 transition-all duration-300"
-                    />
-                    <Label htmlFor="is_active" className="text-sm font-semibold text-foreground cursor-pointer">
-                      ✅ Ativo
-                    </Label>
-                  </div>
-                </div>
-
-                {/* Configurações do carrossel */}
-                <div className="space-y-6 border-t border-border/20 pt-6">
-                  <div className="flex items-center space-x-3">
-                    <Switch
-                      id="show_in_carousel"
-                      checked={formData.show_in_carousel}
-                      onCheckedChange={(checked) => setFormData({ ...formData, show_in_carousel: checked })}
-                      className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-purple-500 transition-all duration-300"
-                    />
-                    <Label htmlFor="show_in_carousel" className="text-sm font-semibold text-foreground cursor-pointer">
-                      🎠 Exibir no Carrossel
-                    </Label>
-                  </div>
-
-                  {formData.show_in_carousel && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-                      <div className="space-y-2">
-                        <Label htmlFor="carousel_image_url" className="text-sm font-semibold text-foreground">
-                          🖼️ URL da Imagem do Carrossel (1920x1080)
-                        </Label>
-                        <Input
-                          id="carousel_image_url"
-                          value={formData.carousel_image_url || ""}
-                          onChange={(e) => setFormData({ ...formData, carousel_image_url: e.target.value })}
-                          placeholder="https://exemplo.com/imagem.jpg"
-                          className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="carousel_order" className="text-sm font-semibold text-foreground">
-                          🔢 Ordem no Carrossel
-                        </Label>
-                        <Input
-                          id="carousel_order"
-                          type="number"
-                          value={formData.carousel_order}
-                          onChange={(e) => setFormData({ ...formData, carousel_order: parseInt(e.target.value) || 0 })}
-                          className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Footer com botões */}
-                <div className="pt-6 border-t border-border/20">
-                  <div className="flex justify-end gap-3">
-                    <Button 
-                      variant="outline" 
-                      onClick={onClose} 
-                      disabled={isLoading}
-                      className="border-2 border-border/30 bg-background/80 backdrop-blur-sm hover:border-primary/40 hover:bg-background/95 transition-all duration-300"
-                    >
-                      Cancelar
-                    </Button>
-                    <Button 
-                      onClick={handleSave} 
-                      disabled={isLoading}
-                      className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary-hover hover:to-purple-600 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 border-0"
-                    >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                          Salvando...
-                        </>
-                      ) : (
-                        <>
-                          💾 Salvar Conteúdo
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </ScrollArea>
+        <div className="overflow-y-auto max-h-[calc(90vh-200px)] pr-2 space-y-4">
+          {/* Título */}
+          <div className="space-y-2">
+            <Label htmlFor="title">
+              Título <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="title"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Digite o título..."
+            />
           </div>
+
+          {/* Descrição */}
+          <div className="space-y-2">
+            <Label htmlFor="description">Descrição</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Descreva o conteúdo..."
+              rows={3}
+            />
+          </div>
+
+          {/* Plano Necessário */}
+          <div className="space-y-2">
+            <Label htmlFor="required_plan">Plano Necessário</Label>
+            <Select 
+              value={formData.required_plan} 
+              onValueChange={(value: any) => setFormData({ ...formData, required_plan: value })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="free">🆓 Gratuito</SelectItem>
+                <SelectItem value="vip">⭐ VIP</SelectItem>
+                <SelectItem value="pro">💎 Pro</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* URL do Vídeo */}
+          <div className="space-y-2">
+            <Label htmlFor="video_url">🎥 URL do Vídeo (opcional)</Label>
+            <Input
+              id="video_url"
+              value={formData.video_url || ""}
+              onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+              placeholder="https://youtube.com/watch?v=..."
+            />
+          </div>
+
+          {/* Ordem de Exibição */}
+          <div className="space-y-2">
+            <Label htmlFor="order_index">📊 Ordem de Exibição</Label>
+            <Input
+              id="order_index"
+              type="number"
+              value={formData.order_index}
+              onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
+            />
+          </div>
+
+          {/* Switch Ativo */}
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="is_active"
+              checked={formData.is_active}
+              onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+            />
+            <Label htmlFor="is_active">✅ Ativo</Label>
+          </div>
+
+          {/* Switch Carrossel */}
+          <div className="flex items-center space-x-3">
+            <Switch
+              id="show_in_carousel"
+              checked={formData.show_in_carousel}
+              onCheckedChange={(checked) => setFormData({ ...formData, show_in_carousel: checked })}
+            />
+            <Label htmlFor="show_in_carousel">🎠 Exibir no Carrossel</Label>
+          </div>
+
+          {/* Campos do Carrossel */}
+          {formData.show_in_carousel && (
+            <div className="space-y-4 border-t pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="carousel_image_url">🖼️ URL da Imagem do Carrossel</Label>
+                <Input
+                  id="carousel_image_url"
+                  value={formData.carousel_image_url || ""}
+                  onChange={(e) => setFormData({ ...formData, carousel_image_url: e.target.value })}
+                  placeholder="https://exemplo.com/imagem.jpg"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="carousel_order">🔢 Ordem no Carrossel</Label>
+                <Input
+                  id="carousel_order"
+                  type="number"
+                  value={formData.carousel_order}
+                  onChange={(e) => setFormData({ ...formData, carousel_order: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Botões Footer */}
+        <div className="flex justify-end gap-3 pt-4 border-t">
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            disabled={isLoading}
+          >
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                💾 Salvar Conteúdo
+              </>
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
