@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -83,11 +82,11 @@ export const useCleanupLogic = () => {
         validationPassed: true
       });
       
-      // Usar os novos parâmetros corrigidos da função
+      // Usar os parâmetros corretos conforme a interface TypeScript
       const { data, error } = await supabase.rpc('system_cleanup', {
-        p_cleanup_type: cleanupType,
-        p_target_tables: null,
-        p_keep_admin: keepAdmin
+        cleanup_type: cleanupType,
+        target_tables: null,
+        keep_admin: keepAdmin
       });
 
       console.log('Cleanup result:', { data, error });
