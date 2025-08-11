@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -104,13 +105,13 @@ const Dashboard = () => {
       case 'dashboard':
         return <DashboardContent profile={profile} />;
       case 'products':
-        return <ContentSection type="product" userPlan={profile?.plan || 'free'} />;
+        return <ContentSection contentType="product" userPlan={profile?.plan || 'free'} />;
       case 'tools':
-        return <ContentSection type="tool" userPlan={profile?.plan || 'free'} />;
+        return <ContentSection contentType="tool" userPlan={profile?.plan || 'free'} />;
       case 'courses':
-        return <ContentSection type="course" userPlan={profile?.plan || 'free'} />;
+        return <ContentSection contentType="course" userPlan={profile?.plan || 'free'} />;
       case 'tutorials':
-        return <ContentSection type="tutorial" userPlan={profile?.plan || 'free'} />;
+        return <ContentSection contentType="tutorial" userPlan={profile?.plan || 'free'} />;
       case 'settings':
         return <ProfileSettings profile={profile} onProfileUpdate={setProfile} />;
       default:
