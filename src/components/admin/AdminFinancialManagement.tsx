@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -77,7 +76,7 @@ export const AdminFinancialManagement = () => {
         .from('withdrawal_requests')
         .select(`
           *,
-          profiles!inner(full_name)
+          profiles(full_name)
         `)
         .order('created_at', { ascending: false });
 
@@ -101,7 +100,7 @@ export const AdminFinancialManagement = () => {
       const pendingWithdrawalValue = withdrawals?.filter(w => w.status === 'pending').reduce((sum, w) => sum + Number(w.amount), 0) || 0;
 
       setStats({
-        totalEarnings,
+        totalEarnings: Number(totalEarnings),
         pendingWithdrawals,
         processedWithdrawals,
         totalUsers,
@@ -143,10 +142,22 @@ export const AdminFinancialManagement = () => {
 
       // If approved, deduct from user's earnings
       if (processingAction === 'approve') {
+        // First get the current earnings
+        const { data: profileData, error: profileFetchError } = await supabase
+          .from('profiles')
+          .select('referral_earnings')
+          .eq('user_id', selectedRequest.user_id)
+          .single();
+
+        if (profileFetchError) throw profileFetchError;
+
+        const currentEarnings = profileData?.referral_earnings || 0;
+        const newEarnings = Math.max(0, Number(currentEarnings) - selectedRequest.amount);
+
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
-            referral_earnings: Math.max(0, (selectedRequest.profiles?.referral_earnings || 0) - selectedRequest.amount)
+            referral_earnings: newEarnings
           })
           .eq('user_id', selectedRequest.user_id);
 
@@ -236,7 +247,6 @@ export const AdminFinancialManagement = () => {
         </Button>
       </div>
 
-      {/* Financial Stats */}
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <Card className="border-border">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -326,7 +336,6 @@ export const AdminFinancialManagement = () => {
         </Card>
       </div>
 
-      {/* Withdrawal Requests Table */}
       <Card className="border-border">
         <CardHeader>
           <CardTitle className="text-lg text-foreground">Solicitações de Saque ({withdrawalRequests.length})</CardTitle>
@@ -416,7 +425,6 @@ export const AdminFinancialManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -465,7 +473,6 @@ export const AdminFinancialManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Process Dialog */}
       <Dialog open={isProcessDialogOpen} onOpenChange={setIsProcessDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>

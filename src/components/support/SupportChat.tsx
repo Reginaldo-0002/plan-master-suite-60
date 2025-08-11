@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -95,7 +94,11 @@ export const SupportChat = () => {
       if (error && error.code !== 'PGRST116') throw error;
       
       if (data?.value && typeof data.value === 'object' && 'menu_options' in data.value) {
-        setChatbotOptions(data.value.menu_options as ChatbotOption[]);
+        // Safe type conversion
+        const menuOptions = data.value.menu_options;
+        if (Array.isArray(menuOptions)) {
+          setChatbotOptions(menuOptions as ChatbotOption[]);
+        }
       } else {
         // Default options if none configured
         setChatbotOptions([
@@ -138,7 +141,15 @@ export const SupportChat = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTickets(data || []);
+      
+      // Type assertion to ensure proper typing
+      const typedTickets = (data || []).map(ticket => ({
+        ...ticket,
+        status: ticket.status as 'open' | 'in_progress' | 'closed',
+        priority: ticket.priority as 'low' | 'normal' | 'high' | 'urgent'
+      }));
+      
+      setTickets(typedTickets);
     } catch (error) {
       console.error('Error fetching tickets:', error);
     }
@@ -150,13 +161,23 @@ export const SupportChat = () => {
         .from('support_messages')
         .select(`
           *,
-          profiles!inner(full_name, role)
+          profiles(full_name, role)
         `)
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setTicketMessages(data || []);
+      
+      // Type assertion and null safety
+      const typedMessages = (data || []).map(message => ({
+        ...message,
+        profiles: message.profiles ? {
+          full_name: message.profiles.full_name || null,
+          role: message.profiles.role || 'user'
+        } : undefined
+      }));
+      
+      setTicketMessages(typedMessages);
     } catch (error) {
       console.error('Error fetching ticket messages:', error);
     }

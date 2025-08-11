@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -98,12 +97,20 @@ export const AdminSupportManagement = () => {
         .from('support_tickets')
         .select(`
           *,
-          profiles!inner(full_name)
+          profiles(full_name)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setTickets((data || []) as Ticket[]);
+      
+      // Type assertion to ensure proper typing
+      const typedTickets = (data || []).map(ticket => ({
+        ...ticket,
+        status: ticket.status as 'open' | 'in_progress' | 'closed',
+        priority: ticket.priority as 'low' | 'normal' | 'high' | 'urgent'
+      }));
+      
+      setTickets(typedTickets);
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
@@ -122,13 +129,23 @@ export const AdminSupportManagement = () => {
         .from('support_messages')
         .select(`
           *,
-          profiles!inner(full_name, role)
+          profiles(full_name, role)
         `)
         .eq('ticket_id', ticketId)
         .order('created_at', { ascending: true });
 
       if (error) throw error;
-      setTicketMessages((data || []) as TicketMessage[]);
+      
+      // Type assertion and null safety
+      const typedMessages = (data || []).map(message => ({
+        ...message,
+        profiles: message.profiles ? {
+          full_name: message.profiles.full_name || null,
+          role: message.profiles.role || 'user'
+        } : undefined
+      }));
+      
+      setTicketMessages(typedMessages);
     } catch (error) {
       console.error('Error fetching ticket messages:', error);
       toast({
@@ -150,10 +167,14 @@ export const AdminSupportManagement = () => {
       if (error && error.code !== 'PGRST116') throw error;
       
       if (data?.value && typeof data.value === 'object' && 'menu_options' in data.value) {
-        setChatbotConfig(data.value.menu_options as ChatbotOption[]);
+        // Safe type conversion
+        const menuOptions = data.value.menu_options;
+        if (Array.isArray(menuOptions)) {
+          setChatbotConfig(menuOptions as ChatbotOption[]);
+        }
       } else {
         // Set default chatbot options
-        const defaultOptions = [
+        const defaultOptions: ChatbotOption[] = [
           {
             id: "1",
             title: "Como alterar meu plano?",
