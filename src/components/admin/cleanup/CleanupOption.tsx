@@ -46,7 +46,7 @@ export const CleanupOption = ({
               <div className="flex items-center gap-2">
                 <CardTitle className={color}>{label}</CardTitle>
                 {isHighRisk && (
-                  <Shield className="w-4 h-4 text-red-500" title="Operação de Alto Risco" />
+                  <Shield className="w-4 h-4 text-red-500" aria-label="Operação de Alto Risco" />
                 )}
               </div>
               <CardDescription className="text-sm">{description}</CardDescription>
