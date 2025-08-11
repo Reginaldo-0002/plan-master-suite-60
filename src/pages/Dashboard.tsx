@@ -30,6 +30,10 @@ interface Profile {
   avatar_url: string | null;
   total_session_time: number;
   areas_accessed: number;
+  loyalty_level: string;
+  total_points: number;
+  last_activity: string | null;
+  preferences: any;
   created_at: string;
   updated_at: string;
 }
@@ -57,7 +61,7 @@ const Dashboard = () => {
 
       setUser(user);
 
-      // Fetch user profile
+      // Fetch user profile with all new fields
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')

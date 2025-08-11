@@ -78,7 +78,7 @@ export const AdvancedTopicEditor = ({ topicId, contentId, onSave }: AdvancedTopi
       setDescription(topicData.description || "");
       setTopicImageUrl(topicData.topic_image_url || "");
 
-      // Fetch topic resources
+      // Fetch topic resources with type conversion
       const { data: resourcesData, error: resourcesError } = await supabase
         .from('topic_resources')
         .select('*')
@@ -86,7 +86,21 @@ export const AdvancedTopicEditor = ({ topicId, contentId, onSave }: AdvancedTopi
         .order('resource_order');
 
       if (resourcesError) throw resourcesError;
-      setResources(resourcesData || []);
+      
+      // Convert database resources to proper TypeScript types
+      const convertedResources: TopicResource[] = (resourcesData || []).map(resource => ({
+        id: resource.id,
+        title: resource.title,
+        description: resource.description || "",
+        resource_type: resource.resource_type as 'video' | 'pdf' | 'external_link' | 'image',
+        resource_url: resource.resource_url,
+        thumbnail_url: resource.thumbnail_url || "",
+        is_premium: resource.is_premium || false,
+        required_plan: resource.required_plan as 'free' | 'vip' | 'pro',
+        resource_order: resource.resource_order || 0
+      }));
+      
+      setResources(convertedResources);
 
     } catch (error) {
       console.error('Error fetching topic data:', error);
