@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, Upload, ExternalLink, Video, FileText } from "lucide-react";
+import { Trash2, Edit, Plus, Upload, ExternalLink, Video, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -136,9 +136,9 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   };
 
   const createTopic = async () => {
-    if (!topicTitle) {
+    if (!topicTitle.trim()) {
       toast({
-        title: "Erro",
+        title: "Erro de Validação",
         description: "Título do tópico é obrigatório",
         variant: "destructive",
       });
@@ -149,10 +149,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       const { data, error } = await supabase
         .from('content_topics')
         .insert([{
-          title: topicTitle,
-          description: topicDescription,
+          title: topicTitle.trim(),
+          description: topicDescription.trim() || null,
           content_id: contentId,
-          topic_image_url: topicImageUrl,
+          topic_image_url: topicImageUrl.trim() || null,
           topic_order: topics.length,
           is_active: true
         }])
@@ -162,8 +162,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Tópico criado com sucesso",
+        title: "Sucesso!",
+        description: `Tópico "${topicTitle}" criado com sucesso`,
       });
 
       setIsTopicDialogOpen(false);
@@ -173,8 +173,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     } catch (error: any) {
       console.error('Error creating topic:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao criar tópico",
+        title: "Erro ao criar tópico",
+        description: error.message || "Erro interno do servidor",
         variant: "destructive",
       });
     }
@@ -216,10 +216,15 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   };
 
   const createResource = async () => {
-    if (!resourceTitle || !resourceUrl || !activeTopic) {
+    const errors = [];
+    if (!resourceTitle.trim()) errors.push("Título");
+    if (!resourceUrl.trim()) errors.push("URL");
+    if (!activeTopic) errors.push("Tópico selecionado");
+
+    if (errors.length > 0) {
       toast({
-        title: "Erro",
-        description: "Título, URL e tópico são obrigatórios",
+        title: "Campos obrigatórios não preenchidos",
+        description: `Os seguintes campos são obrigatórios: ${errors.join(', ')}`,
         variant: "destructive",
       });
       return;
@@ -229,11 +234,11 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       const { error } = await supabase
         .from('topic_resources')
         .insert([{
-          title: resourceTitle,
-          description: resourceDescription,
+          title: resourceTitle.trim(),
+          description: resourceDescription.trim() || null,
           resource_type: resourceType,
-          resource_url: resourceUrl,
-          thumbnail_url: thumbnailUrl,
+          resource_url: resourceUrl.trim(),
+          thumbnail_url: thumbnailUrl.trim() || null,
           is_premium: isResourcePremium,
           required_plan: requiredPlan,
           topic_id: activeTopic,
@@ -244,8 +249,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Recurso criado com sucesso",
+        title: "Recurso adicionado!",
+        description: `"${resourceTitle}" foi adicionado ao tópico`,
       });
 
       setIsResourceDialogOpen(false);
@@ -255,8 +260,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     } catch (error: any) {
       console.error('Error creating resource:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao criar recurso",
+        title: "Erro ao criar recurso",
+        description: error.message || "Erro interno do servidor",
         variant: "destructive",
       });
     }
@@ -302,7 +307,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   };
 
   const deleteTopic = async (topicId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este tópico?")) return;
+    const topic = topics.find(t => t.id === topicId);
+    if (!confirm(`Tem certeza que deseja excluir o tópico "${topic?.title}"?\n\nEsta ação não pode ser desfeita e todos os recursos do tópico também serão removidos.`)) return;
 
     try {
       const { error } = await supabase
@@ -313,24 +319,29 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Tópico excluído com sucesso",
+        title: "Tópico excluído",
+        description: "O tópico foi removido com sucesso",
       });
 
+      if (activeTopic === topicId) {
+        setActiveTopic(null);
+        setResources([]);
+      }
       fetchTopics();
       onSave();
     } catch (error: any) {
       console.error('Error deleting topic:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao excluir tópico",
+        title: "Erro ao excluir tópico",
+        description: error.message || "Erro interno do servidor",
         variant: "destructive",
       });
     }
   };
 
   const deleteResource = async (resourceId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este recurso?")) return;
+    const resource = resources.find(r => r.id === resourceId);
+    if (!confirm(`Tem certeza que deseja excluir o recurso "${resource?.title}"?`)) return;
 
     try {
       const { error } = await supabase
@@ -341,8 +352,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       if (error) throw error;
 
       toast({
-        title: "Sucesso",
-        description: "Recurso excluído com sucesso",
+        title: "Recurso excluído",
+        description: "O recurso foi removido com sucesso",
       });
 
       fetchResources(activeTopic!);
@@ -350,8 +361,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     } catch (error: any) {
       console.error('Error deleting resource:', error);
       toast({
-        title: "Erro",
-        description: error.message || "Erro ao excluir recurso",
+        title: "Erro ao excluir recurso",
+        description: error.message || "Erro interno do servidor",
         variant: "destructive",
       });
     }
@@ -416,165 +427,263 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8">Carregando...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center p-12 space-y-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-futuristic-primary"></div>
+        <p className="text-muted-foreground">Carregando tópicos...</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h3 className="text-2xl font-bold">Gestão de Tópicos</h3>
-        <Button onClick={() => setIsTopicDialogOpen(true)}>
+        <div>
+          <h3 className="text-2xl font-bold text-futuristic-primary">Gestão de Tópicos</h3>
+          <p className="text-muted-foreground">Organize o conteúdo em tópicos e adicione recursos como vídeos, PDFs e links</p>
+        </div>
+        <Button 
+          onClick={() => setIsTopicDialogOpen(true)}
+          className="bg-futuristic-gradient hover:opacity-90"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Novo Tópico
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Topics Sidebar */}
-        <div className="space-y-4">
-          <h4 className="font-semibold">Tópicos</h4>
-          {topics.map((topic) => (
-            <Card 
-              key={topic.id} 
-              className={`cursor-pointer transition-colors ${
-                activeTopic === topic.id ? 'ring-2 ring-primary' : ''
-              }`}
-              onClick={() => setActiveTopic(topic.id)}
-            >
-              <CardHeader className="p-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm">{topic.title}</CardTitle>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openTopicEditDialog(topic);
-                      }}
-                    >
-                      <Edit className="w-3 h-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteTopic(topic.id);
-                      }}
-                    >
-                      <Trash2 className="w-3 h-3" />
-                    </Button>
+      {topics.length === 0 ? (
+        <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
+          <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
+            <AlertCircle className="w-12 h-12 text-muted-foreground" />
+            <div className="text-center">
+              <h4 className="text-lg font-semibold mb-2">Nenhum tópico criado ainda</h4>
+              <p className="text-muted-foreground mb-4">
+                Comece criando o primeiro tópico para organizar o conteúdo
+              </p>
+              <Button 
+                onClick={() => setIsTopicDialogOpen(true)}
+                className="bg-futuristic-gradient hover:opacity-90"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Criar Primeiro Tópico
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Topics Sidebar */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-futuristic-accent">Tópicos ({topics.length})</h4>
+            </div>
+            {topics.map((topic) => (
+              <Card 
+                key={topic.id} 
+                className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                  activeTopic === topic.id 
+                    ? 'ring-2 ring-futuristic-primary bg-futuristic-primary/5' 
+                    : 'hover:bg-background/80'
+                }`}
+                onClick={() => setActiveTopic(topic.id)}
+              >
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium">{topic.title}</CardTitle>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openTopicEditDialog(topic);
+                        }}
+                        className="h-6 w-6 p-0"
+                      >
+                        <Edit className="w-3 h-3" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteTopic(topic.id);
+                        }}
+                        className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                {topic.description && (
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {topic.description}
-                  </p>
-                )}
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-
-        {/* Resources Content */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h4 className="font-semibold">
-              Recursos {activeTopic && topics.find(t => t.id === activeTopic)?.title && 
-                `- ${topics.find(t => t.id === activeTopic)?.title}`}
-            </h4>
-            <Button 
-              onClick={() => setIsResourceDialogOpen(true)}
-              disabled={!activeTopic}
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Novo Recurso
-            </Button>
+                  {topic.description && (
+                    <p className="text-xs text-muted-foreground line-clamp-2">
+                      {topic.description}
+                    </p>
+                  )}
+                  <div className="flex items-center gap-2 mt-2">
+                    <Badge variant="outline" className="text-xs">
+                      Ordem: {topic.topic_order}
+                    </Badge>
+                  </div>
+                </CardHeader>
+              </Card>
+            ))}
           </div>
 
-          {activeTopic ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              {resources.map((resource) => (
-                <Card key={resource.id}>
-                  <CardHeader className="p-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        {getResourceIcon(resource.resource_type)}
-                        <CardTitle className="text-sm">{resource.title}</CardTitle>
-                      </div>
-                      <div className="flex gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openResourceEditDialog(resource)}
-                        >
-                          <Edit className="w-3 h-3" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteResource(resource.id)}
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    {resource.description && (
-                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                        {resource.description}
+          {/* Resources Content */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="flex items-center justify-between">
+              <h4 className="font-semibold text-futuristic-accent">
+                {activeTopic && topics.find(t => t.id === activeTopic) ? (
+                  <>
+                    Recursos - {topics.find(t => t.id === activeTopic)?.title}
+                    <Badge variant="outline" className="ml-2">
+                      {resources.length} recursos
+                    </Badge>
+                  </>
+                ) : (
+                  "Selecione um tópico"
+                )}
+              </h4>
+              <Button 
+                onClick={() => setIsResourceDialogOpen(true)}
+                disabled={!activeTopic}
+                className="bg-futuristic-gradient hover:opacity-90 disabled:opacity-50"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Novo Recurso
+              </Button>
+            </div>
+
+            {activeTopic ? (
+              resources.length === 0 ? (
+                <Card className="bg-background/60 backdrop-blur-sm border-futuristic-accent/20">
+                  <CardContent className="flex flex-col items-center justify-center py-8 space-y-4">
+                    <FileText className="w-8 h-8 text-muted-foreground" />
+                    <div className="text-center">
+                      <h5 className="font-medium mb-1">Nenhum recurso adicionado</h5>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Adicione vídeos, PDFs, links ou outros materiais a este tópico
                       </p>
-                    )}
-                    <div className="flex gap-2 flex-wrap">
-                      <Badge className={getResourceTypeBadge(resource.resource_type)}>
-                        {resource.resource_type}
-                      </Badge>
-                      {resource.is_premium && (
-                        <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
-                      )}
-                      <Badge variant="outline">{resource.required_plan}</Badge>
+                      <Button 
+                        onClick={() => setIsResourceDialogOpen(true)}
+                        size="sm"
+                        className="bg-futuristic-gradient hover:opacity-90"
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Adicionar Recurso
+                      </Button>
                     </div>
-                    {resource.thumbnail_url && (
-                      <img
-                        src={resource.thumbnail_url}
-                        alt={resource.title}
-                        className="w-full h-20 object-cover rounded mt-3"
-                      />
-                    )}
                   </CardContent>
                 </Card>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              Selecione um tópico para ver seus recursos
-            </div>
-          )}
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2">
+                  {resources.map((resource) => (
+                    <Card key={resource.id} className="bg-background/60 backdrop-blur-sm border-futuristic-accent/20">
+                      <CardHeader className="p-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            {getResourceIcon(resource.resource_type)}
+                            <CardTitle className="text-sm font-medium">{resource.title}</CardTitle>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openResourceEditDialog(resource)}
+                              className="h-6 w-6 p-0"
+                            >
+                              <Edit className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteResource(resource.id)}
+                              className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4 pt-0">
+                        {resource.description && (
+                          <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                            {resource.description}
+                          </p>
+                        )}
+                        <div className="flex gap-2 flex-wrap">
+                          <Badge className={getResourceTypeBadge(resource.resource_type)}>
+                            {resource.resource_type}
+                          </Badge>
+                          {resource.is_premium && (
+                            <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
+                          )}
+                          <Badge variant="outline">{resource.required_plan}</Badge>
+                        </div>
+                        {resource.thumbnail_url && (
+                          <img
+                            src={resource.thumbnail_url}
+                            alt={resource.title}
+                            className="w-full h-20 object-cover rounded mt-3 border border-border"
+                          />
+                        )}
+                        <div className="mt-3 pt-3 border-t border-border">
+                          <a 
+                            href={resource.resource_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-futuristic-accent hover:underline truncate block"
+                          >
+                            {resource.resource_url}
+                          </a>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )
+            ) : (
+              <Card className="bg-background/60 backdrop-blur-sm border-muted/20">
+                <CardContent className="flex flex-col items-center justify-center py-12 space-y-4">
+                  <FileText className="w-12 h-12 text-muted-foreground" />
+                  <div className="text-center">
+                    <h4 className="text-lg font-semibold mb-2">Selecione um tópico</h4>
+                    <p className="text-muted-foreground">
+                      Escolha um tópico na lista ao lado para visualizar e gerenciar seus recursos
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Topic Dialog */}
       <Dialog open={isTopicDialogOpen} onOpenChange={setIsTopicDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-futuristic-primary">
               {selectedTopic ? 'Editar Tópico' : 'Novo Tópico'}
             </DialogTitle>
             <DialogDescription>
-              {selectedTopic ? 'Altere os detalhes do tópico' : 'Adicione um novo tópico ao conteúdo'}
+              {selectedTopic ? 'Altere os detalhes do tópico' : 'Crie um novo tópico para organizar o conteúdo'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="topic-title">Título</Label>
+              <Label htmlFor="topic-title">Título *</Label>
               <Input
                 id="topic-title"
                 value={topicTitle}
                 onChange={(e) => setTopicTitle(e.target.value)}
-                placeholder="Título do tópico"
+                placeholder="Ex: Introdução ao Tema"
+                className={!topicTitle.trim() && isTopicDialogOpen ? "border-destructive" : ""}
               />
+              {!topicTitle.trim() && isTopicDialogOpen && (
+                <p className="text-xs text-destructive mt-1">Título é obrigatório</p>
+              )}
             </div>
             <div>
               <Label htmlFor="topic-description">Descrição</Label>
@@ -582,25 +691,27 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                 id="topic-description"
                 value={topicDescription}
                 onChange={(e) => setTopicDescription(e.target.value)}
-                placeholder="Descrição do tópico"
+                placeholder="Descrição opcional do tópico"
                 rows={3}
               />
             </div>
             <div>
-              <Label htmlFor="topic-image">URL da Imagem</Label>
+              <Label htmlFor="topic-image">URL da Imagem (opcional)</Label>
               <Input
                 id="topic-image"
                 value={topicImageUrl}
                 onChange={(e) => setTopicImageUrl(e.target.value)}
-                placeholder="URL da imagem do tópico"
+                placeholder="https://exemplo.com/imagem.jpg"
               />
             </div>
             <div className="flex gap-2">
               <Button 
                 onClick={selectedTopic ? updateTopic : createTopic} 
-                className="flex-1"
+                className="flex-1 bg-futuristic-gradient hover:opacity-90"
+                disabled={!topicTitle.trim()}
               >
-                {selectedTopic ? 'Atualizar' : 'Criar'}
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {selectedTopic ? 'Atualizar' : 'Criar'} Tópico
               </Button>
               <Button 
                 variant="outline" 
@@ -618,28 +729,32 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
 
       {/* Resource Dialog */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-futuristic-accent">
               {selectedResource ? 'Editar Recurso' : 'Novo Recurso'}
             </DialogTitle>
             <DialogDescription>
-              {selectedResource ? 'Altere os detalhes do recurso' : 'Adicione um novo recurso ao tópico'}
+              {selectedResource ? 'Altere os detalhes do recurso' : 'Adicione um novo recurso ao tópico selecionado'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="resource-title">Título</Label>
+                <Label htmlFor="resource-title">Título *</Label>
                 <Input
                   id="resource-title"
                   value={resourceTitle}
                   onChange={(e) => setResourceTitle(e.target.value)}
-                  placeholder="Título do recurso"
+                  placeholder="Ex: Vídeo Aula 1"
+                  className={!resourceTitle.trim() && isResourceDialogOpen ? "border-destructive" : ""}
                 />
+                {!resourceTitle.trim() && isResourceDialogOpen && (
+                  <p className="text-xs text-destructive mt-1">Título é obrigatório</p>
+                )}
               </div>
               <div>
-                <Label htmlFor="resource-type">Tipo</Label>
+                <Label htmlFor="resource-type">Tipo *</Label>
                 <Select value={resourceType} onValueChange={(value) => setResourceType(value as Resource['resource_type'])}>
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o tipo" />
@@ -660,30 +775,33 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                 id="resource-description"
                 value={resourceDescription}
                 onChange={(e) => setResourceDescription(e.target.value)}
-                placeholder="Descrição do recurso"
+                placeholder="Descrição opcional do recurso"
                 rows={3}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="resource-url">URL do Recurso</Label>
-                <Input
-                  id="resource-url"
-                  value={resourceUrl}
-                  onChange={(e) => setResourceUrl(e.target.value)}
-                  placeholder="URL do recurso"
-                />
-              </div>
-              <div>
-                <Label htmlFor="thumbnail-url">URL da Thumbnail</Label>
-                <Input
-                  id="thumbnail-url"
-                  value={thumbnailUrl}
-                  onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="URL da thumbnail"
-                />
-              </div>
+            <div>
+              <Label htmlFor="resource-url">URL do Recurso *</Label>
+              <Input
+                id="resource-url"
+                value={resourceUrl}
+                onChange={(e) => setResourceUrl(e.target.value)}
+                placeholder="https://exemplo.com/recurso"
+                className={!resourceUrl.trim() && isResourceDialogOpen ? "border-destructive" : ""}
+              />
+              {!resourceUrl.trim() && isResourceDialogOpen && (
+                <p className="text-xs text-destructive mt-1">URL é obrigatória</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="thumbnail-url">URL da Thumbnail (opcional)</Label>
+              <Input
+                id="thumbnail-url"
+                value={thumbnailUrl}
+                onChange={(e) => setThumbnailUrl(e.target.value)}
+                placeholder="https://exemplo.com/thumbnail.jpg"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -704,20 +822,22 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                 <input
                   type="checkbox"
                   id="is-resource-premium"
-                  className="h-4 w-4"
+                  className="h-4 w-4 rounded border-border"
                   checked={isResourcePremium}
                   onChange={(e) => setIsResourcePremium(e.target.checked)}
                 />
-                <Label htmlFor="is-resource-premium">Premium</Label>
+                <Label htmlFor="is-resource-premium">Conteúdo Premium</Label>
               </div>
             </div>
 
             <div className="flex gap-2">
               <Button 
                 onClick={selectedResource ? updateResource : createResource} 
-                className="flex-1"
+                className="flex-1 bg-futuristic-gradient hover:opacity-90"
+                disabled={!resourceTitle.trim() || !resourceUrl.trim()}
               >
-                {selectedResource ? 'Atualizar' : 'Criar'}
+                <CheckCircle className="w-4 h-4 mr-2" />
+                {selectedResource ? 'Atualizar' : 'Criar'} Recurso
               </Button>
               <Button 
                 variant="outline" 

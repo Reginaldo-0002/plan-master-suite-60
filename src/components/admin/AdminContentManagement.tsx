@@ -8,10 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Edit, Trash2, Plus, Eye, EyeOff, Users, Clock } from "lucide-react";
+import { CalendarIcon, Edit, Trash2, Plus, Eye, EyeOff, Users, Clock, BookOpen } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { ContentTopicsEditor } from "@/components/content/ContentTopicsEditor";
 
 type ContentType = "course" | "tutorial" | "product" | "tool";
 type UserPlan = "free" | "vip" | "pro";
@@ -51,6 +52,7 @@ export const AdminContentManagement = () => {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [publishDate, setPublishDate] = useState<Date | undefined>();
   const [hideDate, setHideDate] = useState<Date | undefined>();
+  const [managingTopicsContentId, setManagingTopicsContentId] = useState<string | null>(null);
   const { toast } = useToast();
 
   // Form states
@@ -307,6 +309,42 @@ export const AdminContentManagement = () => {
 
   if (loading) {
     return <div className="flex justify-center p-8">Carregando...</div>;
+  }
+
+  // Se estiver gerenciando tópicos, mostrar o ContentTopicsEditor
+  if (managingTopicsContentId) {
+    const content = contents.find(c => c.id === managingTopicsContentId);
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Button 
+            variant="outline" 
+            onClick={() => setManagingTopicsContentId(null)}
+            className="border-futuristic-primary text-futuristic-primary hover:bg-futuristic-primary/10"
+          >
+            ← Voltar para Gestão de Conteúdo
+          </Button>
+          <div>
+            <h2 className="text-2xl font-bold text-futuristic-primary">
+              Gerenciar Tópicos: {content?.title}
+            </h2>
+            <p className="text-muted-foreground">
+              Adicione vídeos, PDFs, links e outros recursos organizados em tópicos
+            </p>
+          </div>
+        </div>
+        
+        <ContentTopicsEditor 
+          contentId={managingTopicsContentId} 
+          onSave={() => {
+            toast({
+              title: "Tópicos atualizados",
+              description: "Os tópicos foram salvos com sucesso",
+            });
+          }}
+        />
+      </div>
+    );
   }
 
   return (
@@ -577,6 +615,15 @@ export const AdminContentManagement = () => {
                   </div>
                 </div>
                 <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setManagingTopicsContentId(content.id)}
+                    className="border-futuristic-accent text-futuristic-accent hover:bg-futuristic-accent/10"
+                  >
+                    <BookOpen className="w-4 h-4 mr-1" />
+                    Gerenciar Tópicos
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
