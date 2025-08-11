@@ -1,12 +1,13 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Users, DollarSign, Clock, Target, Gift, Eye } from "lucide-react";
+import { Users, DollarSign, Clock, Target, Gift, Eye, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { LoyaltySystem } from "@/components/loyalty/LoyaltySystem";
+import { MagneticBackground } from "@/components/background/MagneticBackground";
 
 interface Profile {
   id: string;
@@ -19,6 +20,8 @@ interface Profile {
   areas_accessed: number;
   referral_code: string;
   referral_earnings: number;
+  loyalty_level: string;
+  total_points: number;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +34,7 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
   const [notifications, setNotifications] = useState([]);
   const [recentContent, setRecentContent] = useState([]);
   const [referralStats, setReferralStats] = useState({ count: 0, earnings: 0 });
+  const [showLoyalty, setShowLoyalty] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -38,8 +42,47 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
       fetchNotifications();
       fetchRecentContent();
       fetchReferralStats();
+      // Award points for daily login
+      awardDailyLoginPoints();
     }
   }, [profile]);
+
+  const awardDailyLoginPoints = async () => {
+    if (!profile) return;
+    
+    try {
+      // Check if user already received daily points today
+      const today = new Date().toISOString().split('T')[0];
+      const { data: existingInteraction } = await supabase
+        .from('user_interactions')
+        .select('*')
+        .eq('user_id', profile.user_id)
+        .eq('interaction_type', 'daily_login')
+        .gte('created_at', today + 'T00:00:00')
+        .single();
+
+      if (!existingInteraction) {
+        // Award daily login points
+        await supabase.rpc('award_loyalty_points', {
+          user_uuid: profile.user_id,
+          points_amount: 10,
+          activity_type: 'daily_login'
+        });
+
+        // Log the interaction
+        await supabase
+          .from('user_interactions')
+          .insert([{
+            user_id: profile.user_id,
+            interaction_type: 'daily_login',
+            target_type: 'system',
+            metadata: { points_awarded: 10 }
+          }]);
+      }
+    } catch (error) {
+      console.error('Error awarding daily points:', error);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -105,10 +148,10 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
 
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
-      case 'free': return 'bg-gray-100 text-gray-800';
-      case 'vip': return 'bg-blue-100 text-blue-800';
-      case 'pro': return 'bg-purple-100 text-purple-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'free': return 'bg-plan-free text-white';
+      case 'vip': return 'bg-plan-vip text-white';
+      case 'pro': return 'bg-plan-pro text-white';
+      default: return 'bg-plan-free text-white';
     }
   };
 
@@ -120,157 +163,180 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
 
   if (!profile) {
     return (
-      <div className="flex-1 space-y-8 p-8">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-foreground">Carregando...</h2>
+      <>
+        <MagneticBackground />
+        <div className="flex-1 space-y-8 p-8 relative z-10">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-foreground">Carregando...</h2>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
   return (
-    <div className="flex-1 space-y-8 p-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">
-            Bem-vindo, {profile.full_name || 'Usuário'}!
-          </h2>
-          <p className="text-muted-foreground">
-            Aqui está um resumo da sua atividade na plataforma
-          </p>
-        </div>
-        <Badge className={getPlanBadgeColor(profile.plan)}>
-          Plano {profile.plan.toUpperCase()}
-        </Badge>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tempo Total</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatTime(profile.total_session_time || 0)}</div>
-            <p className="text-xs text-muted-foreground">
-              na plataforma
+    <>
+      <MagneticBackground />
+      <div className="flex-1 space-y-8 p-8 relative z-10">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight text-foreground bg-gradient-to-r from-futuristic-primary to-futuristic-secondary bg-clip-text text-transparent">
+              Bem-vindo, {profile.full_name || 'Usuário'}!
+            </h2>
+            <p className="text-muted-foreground">
+              Aqui está um resumo da sua atividade na plataforma
             </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Áreas Acessadas</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{profile.areas_accessed || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              diferentes seções
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Indicações</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{referralStats.count}</div>
-            <p className="text-xs text-muted-foreground">
-              usuários indicados
-            </p>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ganhos</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              R$ {(profile.referral_earnings || 0).toFixed(2)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              em indicações
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Referral Program */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Gift className="h-5 w-5" />
-            Programa de Indicação
-          </CardTitle>
-          <CardDescription>
-            Compartilhe seu código e ganhe com cada nova indicação
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between p-4 border rounded-lg">
-            <div>
-              <p className="font-medium">Seu código de indicação:</p>
-              <p className="text-lg font-mono font-bold text-primary">{profile.referral_code}</p>
-            </div>
-            <Button onClick={copyReferralCode}>
-              Copiar Código
+          </div>
+          <div className="flex items-center gap-3">
+            <Badge className={getPlanBadgeColor(profile.plan)}>
+              Plano {profile.plan.toUpperCase()}
+            </Badge>
+            <Button
+              variant="outline"
+              onClick={() => setShowLoyalty(!showLoyalty)}
+              className="border-futuristic-primary text-futuristic-primary hover:bg-futuristic-primary/10"
+            >
+              <Sparkles className="w-4 h-4 mr-2" />
+              {showLoyalty ? 'Ocultar' : 'Mostrar'} Loyalty
             </Button>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
-      {/* Recent Content & Notifications */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        {/* Loyalty System */}
+        {showLoyalty && (
+          <div className="animate-float">
+            <LoyaltySystem userId={profile.user_id} />
+          </div>
+        )}
+
+        {/* Enhanced Stats Cards with Futuristic Design */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20 hover:shadow-lg hover:shadow-futuristic-primary/20 transition-all duration-300 animate-glow">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tempo Total</CardTitle>
+              <Clock className="h-4 w-4 text-futuristic-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-futuristic-electric">{formatTime(profile.total_session_time || 0)}</div>
+              <p className="text-xs text-muted-foreground">
+                na plataforma
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-accent/20 hover:shadow-lg hover:shadow-futuristic-accent/20 transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Áreas Acessadas</CardTitle>
+              <Target className="h-4 w-4 text-futuristic-accent" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-futuristic-accent">{profile.areas_accessed || 0}</div>
+              <p className="text-xs text-muted-foreground">
+                diferentes seções
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-secondary/20 hover:shadow-lg hover:shadow-futuristic-secondary/20 transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Indicações</CardTitle>
+              <Users className="h-4 w-4 text-futuristic-secondary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-futuristic-secondary">{referralStats.count}</div>
+              <p className="text-xs text-muted-foreground">
+                usuários indicados
+              </p>
+            </CardContent>
+          </Card>
+          
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-neon/20 hover:shadow-lg hover:shadow-futuristic-neon/20 transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pontos Loyalty</CardTitle>
+              <Sparkles className="h-4 w-4 text-futuristic-neon" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-futuristic-neon">
+                {profile.total_points || 0}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                nível {profile.loyalty_level || 'bronze'}
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Enhanced Referral Program */}
+        <Card className="bg-gradient-to-br from-futuristic-primary/10 to-futuristic-secondary/10 border-futuristic-primary/20 shadow-lg backdrop-blur-sm">
           <CardHeader>
-            <CardTitle>Conteúdo Recente</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-futuristic-primary">
+              <Gift className="h-5 w-5" />
+              Programa de Indicação
+            </CardTitle>
             <CardDescription>
-              Últimos conteúdos adicionados à plataforma
+              Compartilhe seu código e ganhe com cada nova indicação
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {recentContent.slice(0, 3).map((content: any) => (
-              <div key={content.id} className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium">{content.title}</p>
-                  <p className="text-sm text-muted-foreground capitalize">
-                    {content.content_type}
+          <CardContent>
+            <div className="flex items-center justify-between p-4 border border-futuristic-primary/30 rounded-lg bg-background/30 backdrop-blur-xs">
+              <div>
+                <p className="font-medium">Seu código de indicação:</p>
+                <p className="text-lg font-mono font-bold text-futuristic-primary">{profile.referral_code}</p>
+              </div>
+              <Button onClick={copyReferralCode} className="bg-futuristic-gradient hover:opacity-90">
+                Copiar Código
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Enhanced Recent Content & Notifications */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-accent/20">
+            <CardHeader>
+              <CardTitle className="text-futuristic-accent">Conteúdo Recente</CardTitle>
+              <CardDescription>
+                Últimos conteúdos adicionados à plataforma
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {recentContent.slice(0, 3).map((content: any) => (
+                <div key={content.id} className="flex items-center justify-between p-3 border border-futuristic-primary/20 rounded-lg bg-background/20 hover:bg-background/40 transition-colors">
+                  <div>
+                    <p className="font-medium">{content.title}</p>
+                    <p className="text-sm text-muted-foreground capitalize">
+                      {content.content_type}
+                    </p>
+                  </div>
+                  <Badge className={getPlanBadgeColor(content.required_plan)}>
+                    {content.required_plan.toUpperCase()}
+                  </Badge>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-neon/20">
+            <CardHeader>
+              <CardTitle className="text-futuristic-neon">Notificações</CardTitle>
+              <CardDescription>
+                Últimas atualizações e avisos importantes
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {notifications.slice(0, 3).map((notification: any) => (
+                <div key={notification.id} className="border-l-4 border-futuristic-primary pl-4 p-3 bg-background/20 rounded-r-lg">
+                  <p className="font-medium">{notification.title}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {notification.message}
                   </p>
                 </div>
-                <Badge className={getPlanBadgeColor(content.required_plan)}>
-                  {content.required_plan.toUpperCase()}
-                </Badge>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Notificações</CardTitle>
-            <CardDescription>
-              Últimas atualizações e avisos importantes
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {notifications.slice(0, 3).map((notification: any) => (
-              <div key={notification.id} className="border-l-4 border-primary pl-4">
-                <p className="font-medium">{notification.title}</p>
-                <p className="text-sm text-muted-foreground">
-                  {notification.message}
-                </p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </>
   );
 };

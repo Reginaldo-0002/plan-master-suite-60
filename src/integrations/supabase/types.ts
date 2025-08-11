@@ -80,6 +80,42 @@ export type Database = {
         }
         Relationships: []
       }
+      automation_workflows: {
+        Row: {
+          actions: Json
+          created_at: string | null
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          trigger_conditions: Json | null
+          trigger_type: string
+        }
+        Insert: {
+          actions: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          trigger_conditions?: Json | null
+          trigger_type: string
+        }
+        Update: {
+          actions?: Json
+          created_at?: string | null
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          trigger_conditions?: Json | null
+          trigger_type?: string
+        }
+        Relationships: []
+      }
       content: {
         Row: {
           carousel_image_url: string | null
@@ -87,11 +123,17 @@ export type Database = {
           content_type: Database["public"]["Enums"]["content_type"]
           created_at: string | null
           description: string | null
+          difficulty_level: string | null
+          estimated_duration: number | null
+          hero_image_alt: string | null
+          hero_image_url: string | null
           id: string
           is_active: boolean | null
+          metadata: Json | null
           order_index: number | null
           required_plan: Database["public"]["Enums"]["user_plan"]
           show_in_carousel: boolean | null
+          tags: string[] | null
           title: string
           updated_at: string | null
           video_url: string | null
@@ -102,11 +144,17 @@ export type Database = {
           content_type: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
+          difficulty_level?: string | null
+          estimated_duration?: number | null
+          hero_image_alt?: string | null
+          hero_image_url?: string | null
           id?: string
           is_active?: boolean | null
+          metadata?: Json | null
           order_index?: number | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
           show_in_carousel?: boolean | null
+          tags?: string[] | null
           title: string
           updated_at?: string | null
           video_url?: string | null
@@ -117,50 +165,150 @@ export type Database = {
           content_type?: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
+          difficulty_level?: string | null
+          estimated_duration?: number | null
+          hero_image_alt?: string | null
+          hero_image_url?: string | null
           id?: string
           is_active?: boolean | null
+          metadata?: Json | null
           order_index?: number | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
           show_in_carousel?: boolean | null
+          tags?: string[] | null
           title?: string
           updated_at?: string | null
           video_url?: string | null
         }
         Relationships: []
       }
+      content_analytics: {
+        Row: {
+          completion_percentage: number | null
+          content_id: string | null
+          created_at: string | null
+          id: string
+          interaction_type: string | null
+          rating: number | null
+          user_id: string | null
+          view_duration: number | null
+        }
+        Insert: {
+          completion_percentage?: number | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          interaction_type?: string | null
+          rating?: number | null
+          user_id?: string | null
+          view_duration?: number | null
+        }
+        Update: {
+          completion_percentage?: number | null
+          content_id?: string | null
+          created_at?: string | null
+          id?: string
+          interaction_type?: string | null
+          rating?: number | null
+          user_id?: string | null
+          view_duration?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_analytics_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      content_schedules: {
+        Row: {
+          action_type: string
+          content_id: string | null
+          created_at: string | null
+          executed: boolean | null
+          id: string
+          scheduled_at: string
+          target_plans: string[] | null
+          target_users: string[] | null
+        }
+        Insert: {
+          action_type: string
+          content_id?: string | null
+          created_at?: string | null
+          executed?: boolean | null
+          id?: string
+          scheduled_at: string
+          target_plans?: string[] | null
+          target_users?: string[] | null
+        }
+        Update: {
+          action_type?: string
+          content_id?: string | null
+          created_at?: string | null
+          executed?: boolean | null
+          id?: string
+          scheduled_at?: string
+          target_plans?: string[] | null
+          target_users?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_schedules_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       content_topics: {
         Row: {
           content_id: string
           created_at: string | null
           description: string | null
+          external_links: Json | null
           id: string
           is_active: boolean | null
+          pdf_urls: string[] | null
+          resource_metadata: Json | null
           title: string
           topic_image_url: string | null
           topic_order: number | null
           updated_at: string | null
+          video_urls: string[] | null
         }
         Insert: {
           content_id: string
           created_at?: string | null
           description?: string | null
+          external_links?: Json | null
           id?: string
           is_active?: boolean | null
+          pdf_urls?: string[] | null
+          resource_metadata?: Json | null
           title: string
           topic_image_url?: string | null
           topic_order?: number | null
           updated_at?: string | null
+          video_urls?: string[] | null
         }
         Update: {
           content_id?: string
           created_at?: string | null
           description?: string | null
+          external_links?: Json | null
           id?: string
           is_active?: boolean | null
+          pdf_urls?: string[] | null
+          resource_metadata?: Json | null
           title?: string
           topic_image_url?: string | null
           topic_order?: number | null
           updated_at?: string | null
+          video_urls?: string[] | null
         }
         Relationships: [
           {
@@ -171,6 +319,125 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      content_visibility_rules: {
+        Row: {
+          content_id: string | null
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_visible: boolean | null
+          override_plan_restrictions: boolean | null
+          scheduled_hide_date: string | null
+          scheduled_show_date: string | null
+          user_id: string | null
+        }
+        Insert: {
+          content_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_visible?: boolean | null
+          override_plan_restrictions?: boolean | null
+          scheduled_hide_date?: string | null
+          scheduled_show_date?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          content_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_visible?: boolean | null
+          override_plan_restrictions?: boolean | null
+          scheduled_hide_date?: string | null
+          scheduled_show_date?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_visibility_rules_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loyalty_rewards: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          points_cost: number
+          reward_type: string
+          reward_value: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          points_cost: number
+          reward_type: string
+          reward_value?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          points_cost?: number
+          reward_type?: string
+          reward_value?: Json | null
+        }
+        Relationships: []
+      }
+      media_library: {
+        Row: {
+          alt_text: string | null
+          created_at: string | null
+          file_name: string
+          file_size: number | null
+          file_type: string
+          file_url: string
+          height: number | null
+          id: string
+          tags: string[] | null
+          uploaded_by: string | null
+          width: number | null
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string | null
+          file_name: string
+          file_size?: number | null
+          file_type: string
+          file_url: string
+          height?: number | null
+          id?: string
+          tags?: string[] | null
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string | null
+          file_name?: string
+          file_size?: number | null
+          file_type?: string
+          file_url?: string
+          height?: number | null
+          id?: string
+          tags?: string[] | null
+          uploaded_by?: string | null
+          width?: number | null
+        }
+        Relationships: []
       }
       notifications: {
         Row: {
@@ -221,11 +488,15 @@ export type Database = {
           created_at: string | null
           full_name: string | null
           id: string
+          last_activity: string | null
+          loyalty_level: string | null
           pix_key: string | null
           plan: Database["public"]["Enums"]["user_plan"]
+          preferences: Json | null
           referral_code: string | null
           referral_earnings: number | null
           role: string | null
+          total_points: number | null
           total_session_time: number | null
           updated_at: string | null
           user_id: string
@@ -236,11 +507,15 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          last_activity?: string | null
+          loyalty_level?: string | null
           pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          preferences?: Json | null
           referral_code?: string | null
           referral_earnings?: number | null
           role?: string | null
+          total_points?: number | null
           total_session_time?: number | null
           updated_at?: string | null
           user_id: string
@@ -251,11 +526,15 @@ export type Database = {
           created_at?: string | null
           full_name?: string | null
           id?: string
+          last_activity?: string | null
+          loyalty_level?: string | null
           pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
+          preferences?: Json | null
           referral_code?: string | null
           referral_earnings?: number | null
           role?: string | null
+          total_points?: number | null
           total_session_time?: number | null
           updated_at?: string | null
           user_id?: string
@@ -300,6 +579,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scheduled_notifications: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          message: string
+          notification_type: string | null
+          scheduled_at: string
+          sent: boolean | null
+          target_plans: string[] | null
+          target_users: string[] | null
+          template_data: Json | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          message: string
+          notification_type?: string | null
+          scheduled_at: string
+          sent?: boolean | null
+          target_plans?: string[] | null
+          target_users?: string[] | null
+          template_data?: Json | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          message?: string
+          notification_type?: string | null
+          scheduled_at?: string
+          sent?: boolean | null
+          target_plans?: string[] | null
+          target_users?: string[] | null
+          template_data?: Json | null
+          title?: string
+        }
+        Relationships: []
       }
       support_messages: {
         Row: {
@@ -461,6 +782,36 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_description: string | null
+          achievement_name: string
+          achievement_type: string
+          id: string
+          points_awarded: number | null
+          unlocked_at: string | null
+          user_id: string
+        }
+        Insert: {
+          achievement_description?: string | null
+          achievement_name: string
+          achievement_type: string
+          id?: string
+          points_awarded?: number | null
+          unlocked_at?: string | null
+          user_id: string
+        }
+        Update: {
+          achievement_description?: string | null
+          achievement_name?: string
+          achievement_type?: string
+          id?: string
+          points_awarded?: number | null
+          unlocked_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_activity_logs: {
         Row: {
           activity_type: string
@@ -564,6 +915,114 @@ export type Database = {
           },
         ]
       }
+      user_interactions: {
+        Row: {
+          created_at: string | null
+          id: string
+          interaction_type: string
+          ip_address: unknown | null
+          metadata: Json | null
+          session_id: string | null
+          target_id: string | null
+          target_type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interaction_type: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          session_id?: string | null
+          target_id?: string | null
+          target_type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interaction_type?: string
+          ip_address?: unknown | null
+          metadata?: Json | null
+          session_id?: string | null
+          target_id?: string | null
+          target_type?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      user_loyalty_points: {
+        Row: {
+          created_at: string | null
+          id: string
+          level: string
+          points: number
+          total_earned: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          level?: string
+          points?: number
+          total_earned?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          level?: string
+          points?: number
+          total_earned?: number
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_missions: {
+        Row: {
+          completed_at: string | null
+          created_at: string | null
+          current_progress: number | null
+          expires_at: string | null
+          id: string
+          mission_description: string
+          mission_type: string
+          points_reward: number
+          status: string | null
+          target_value: number
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_progress?: number | null
+          expires_at?: string | null
+          id?: string
+          mission_description: string
+          mission_type: string
+          points_reward: number
+          status?: string | null
+          target_value: number
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string | null
+          current_progress?: number | null
+          expires_at?: string | null
+          id?: string
+          mission_description?: string
+          mission_type?: string
+          points_reward?: number
+          status?: string | null
+          target_value?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           amount: number
@@ -607,7 +1066,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      award_loyalty_points: {
+        Args: {
+          user_uuid: string
+          points_amount: number
+          activity_type: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       content_type: "product" | "tool" | "course" | "tutorial"
