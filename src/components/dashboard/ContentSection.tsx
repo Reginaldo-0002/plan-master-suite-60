@@ -36,18 +36,32 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
     fetchContent();
   }, [type]);
 
+  const getContentTypeForQuery = (type: string) => {
+    switch (type) {
+      case 'products': return 'product';
+      case 'tools': return 'tool';
+      case 'courses': return 'course';
+      case 'rules': return 'tutorial'; // Regras são um tipo especial de tutorial
+      case 'coming-soon': return null; // Coming soon busca por data futura
+      default: return type;
+    }
+  };
+
   const fetchContent = async () => {
     try {
       let query = supabase
         .from('content')
-        .select('*')
-        .eq('content_type', type)
+        .select('id, title, description, content_type, status, required_plan, hero_image_url, scheduled_publish_at as release_date, created_at, updated_at')
         .order('created_at', { ascending: false });
 
-      // Para "coming-soon", buscar por data de lançamento futura
+      const contentType = getContentTypeForQuery(type);
+      
       if (type === 'coming-soon') {
-        const today = new Date().toISOString().split('T')[0];
-        query = query.gte('release_date', today);
+        // Para "coming-soon", buscar por data de lançamento futura
+        const today = new Date().toISOString();
+        query = query.gte('scheduled_publish_at', today);
+      } else if (contentType) {
+        query = query.eq('content_type', contentType);
       }
 
       const { data, error } = await query;

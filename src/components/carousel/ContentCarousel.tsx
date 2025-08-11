@@ -21,7 +21,12 @@ interface CarouselContent {
   updated_at: string;
 }
 
-export const ContentCarousel = () => {
+interface ContentCarouselProps {
+  userPlan?: 'free' | 'vip' | 'pro';
+  onContentClick?: (contentId: string) => void;
+}
+
+export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselProps) => {
   const [carouselContent, setCarouselContent] = useState<CarouselContent[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -37,7 +42,7 @@ export const ContentCarousel = () => {
       
       const { data, error } = await supabase
         .from('content')
-        .select('*')
+        .select('id, title, description, content_type, status, required_plan, hero_image_url, carousel_image_url, carousel_order, created_at, updated_at')
         .eq('show_in_carousel', true)
         .eq('status', 'active')
         .order('carousel_order', { ascending: true });
@@ -84,6 +89,12 @@ export const ContentCarousel = () => {
 
   const prevSlide = () => {
     setCurrentIndex((prev) => (prev - 1 + carouselContent.length) % carouselContent.length);
+  };
+
+  const handleContentClick = (contentId: string) => {
+    if (onContentClick) {
+      onContentClick(contentId);
+    }
   };
 
   if (loading) {
@@ -186,7 +197,7 @@ export const ContentCarousel = () => {
           {/* Grid de Conteúdo do Carrossel */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {carouselContent.map((item, index) => (
-              <Card key={item.id} className={`overflow-hidden hover:shadow-lg transition-shadow ${
+              <Card key={item.id} className={`overflow-hidden hover:shadow-lg transition-shadow cursor-pointer ${
                 index === currentIndex ? 'ring-2 ring-primary' : ''
               }`}>
                 {(item.carousel_image_url || item.hero_image_url) && (
@@ -208,7 +219,10 @@ export const ContentCarousel = () => {
                 <CardContent>
                   <Button 
                     className="w-full"
-                    onClick={() => setCurrentIndex(index)}
+                    onClick={() => {
+                      setCurrentIndex(index);
+                      handleContentClick(item.id);
+                    }}
                   >
                     {index === currentIndex ? 'Visualizando' : 'Ver no Carrossel'}
                   </Button>

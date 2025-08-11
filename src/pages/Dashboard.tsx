@@ -40,6 +40,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ActiveSection>('dashboard');
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { handleAsyncError } = useErrorHandler();
@@ -98,6 +99,21 @@ const Dashboard = () => {
 
   const handleSectionChange = (section: ActiveSection) => {
     setActiveSection(section);
+    setSelectedContentId(null); // Reset content selection when changing sections
+  };
+
+  const handleContentClick = (contentId: string) => {
+    setSelectedContentId(contentId);
+    setActiveSection('tutorials'); // Navigate to tutorials when content is clicked
+  };
+
+  const handleBackFromTutorials = () => {
+    setSelectedContentId(null);
+    setActiveSection('carousel'); // Go back to carousel when backing out of tutorials
+  };
+
+  const handleProfileUpdate = (updatedProfile: Profile) => {
+    setProfile(updatedProfile);
   };
 
   if (loading) {
@@ -123,15 +139,29 @@ const Dashboard = () => {
       case 'courses':
         return <ContentSection type="courses" userPlan={profile.plan} />;
       case 'tutorials':
-        return <TopicsGallery userPlan={profile.plan} />;
+        if (selectedContentId) {
+          return (
+            <TopicsGallery 
+              contentId={selectedContentId} 
+              userPlan={profile.plan} 
+              onBack={handleBackFromTutorials}
+            />
+          );
+        }
+        return <ContentSection type="tutorials" userPlan={profile.plan} />;
       case 'rules':
         return <ContentSection type="rules" userPlan={profile.plan} />;
       case 'coming-soon':
         return <ContentSection type="coming-soon" userPlan={profile.plan} />;
       case 'carousel':
-        return <ContentCarousel />;
+        return (
+          <ContentCarousel 
+            userPlan={profile.plan} 
+            onContentClick={handleContentClick}
+          />
+        );
       case 'settings':
-        return <ProfileSettings profile={profile} onProfileUpdate={setProfile} />;
+        return <ProfileSettings profile={profile} onProfileUpdate={handleProfileUpdate} />;
       default:
         return <DashboardContent profile={profile} />;
     }
