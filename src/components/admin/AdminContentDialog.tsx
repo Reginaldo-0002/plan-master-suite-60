@@ -9,562 +9,432 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, ChevronDown, ScrollText } from "lucide-react";
+import { Loader2, X } from "lucide-react";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
 
-interface ContentItem {
+interface Content {
   id?: string;
   title: string;
   description: string;
-  content_type: 'course' | 'tool' | 'tutorial' | 'product';
+  content_type: 'video' | 'article' | 'course' | 'tool';
   required_plan: 'free' | 'vip' | 'pro';
-  is_active: boolean;
-  order_index: number;
-  show_in_carousel: boolean;
-  carousel_image_url?: string;
-  carousel_order: number;
   video_url?: string;
+  hero_image_url?: string;
+  carousel_image_url?: string;
+  is_active: boolean;
+  show_in_carousel: boolean;
+  carousel_order: number;
+  status: 'draft' | 'published' | 'scheduled';
+  published_at?: string;
+  scheduled_publish_at?: string;
+  tags?: string[];
+  difficulty_level: 'beginner' | 'intermediate' | 'advanced';
+  estimated_duration?: number;
+  order_index: number;
 }
 
 interface AdminContentDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  contentItem?: ContentItem | null;
-  contentType: 'course' | 'tool' | 'tutorial' | 'product';
+  content?: Content | null;
+  onContentSaved: () => void;
 }
 
-export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }: AdminContentDialogProps) => {
-  const [formData, setFormData] = useState<ContentItem>({
+export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }: AdminContentDialogProps) => {
+  const [loading, setLoading] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+  const { toast } = useToast();
+  const { handleError } = useErrorHandler();
+
+  const [formData, setFormData] = useState<Content>({
     title: "",
     description: "",
-    content_type: contentType,
+    content_type: "article",
     required_plan: "free",
+    video_url: "",
+    hero_image_url: "",
+    carousel_image_url: "",
     is_active: true,
-    order_index: 0,
     show_in_carousel: false,
     carousel_order: 0,
-    video_url: ""
+    status: "draft",
+    tags: [],
+    difficulty_level: "beginner",
+    estimated_duration: 0,
+    order_index: 0
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [showScrollIndicator, setShowScrollIndicator] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
-    if (contentItem) {
+    if (content) {
       setFormData({
-        ...contentItem,
-        content_type: contentType
+        ...content,
+        tags: content.tags || []
       });
+      setTagInput(content.tags?.join(", ") || "");
     } else {
       setFormData({
         title: "",
         description: "",
-        content_type: contentType,
+        content_type: "article",
         required_plan: "free",
+        video_url: "",
+        hero_image_url: "",
+        carousel_image_url: "",
         is_active: true,
-        order_index: 0,
         show_in_carousel: false,
         carousel_order: 0,
-        video_url: ""
+        status: "draft",
+        tags: [],
+        difficulty_level: "beginner",
+        estimated_duration: 0,
+        order_index: 0
       });
+      setTagInput("");
     }
-  }, [contentItem, contentType, isOpen]);
+  }, [content, isOpen]);
 
-  // Verificar se há conteúdo para rolar
-  useEffect(() => {
-    const checkScrollable = () => {
-      const scrollContainer = document.querySelector('.admin-content-scroll-area');
-      if (scrollContainer) {
-        const isScrollable = scrollContainer.scrollHeight > scrollContainer.clientHeight;
-        setShowScrollIndicator(isScrollable);
-      }
-    };
+  const handleInputChange = (field: keyof Content, value: any) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+  };
 
-    if (isOpen) {
-      setTimeout(checkScrollable, 100);
-      window.addEventListener('resize', checkScrollable);
-      return () => window.removeEventListener('resize', checkScrollable);
-    }
-  }, [isOpen, formData]);
+  const handleTagsChange = (value: string) => {
+    setTagInput(value);
+    const tags = value.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0);
+    setFormData(prev => ({ ...prev, tags }));
+  };
 
-  const handleSave = async () => {
+  const validateForm = (): boolean => {
     if (!formData.title.trim()) {
       toast({
-        title: "Erro",
+        title: "Erro de validação",
         description: "O título é obrigatório",
         variant: "destructive",
       });
-      
-      // Auto-scroll para o campo título em caso de erro
-      const titleField = document.getElementById('title');
-      if (titleField) {
-        titleField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        titleField.focus();
-      }
-      return;
+      return false;
     }
 
-    setIsLoading(true);
+    if (!formData.description.trim()) {
+      toast({
+        title: "Erro de validação",
+        description: "A descrição é obrigatória",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    if (formData.content_type === 'video' && !formData.video_url?.trim()) {
+      toast({
+        title: "Erro de validação",
+        description: "URL do vídeo é obrigatória para conteúdo do tipo vídeo",
+        variant: "destructive",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) return;
+
+    setLoading(true);
+    
     try {
       const dataToSave = {
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         content_type: formData.content_type,
         required_plan: formData.required_plan,
+        video_url: formData.video_url?.trim() || null,
+        hero_image_url: formData.hero_image_url?.trim() || null,
+        carousel_image_url: formData.carousel_image_url?.trim() || null,
         is_active: formData.is_active,
-        order_index: formData.order_index,
         show_in_carousel: formData.show_in_carousel,
-        carousel_image_url: formData.carousel_image_url || null,
         carousel_order: formData.carousel_order,
-        video_url: formData.video_url || null
+        status: formData.status,
+        published_at: formData.status === 'published' ? new Date().toISOString() : null,
+        scheduled_publish_at: formData.scheduled_publish_at || null,
+        tags: formData.tags,
+        difficulty_level: formData.difficulty_level,
+        estimated_duration: formData.estimated_duration || null,
+        order_index: formData.order_index,
+        updated_at: new Date().toISOString()
       };
 
-      let error;
-      if (contentItem?.id) {
-        const result = await supabase
+      let result;
+      
+      if (content?.id) {
+        // Atualizar conteúdo existente
+        result = await supabase
           .from('content')
           .update(dataToSave)
-          .eq('id', contentItem.id);
-        error = result.error;
+          .eq('id', content.id)
+          .select();
       } else {
-        const result = await supabase
+        // Criar novo conteúdo
+        result = await supabase
           .from('content')
-          .insert(dataToSave);
-        error = result.error;
+          .insert([dataToSave])
+          .select();
       }
 
-      if (error) throw error;
+      if (result.error) {
+        throw result.error;
+      }
 
       toast({
         title: "Sucesso",
-        description: `${contentItem?.id ? 'Conteúdo atualizado' : 'Conteúdo criado'} com sucesso`,
+        description: `Conteúdo ${content?.id ? 'atualizado' : 'criado'} com sucesso!`,
       });
 
+      onContentSaved();
       onClose();
+
     } catch (error) {
       console.error('Error saving content:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao salvar conteúdo",
-        variant: "destructive",
+      handleError(error, {
+        title: "Erro ao salvar conteúdo",
+        showToast: true
       });
     } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const getContentTypeLabel = (type: string) => {
-    switch (type) {
-      case 'course': return 'Curso';
-      case 'tool': return 'Ferramenta';
-      case 'tutorial': return 'Tutorial';
-      case 'product': return 'Produto';
-      default: return type;
+      setLoading(false);
     }
   };
 
   return (
-    <>
-      <style>{`
-        .admin-dialog-container {
-          max-width: 64rem;
-          width: 100%;
-          height: 95vh;
-          padding: 0;
-          gap: 0;
-          display: flex;
-          flex-direction: column;
-          overflow: hidden;
-          position: fixed;
-          top: 50%;
-          left: 50%;
-          transform: translate(-50%, -50%);
-        }
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>
+            {content?.id ? 'Editar Conteúdo' : 'Criar Novo Conteúdo'}
+          </DialogTitle>
+          <DialogDescription>
+            Preencha os dados para {content?.id ? 'atualizar' : 'criar'} o conteúdo
+          </DialogDescription>
+        </DialogHeader>
 
-        .admin-dialog-header {
-          padding: 1rem 1.5rem;
-          border-bottom: 1px solid hsl(var(--border));
-          background: hsl(var(--background) / 0.95);
-          backdrop-filter: blur(4px);
-          flex-shrink: 0;
-          position: relative;
-          z-index: 10;
-        }
+        <div className="space-y-6">
+          {/* Informações Básicas */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="title">Título *</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => handleInputChange('title', e.target.value)}
+                placeholder="Título do conteúdo"
+                required
+              />
+            </div>
 
-        .admin-header-title {
-          font-size: 1.25rem;
-          font-weight: 700;
-          color: hsl(var(--foreground));
-          margin-bottom: 0.5rem;
-        }
+            <div>
+              <Label htmlFor="content_type">Tipo de Conteúdo</Label>
+              <Select value={formData.content_type} onValueChange={(value: any) => handleInputChange('content_type', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="article">Artigo</SelectItem>
+                  <SelectItem value="video">Vídeo</SelectItem>
+                  <SelectItem value="course">Curso</SelectItem>
+                  <SelectItem value="tool">Ferramenta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-        .admin-header-description {
-          font-size: 0.875rem;
-          color: hsl(var(--muted-foreground));
-        }
+          <div>
+            <Label htmlFor="description">Descrição *</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => handleInputChange('description', e.target.value)}
+              placeholder="Descrição detalhada do conteúdo"
+              rows={4}
+              required
+            />
+          </div>
 
-        .admin-scroll-indicator {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin-top: 0.75rem;
-          padding: 0.5rem;
-          background: hsl(var(--primary) / 0.1);
-          border-radius: 0.5rem;
-          border: 1px solid hsl(var(--primary) / 0.2);
-          color: hsl(var(--primary));
-        }
+          {/* URLs e Mídia */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="video_url">URL do Vídeo</Label>
+              <Input
+                id="video_url"
+                value={formData.video_url || ''}
+                onChange={(e) => handleInputChange('video_url', e.target.value)}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+            </div>
 
-        .admin-content-scroll-area {
-          flex: 1;
-          overflow-y: auto;
-          scrollbar-width: thin;
-          scrollbar-color: hsl(var(--primary) / 0.3) hsl(var(--muted));
-          position: relative;
-        }
+            <div>
+              <Label htmlFor="hero_image_url">URL da Imagem Principal</Label>
+              <Input
+                id="hero_image_url"
+                value={formData.hero_image_url || ''}
+                onChange={(e) => handleInputChange('hero_image_url', e.target.value)}
+                placeholder="https://exemplo.com/imagem.jpg"
+              />
+            </div>
+          </div>
 
-        .admin-content-scroll-area::-webkit-scrollbar {
-          width: 8px;
-        }
+          <div>
+            <Label htmlFor="carousel_image_url">URL da Imagem do Carrossel</Label>
+            <Input
+              id="carousel_image_url"
+              value={formData.carousel_image_url || ''}
+              onChange={(e) => handleInputChange('carousel_image_url', e.target.value)}
+              placeholder="https://exemplo.com/carousel.jpg"
+            />
+          </div>
 
-        .admin-content-scroll-area::-webkit-scrollbar-track {
-          background: hsl(var(--muted));
-          border-radius: 4px;
-        }
+          {/* Configurações */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <Label htmlFor="required_plan">Plano Necessário</Label>
+              <Select value={formData.required_plan} onValueChange={(value: any) => handleInputChange('required_plan', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        .admin-content-scroll-area::-webkit-scrollbar-thumb {
-          background: hsl(var(--primary) / 0.5);
-          border-radius: 4px;
-          transition: background 0.2s ease;
-        }
+            <div>
+              <Label htmlFor="difficulty_level">Nível de Dificuldade</Label>
+              <Select value={formData.difficulty_level} onValueChange={(value: any) => handleInputChange('difficulty_level', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="beginner">Iniciante</SelectItem>
+                  <SelectItem value="intermediate">Intermediário</SelectItem>
+                  <SelectItem value="advanced">Avançado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        .admin-content-scroll-area::-webkit-scrollbar-thumb:hover {
-          background: hsl(var(--primary) / 0.7);
-        }
+            <div>
+              <Label htmlFor="estimated_duration">Duração Estimada (min)</Label>
+              <Input
+                id="estimated_duration"
+                type="number"
+                value={formData.estimated_duration || ''}
+                onChange={(e) => handleInputChange('estimated_duration', parseInt(e.target.value) || 0)}
+                placeholder="0"
+                min="0"
+              />
+            </div>
+          </div>
 
-        .admin-form-content {
-          padding: 1rem 1.5rem;
-        }
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="status">Status</Label>
+              <Select value={formData.status} onValueChange={(value: any) => handleInputChange('status', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Rascunho</SelectItem>
+                  <SelectItem value="published">Publicado</SelectItem>
+                  <SelectItem value="scheduled">Agendado</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        .admin-field-group {
-          margin-bottom: 1.5rem;
-        }
+            <div>
+              <Label htmlFor="order_index">Ordem de Exibição</Label>
+              <Input
+                id="order_index"
+                type="number"
+                value={formData.order_index}
+                onChange={(e) => handleInputChange('order_index', parseInt(e.target.value) || 0)}
+                placeholder="0"
+                min="0"
+              />
+            </div>
+          </div>
 
-        .admin-field-label {
-          display: block;
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: hsl(var(--foreground));
-          margin-bottom: 0.5rem;
-        }
+          {/* Tags */}
+          <div>
+            <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
+            <Input
+              id="tags"
+              value={tagInput}
+              onChange={(e) => handleTagsChange(e.target.value)}
+              placeholder="tag1, tag2, tag3"
+            />
+          </div>
 
-        .admin-field-label.required::after {
-          content: ' *';
-          color: hsl(var(--destructive));
-        }
+          {/* Switches */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="is_active"
+                checked={formData.is_active}
+                onCheckedChange={(checked) => handleInputChange('is_active', checked)}
+              />
+              <Label htmlFor="is_active">Ativo</Label>
+            </div>
 
-        .admin-switches-group {
-          margin-bottom: 1.5rem;
-          padding: 1rem;
-          background: hsl(var(--muted) / 0.3);
-          border-radius: 0.5rem;
-          border: 1px solid hsl(var(--border) / 0.5);
-        }
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show_in_carousel"
+                checked={formData.show_in_carousel}
+                onCheckedChange={(checked) => handleInputChange('show_in_carousel', checked)}
+              />
+              <Label htmlFor="show_in_carousel">Mostrar no Carrossel</Label>
+            </div>
 
-        .admin-switch-item {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          margin-bottom: 1rem;
-        }
-
-        .admin-switch-item:last-child {
-          margin-bottom: 0;
-        }
-
-        .admin-switch-label {
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: hsl(var(--foreground));
-        }
-
-        .admin-carousel-section {
-          margin-bottom: 1.5rem;
-          padding: 1rem;
-          background: hsl(var(--primary) / 0.05);
-          border-radius: 0.5rem;
-          border: 1px solid hsl(var(--primary) / 0.2);
-        }
-
-        .admin-carousel-title {
-          font-size: 0.875rem;
-          font-weight: 600;
-          color: hsl(var(--primary));
-          margin-bottom: 1rem;
-        }
-
-        .admin-scroll-padding {
-          height: 2rem;
-        }
-
-        .admin-dialog-footer {
-          border-top: 1px solid hsl(var(--border));
-          background: hsl(var(--background) / 0.95);
-          backdrop-filter: blur(4px);
-          flex-shrink: 0;
-          position: relative;
-          z-index: 10;
-        }
-
-        .admin-footer-shadow {
-          position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          height: 1rem;
-          background: linear-gradient(to bottom, transparent, hsl(var(--background) / 0.2));
-          pointer-events: none;
-          transform: translateY(-100%);
-        }
-
-        .admin-footer-buttons {
-          display: flex;
-          justify-content: flex-end;
-          gap: 0.75rem;
-          padding: 1rem 1.5rem;
-        }
-
-        @media (max-width: 768px) {
-          .admin-dialog-container {
-            max-width: 95vw;
-            height: 90vh;
-          }
-
-          .admin-form-content,
-          .admin-dialog-header,
-          .admin-footer-buttons {
-            padding-left: 1rem;
-            padding-right: 1rem;
-          }
-
-          .admin-footer-buttons {
-            flex-direction: column;
-            gap: 0.5rem;
-          }
-        }
-
-        @media (max-height: 600px) {
-          .admin-dialog-container {
-            height: 98vh;
-          }
-
-          .admin-dialog-header {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
-          }
-
-          .admin-footer-buttons {
-            padding-top: 0.75rem;
-            padding-bottom: 0.75rem;
-          }
-        }
-      `}</style>
-
-      <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="admin-dialog-container">
-          {/* Header Fixo */}
-          <div className="admin-dialog-header">
-            <DialogHeader>
-              <DialogTitle className="admin-header-title">
-                {contentItem?.id ? 'Editar' : 'Criar'} {getContentTypeLabel(contentType)}
-              </DialogTitle>
-              <DialogDescription className="admin-header-description">
-                Preencha os campos abaixo para {contentItem?.id ? 'editar' : 'criar'} o conteúdo.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {/* Indicador de Scroll */}
-            {showScrollIndicator && (
-              <div className="admin-scroll-indicator">
-                <ScrollText className="w-4 h-4 mr-2" />
-                <span className="text-xs">Role para ver mais campos</span>
-                <ChevronDown className="w-4 h-4 ml-2 animate-bounce" />
+            {formData.show_in_carousel && (
+              <div>
+                <Label htmlFor="carousel_order">Ordem no Carrossel</Label>
+                <Input
+                  id="carousel_order"
+                  type="number"
+                  value={formData.carousel_order}
+                  onChange={(e) => handleInputChange('carousel_order', parseInt(e.target.value) || 0)}
+                  placeholder="0"
+                  min="0"
+                />
               </div>
             )}
           </div>
 
-          {/* Área de Conteúdo Scrollável */}
-          <div className="admin-content-scroll-area">
-            <div className="admin-form-content">
-              {/* Título */}
-              <div className="admin-field-group">
-                <Label htmlFor="title" className="admin-field-label required">
-                  Título
-                </Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Digite o título..."
-                  className="w-full"
-                />
-              </div>
-
-              {/* Descrição */}
-              <div className="admin-field-group">
-                <Label htmlFor="description" className="admin-field-label">
-                  Descrição
-                </Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Descreva o conteúdo..."
-                  rows={4}
-                  className="w-full resize-none"
-                />
-              </div>
-
-              {/* Plano Necessário */}
-              <div className="admin-field-group">
-                <Label htmlFor="required_plan" className="admin-field-label">
-                  Plano Necessário
-                </Label>
-                <Select 
-                  value={formData.required_plan} 
-                  onValueChange={(value: any) => setFormData({ ...formData, required_plan: value })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">🆓 Gratuito</SelectItem>
-                    <SelectItem value="vip">⭐ VIP</SelectItem>
-                    <SelectItem value="pro">💎 Pro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* URL do Vídeo */}
-              <div className="admin-field-group">
-                <Label htmlFor="video_url" className="admin-field-label">
-                  🎥 URL do Vídeo (opcional)
-                </Label>
-                <Input
-                  id="video_url"
-                  value={formData.video_url || ""}
-                  onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className="w-full"
-                />
-              </div>
-
-              {/* Ordem de Exibição */}
-              <div className="admin-field-group">
-                <Label htmlFor="order_index" className="admin-field-label">
-                  📊 Ordem de Exibição
-                </Label>
-                <Input
-                  id="order_index"
-                  type="number"
-                  value={formData.order_index}
-                  onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Switches */}
-              <div className="admin-switches-group">
-                <div className="admin-switch-item">
-                  <Label htmlFor="is_active" className="admin-switch-label">
-                    ✅ Conteúdo Ativo
-                  </Label>
-                  <Switch
-                    id="is_active"
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                </div>
-
-                <div className="admin-switch-item">
-                  <Label htmlFor="show_in_carousel" className="admin-switch-label">
-                    🎠 Exibir no Carrossel
-                  </Label>
-                  <Switch
-                    id="show_in_carousel"
-                    checked={formData.show_in_carousel}
-                    onCheckedChange={(checked) => setFormData({ ...formData, show_in_carousel: checked })}
-                  />
-                </div>
-              </div>
-
-              {/* Campos do Carrossel */}
-              {formData.show_in_carousel && (
-                <div className="admin-carousel-section">
-                  <h4 className="admin-carousel-title">🎠 Configurações do Carrossel</h4>
-                  
-                  <div className="admin-field-group">
-                    <Label htmlFor="carousel_image_url" className="admin-field-label">
-                      🖼️ URL da Imagem do Carrossel
-                    </Label>
-                    <Input
-                      id="carousel_image_url"
-                      value={formData.carousel_image_url || ""}
-                      onChange={(e) => setFormData({ ...formData, carousel_image_url: e.target.value })}
-                      placeholder="https://exemplo.com/imagem.jpg"
-                      className="w-full"
-                    />
-                  </div>
-                  
-                  <div className="admin-field-group">
-                    <Label htmlFor="carousel_order" className="admin-field-label">
-                      🔢 Ordem no Carrossel
-                    </Label>
-                    <Input
-                      id="carousel_order"
-                      type="number"
-                      value={formData.carousel_order}
-                      onChange={(e) => setFormData({ ...formData, carousel_order: parseInt(e.target.value) || 0 })}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Espaço adicional para garantir que o último campo seja acessível */}
-              <div className="admin-scroll-padding"></div>
+          {/* Agendamento */}
+          {formData.status === 'scheduled' && (
+            <div>
+              <Label htmlFor="scheduled_publish_at">Data de Publicação Agendada</Label>
+              <Input
+                id="scheduled_publish_at"
+                type="datetime-local"
+                value={formData.scheduled_publish_at || ''}
+                onChange={(e) => handleInputChange('scheduled_publish_at', e.target.value)}
+              />
             </div>
-          </div>
+          )}
+        </div>
 
-          {/* Footer Fixo com Botões */}
-          <div className="admin-dialog-footer">
-            <div className="admin-footer-shadow"></div>
-            <div className="admin-footer-buttons">
-              <Button 
-                variant="outline" 
-                onClick={onClose} 
-                disabled={isLoading}
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSave} 
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    💾 Salvar Conteúdo
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+        <div className="flex gap-2 pt-6">
+          <Button onClick={handleSave} disabled={loading} className="flex-1">
+            {loading ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Salvando...
+              </>
+            ) : (
+              `${content?.id ? 'Atualizar' : 'Criar'} Conteúdo`
+            )}
+          </Button>
+          <Button type="button" variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

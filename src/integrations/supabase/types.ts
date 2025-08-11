@@ -919,39 +919,6 @@ export type Database = {
         }
         Relationships: []
       }
-      system_cleanup_logs: {
-        Row: {
-          affected_tables: string[] | null
-          backup_created: boolean | null
-          backup_location: string | null
-          cleanup_type: string
-          created_at: string
-          executed_by: string | null
-          id: string
-          records_deleted: number | null
-        }
-        Insert: {
-          affected_tables?: string[] | null
-          backup_created?: boolean | null
-          backup_location?: string | null
-          cleanup_type: string
-          created_at?: string
-          executed_by?: string | null
-          id?: string
-          records_deleted?: number | null
-        }
-        Update: {
-          affected_tables?: string[] | null
-          backup_created?: boolean | null
-          backup_location?: string | null
-          cleanup_type?: string
-          created_at?: string
-          executed_by?: string | null
-          id?: string
-          records_deleted?: number | null
-        }
-        Relationships: []
-      }
       tool_status: {
         Row: {
           created_at: string
@@ -1429,14 +1396,6 @@ export type Database = {
       calculate_referral_commission: {
         Args: { referrer_user_id: string; referred_plan: string }
         Returns: number
-      }
-      system_cleanup: {
-        Args: {
-          cleanup_type: string
-          target_tables?: string[]
-          keep_admin?: boolean
-        }
-        Returns: Json
       }
     }
     Enums: {
