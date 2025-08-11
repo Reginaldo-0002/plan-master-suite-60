@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Trash2, Edit, Plus, Upload, ExternalLink, Video, FileText, AlertCircle, CheckCircle } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Trash2, Edit, Plus, Upload, ExternalLink, Video, FileText, AlertCircle, CheckCircle, Eye, Link2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -62,11 +63,12 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   // Resource form states
   const [resourceTitle, setResourceTitle] = useState("");
   const [resourceDescription, setResourceDescription] = useState("");
-  const [resourceType, setResourceType] = useState<Resource['resource_type']>("link");
+  const [resourceType, setResourceType] = useState<Resource['resource_type']>("video");
   const [resourceUrl, setResourceUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [isResourcePremium, setIsResourcePremium] = useState(false);
   const [requiredPlan, setRequiredPlan] = useState("free");
+  const [urlValidation, setUrlValidation] = useState<{ isValid: boolean; message: string }>({ isValid: true, message: "" });
   
   const { toast } = useToast();
 
@@ -79,6 +81,50 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       fetchResources(activeTopic);
     }
   }, [activeTopic]);
+
+  // Validação de URL em tempo real
+  useEffect(() => {
+    if (resourceUrl.trim()) {
+      validateUrl(resourceUrl, resourceType);
+    } else {
+      setUrlValidation({ isValid: true, message: "" });
+    }
+  }, [resourceUrl, resourceType]);
+
+  const validateUrl = (url: string, type: Resource['resource_type']) => {
+    try {
+      new URL(url);
+      
+      let isValid = true;
+      let message = "";
+      
+      if (type === 'video') {
+        const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
+        const isVimeo = url.includes('vimeo.com');
+        const isMp4 = url.includes('.mp4');
+        
+        if (!isYoutube && !isVimeo && !isMp4) {
+          isValid = false;
+          message = "URL deve ser do YouTube, Vimeo ou arquivo .mp4";
+        } else {
+          message = isYoutube ? "✓ YouTube detectado" : isVimeo ? "✓ Vimeo detectado" : "✓ Arquivo de vídeo detectado";
+        }
+      } else if (type === 'pdf') {
+        if (!url.includes('.pdf') && !url.includes('drive.google.com') && !url.includes('dropbox.com')) {
+          isValid = false;
+          message = "URL deve ser um arquivo PDF ou link do Google Drive/Dropbox";
+        } else {
+          message = "✓ Arquivo PDF detectado";
+        }
+      } else {
+        message = "✓ URL válida";
+      }
+      
+      setUrlValidation({ isValid, message });
+    } catch {
+      setUrlValidation({ isValid: false, message: "URL inválida" });
+    }
+  };
 
   const fetchTopics = async () => {
     try {
@@ -220,6 +266,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     if (!resourceTitle.trim()) errors.push("Título");
     if (!resourceUrl.trim()) errors.push("URL");
     if (!activeTopic) errors.push("Tópico selecionado");
+    if (!urlValidation.isValid) errors.push("URL válida");
 
     if (errors.length > 0) {
       toast({
@@ -399,18 +446,19 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     setSelectedResource(null);
     setResourceTitle("");
     setResourceDescription("");
-    setResourceType("link");
+    setResourceType("video");
     setResourceUrl("");
     setThumbnailUrl("");
     setIsResourcePremium(false);
     setRequiredPlan("free");
+    setUrlValidation({ isValid: true, message: "" });
   };
 
   const getResourceIcon = (type: string) => {
     switch (type) {
       case 'video': return <Video className="w-4 h-4" />;
       case 'pdf': return <FileText className="w-4 h-4" />;
-      case 'unlock_link':
+      case 'unlock_link': return <Link2 className="w-4 h-4" />;
       case 'link': 
       default: return <ExternalLink className="w-4 h-4" />;
     }
@@ -418,12 +466,22 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
 
   const getResourceTypeBadge = (type: string) => {
     const colors = {
-      video: 'bg-red-100 text-red-800',
-      pdf: 'bg-blue-100 text-blue-800',
-      link: 'bg-green-100 text-green-800',
-      unlock_link: 'bg-purple-100 text-purple-800'
+      video: 'bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400',
+      pdf: 'bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-400',
+      link: 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400',
+      unlock_link: 'bg-purple-100 text-purple-800 dark:bg-purple-900/20 dark:text-purple-400'
     };
     return colors[type as keyof typeof colors] || colors.link;
+  };
+
+  const getResourceTypeLabel = (type: string) => {
+    const labels = {
+      video: 'Vídeo',
+      pdf: 'PDF',
+      link: 'Link',
+      unlock_link: 'Link de Desbloqueio'
+    };
+    return labels[type as keyof typeof labels] || type;
   };
 
   if (loading) {
@@ -614,12 +672,12 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                         )}
                         <div className="flex gap-2 flex-wrap">
                           <Badge className={getResourceTypeBadge(resource.resource_type)}>
-                            {resource.resource_type}
+                            {getResourceTypeLabel(resource.resource_type)}
                           </Badge>
                           {resource.is_premium && (
-                            <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
+                            <Badge className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">Premium</Badge>
                           )}
-                          <Badge variant="outline">{resource.required_plan}</Badge>
+                          <Badge variant="outline">{resource.required_plan.toUpperCase()}</Badge>
                         </div>
                         {resource.thumbnail_url && (
                           <img
@@ -633,9 +691,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                             href={resource.resource_url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="text-xs text-futuristic-accent hover:underline truncate block"
+                            className="text-xs text-futuristic-accent hover:underline truncate block flex items-center gap-1"
                           >
-                            {resource.resource_url}
+                            <Eye className="w-3 h-3" />
+                            Visualizar recurso
                           </a>
                         </div>
                       </CardContent>
@@ -727,9 +786,9 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         </DialogContent>
       </Dialog>
 
-      {/* Resource Dialog */}
+      {/* Enhanced Resource Dialog */}
       <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-futuristic-accent">
               {selectedResource ? 'Editar Recurso' : 'Novo Recurso'}
@@ -738,117 +797,189 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
               {selectedResource ? 'Altere os detalhes do recurso' : 'Adicione um novo recurso ao tópico selecionado'}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+          
+          <Tabs defaultValue="basics" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="basics">Informações Básicas</TabsTrigger>
+              <TabsTrigger value="content">Conteúdo</TabsTrigger>
+              <TabsTrigger value="access">Controle de Acesso</TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="basics" className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="resource-title">Título *</Label>
+                  <Input
+                    id="resource-title"
+                    value={resourceTitle}
+                    onChange={(e) => setResourceTitle(e.target.value)}
+                    placeholder="Ex: Vídeo Aula 1"
+                    className={!resourceTitle.trim() && isResourceDialogOpen ? "border-destructive" : ""}
+                  />
+                  {!resourceTitle.trim() && isResourceDialogOpen && (
+                    <p className="text-xs text-destructive mt-1">Título é obrigatório</p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor="resource-type">Tipo de Recurso *</Label>
+                  <Select value={resourceType} onValueChange={(value) => setResourceType(value as Resource['resource_type'])}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="video">
+                        <div className="flex items-center gap-2">
+                          <Video className="w-4 h-4" />
+                          Vídeo (YouTube, Vimeo, MP4)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pdf">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          PDF (Documento)
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="link">
+                        <div className="flex items-center gap-2">
+                          <ExternalLink className="w-4 h-4" />
+                          Link Externo
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="unlock_link">
+                        <div className="flex items-center gap-2">
+                          <Link2 className="w-4 h-4" />
+                          Link de Desbloqueio
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
               <div>
-                <Label htmlFor="resource-title">Título *</Label>
-                <Input
-                  id="resource-title"
-                  value={resourceTitle}
-                  onChange={(e) => setResourceTitle(e.target.value)}
-                  placeholder="Ex: Vídeo Aula 1"
-                  className={!resourceTitle.trim() && isResourceDialogOpen ? "border-destructive" : ""}
+                <Label htmlFor="resource-description">Descrição</Label>
+                <Textarea
+                  id="resource-description"
+                  value={resourceDescription}
+                  onChange={(e) => setResourceDescription(e.target.value)}
+                  placeholder="Descrição opcional do recurso"
+                  rows={3}
                 />
-                {!resourceTitle.trim() && isResourceDialogOpen && (
-                  <p className="text-xs text-destructive mt-1">Título é obrigatório</p>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="content" className="space-y-4">
+              <div>
+                <Label htmlFor="resource-url">URL do Recurso *</Label>
+                <Input
+                  id="resource-url"
+                  value={resourceUrl}
+                  onChange={(e) => setResourceUrl(e.target.value)}
+                  placeholder={
+                    resourceType === 'video' ? "https://youtube.com/watch?v=... ou https://vimeo.com/..." :
+                    resourceType === 'pdf' ? "https://exemplo.com/arquivo.pdf" :
+                    "https://exemplo.com/recurso"
+                  }
+                  className={(!resourceUrl.trim() || !urlValidation.isValid) && isResourceDialogOpen ? "border-destructive" : urlValidation.isValid && resourceUrl.trim() ? "border-green-500" : ""}
+                />
+                {urlValidation.message && (
+                  <p className={`text-xs mt-1 ${urlValidation.isValid ? 'text-green-600' : 'text-destructive'}`}>
+                    {urlValidation.message}
+                  </p>
+                )}
+                {!resourceUrl.trim() && isResourceDialogOpen && (
+                  <p className="text-xs text-destructive mt-1">URL é obrigatória</p>
                 )}
               </div>
+
               <div>
-                <Label htmlFor="resource-type">Tipo *</Label>
-                <Select value={resourceType} onValueChange={(value) => setResourceType(value as Resource['resource_type'])}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="link">Link</SelectItem>
-                    <SelectItem value="video">Vídeo</SelectItem>
-                    <SelectItem value="pdf">PDF</SelectItem>
-                    <SelectItem value="unlock_link">Link de Desbloqueio</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="resource-description">Descrição</Label>
-              <Textarea
-                id="resource-description"
-                value={resourceDescription}
-                onChange={(e) => setResourceDescription(e.target.value)}
-                placeholder="Descrição opcional do recurso"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="resource-url">URL do Recurso *</Label>
-              <Input
-                id="resource-url"
-                value={resourceUrl}
-                onChange={(e) => setResourceUrl(e.target.value)}
-                placeholder="https://exemplo.com/recurso"
-                className={!resourceUrl.trim() && isResourceDialogOpen ? "border-destructive" : ""}
-              />
-              {!resourceUrl.trim() && isResourceDialogOpen && (
-                <p className="text-xs text-destructive mt-1">URL é obrigatória</p>
-              )}
-            </div>
-
-            <div>
-              <Label htmlFor="thumbnail-url">URL da Thumbnail (opcional)</Label>
-              <Input
-                id="thumbnail-url"
-                value={thumbnailUrl}
-                onChange={(e) => setThumbnailUrl(e.target.value)}
-                placeholder="https://exemplo.com/thumbnail.jpg"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="required-plan">Plano Necessário</Label>
-                <Select value={requiredPlan} onValueChange={setRequiredPlan}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione o plano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="free">Free</SelectItem>
-                    <SelectItem value="vip">VIP</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex items-center space-x-2 pt-6">
-                <input
-                  type="checkbox"
-                  id="is-resource-premium"
-                  className="h-4 w-4 rounded border-border"
-                  checked={isResourcePremium}
-                  onChange={(e) => setIsResourcePremium(e.target.checked)}
+                <Label htmlFor="thumbnail-url">URL da Thumbnail (opcional)</Label>
+                <Input
+                  id="thumbnail-url"
+                  value={thumbnailUrl}
+                  onChange={(e) => setThumbnailUrl(e.target.value)}
+                  placeholder="https://exemplo.com/thumbnail.jpg"
                 />
-                <Label htmlFor="is-resource-premium">Conteúdo Premium</Label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Será usado como imagem de capa do recurso
+                </p>
               </div>
-            </div>
 
-            <div className="flex gap-2">
-              <Button 
-                onClick={selectedResource ? updateResource : createResource} 
-                className="flex-1 bg-futuristic-gradient hover:opacity-90"
-                disabled={!resourceTitle.trim() || !resourceUrl.trim()}
-              >
-                <CheckCircle className="w-4 h-4 mr-2" />
-                {selectedResource ? 'Atualizar' : 'Criar'} Recurso
-              </Button>
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsResourceDialogOpen(false);
-                  clearResourceForm();
-                }}
-              >
-                Cancelar
-              </Button>
-            </div>
+              {thumbnailUrl && (
+                <div>
+                  <Label>Preview da Thumbnail</Label>
+                  <img
+                    src={thumbnailUrl}
+                    alt="Preview"
+                    className="w-32 h-20 object-cover rounded border border-border mt-2"
+                    onError={(e) => {
+                      e.currentTarget.style.display = 'none';
+                    }}
+                  />
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="access" className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="required-plan">Plano Necessário</Label>
+                  <Select value={requiredPlan} onValueChange={setRequiredPlan}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o plano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="free">Gratuito</SelectItem>
+                      <SelectItem value="vip">VIP</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Plano mínimo necessário para acessar este recurso
+                  </p>
+                </div>
+                <div className="flex items-center space-x-2 pt-6">
+                  <input
+                    type="checkbox"
+                    id="is-resource-premium"
+                    className="h-4 w-4 rounded border-border"
+                    checked={isResourcePremium}
+                    onChange={(e) => setIsResourcePremium(e.target.checked)}
+                  />
+                  <Label htmlFor="is-resource-premium">Conteúdo Premium</Label>
+                </div>
+              </div>
+
+              <div className="p-4 bg-muted/50 rounded-lg">
+                <h4 className="font-medium mb-2">Configuração de Acesso</h4>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>• <strong>Gratuito:</strong> Todos os usuários podem acessar</p>
+                  <p>• <strong>VIP:</strong> Apenas usuários VIP e Pro podem acessar</p>
+                  <p>• <strong>Pro:</strong> Apenas usuários Pro podem acessar</p>
+                  <p>• <strong>Premium:</strong> Destaque especial como conteúdo premium</p>
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="flex gap-2 pt-4 border-t">
+            <Button 
+              onClick={selectedResource ? updateResource : createResource} 
+              className="flex-1 bg-futuristic-gradient hover:opacity-90"
+              disabled={!resourceTitle.trim() || !resourceUrl.trim() || !urlValidation.isValid}
+            >
+              <CheckCircle className="w-4 h-4 mr-2" />
+              {selectedResource ? 'Atualizar' : 'Criar'} Recurso
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsResourceDialogOpen(false);
+                clearResourceForm();
+              }}
+            >
+              Cancelar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
