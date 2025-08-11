@@ -1,59 +1,59 @@
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Edit, Trash2, Upload, ExternalLink, FileText, Video, Link } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Trash2, Edit, Plus, Upload, ExternalLink, Video, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Topic {
   id: string;
-  content_id: string;
   title: string;
   description: string | null;
   topic_order: number;
-  topic_image_url: string | null;
   is_active: boolean;
+  content_id: string;
+  topic_image_url: string | null;
   created_at: string;
   updated_at: string;
 }
 
 interface Resource {
   id: string;
-  topic_id: string;
   title: string;
   description: string | null;
   resource_type: 'link' | 'video' | 'pdf' | 'unlock_link';
   resource_url: string;
   thumbnail_url: string | null;
-  resource_order: number;
   is_active: boolean;
   is_premium: boolean;
   required_plan: string;
+  resource_order: number;
+  topic_id: string;
   created_at: string;
   updated_at: string;
 }
 
 interface ContentTopicsEditorProps {
   contentId: string;
-  onSave?: () => void;
+  onSave: () => void;
 }
 
 export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorProps) => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isTopicDialogOpen, setIsTopicDialogOpen] = useState(false);
+  const [isResourceDialogOpen, setIsResourceDialogOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
-  const [showTopicDialog, setShowTopicDialog] = useState(false);
-  const [showResourceDialog, setShowResourceDialog] = useState(false);
-  const [editingTopic, setEditingTopic] = useState<Topic | null>(null);
-  const [editingResource, setEditingResource] = useState<Resource | null>(null);
+  const [selectedResource, setSelectedResource] = useState<Resource | null>(null);
+  const [activeTopic, setActiveTopic] = useState<string | null>(null);
   
   // Topic form states
   const [topicTitle, setTopicTitle] = useState("");
@@ -67,8 +67,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   const [resourceUrl, setResourceUrl] = useState("");
   const [thumbnailUrl, setThumbnailUrl] = useState("");
   const [isResourcePremium, setIsResourcePremium] = useState(false);
-  const [resourceRequiredPlan, setResourceRequiredPlan] = useState("free");
-
+  const [requiredPlan, setRequiredPlan] = useState("free");
+  
   const { toast } = useToast();
 
   useEffect(() => {
@@ -76,10 +76,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   }, [contentId]);
 
   useEffect(() => {
-    if (selectedTopic) {
-      fetchResources(selectedTopic.id);
+    if (activeTopic) {
+      fetchResources(activeTopic);
     }
-  }, [selectedTopic]);
+  }, [activeTopic]);
 
   const fetchTopics = async () => {
     try {
@@ -87,13 +87,14 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         .from('content_topics')
         .select('*')
         .eq('content_id', contentId)
+        .eq('is_active', true)
         .order('topic_order', { ascending: true });
 
       if (error) throw error;
       setTopics(data || []);
       
-      if (data && data.length > 0 && !selectedTopic) {
-        setSelectedTopic(data[0]);
+      if (data && data.length > 0 && !activeTopic) {
+        setActiveTopic(data[0].id);
       }
     } catch (error) {
       console.error('Error fetching topics:', error);
@@ -113,17 +114,11 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         .from('topic_resources')
         .select('*')
         .eq('topic_id', topicId)
+        .eq('is_active', true)
         .order('resource_order', { ascending: true });
 
       if (error) throw error;
-      
-      // Ensure resource_type is properly typed
-      const typedResources: Resource[] = (data || []).map(item => ({
-        ...item,
-        resource_type: item.resource_type as Resource['resource_type']
-      }));
-      
-      setResources(typedResources);
+      setResources(data || []);
     } catch (error) {
       console.error('Error fetching resources:', error);
       toast({
@@ -135,7 +130,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   };
 
   const createTopic = async () => {
-    if (!topicTitle.trim()) {
+    if (!topicTitle) {
       toast({
         title: "Erro",
         description: "Título do tópico é obrigatório",
@@ -148,11 +143,11 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       const { data, error } = await supabase
         .from('content_topics')
         .insert([{
-          content_id: contentId,
           title: topicTitle,
           description: topicDescription,
+          content_id: contentId,
           topic_image_url: topicImageUrl,
-          topic_order: topics.length + 1,
+          topic_order: topics.length,
           is_active: true
         }])
         .select()
@@ -165,10 +160,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         description: "Tópico criado com sucesso",
       });
 
-      setShowTopicDialog(false);
+      setIsTopicDialogOpen(false);
       clearTopicForm();
       fetchTopics();
-      onSave?.();
+      onSave();
     } catch (error: any) {
       console.error('Error creating topic:', error);
       toast({
@@ -180,7 +175,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   };
 
   const updateTopic = async () => {
-    if (!editingTopic) return;
+    if (!selectedTopic) return;
 
     try {
       const { error } = await supabase
@@ -191,7 +186,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
           topic_image_url: topicImageUrl,
           updated_at: new Date().toISOString()
         })
-        .eq('id', editingTopic.id);
+        .eq('id', selectedTopic.id);
 
       if (error) throw error;
 
@@ -200,11 +195,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         description: "Tópico atualizado com sucesso",
       });
 
-      setShowTopicDialog(false);
-      setEditingTopic(null);
+      setIsTopicDialogOpen(false);
       clearTopicForm();
       fetchTopics();
-      onSave?.();
+      onSave();
     } catch (error: any) {
       console.error('Error updating topic:', error);
       toast({
@@ -215,61 +209,31 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     }
   };
 
-  const deleteTopic = async (topicId: string) => {
-    if (!confirm("Tem certeza que deseja excluir este tópico?")) return;
-
-    try {
-      const { error } = await supabase
-        .from('content_topics')
-        .delete()
-        .eq('id', topicId);
-
-      if (error) throw error;
-
-      toast({
-        title: "Sucesso",
-        description: "Tópico excluído com sucesso",
-      });
-
-      fetchTopics();
-      onSave?.();
-    } catch (error: any) {
-      console.error('Error deleting topic:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro ao excluir tópico",
-        variant: "destructive",
-      });
-    }
-  };
-
   const createResource = async () => {
-    if (!selectedTopic || !resourceTitle.trim() || !resourceUrl.trim()) {
+    if (!resourceTitle || !resourceUrl || !activeTopic) {
       toast({
         title: "Erro",
-        description: "Título e URL do recurso são obrigatórios",
+        description: "Título, URL e tópico são obrigatórios",
         variant: "destructive",
       });
       return;
     }
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('topic_resources')
         .insert([{
-          topic_id: selectedTopic.id,
           title: resourceTitle,
           description: resourceDescription,
           resource_type: resourceType,
           resource_url: resourceUrl,
           thumbnail_url: thumbnailUrl,
-          resource_order: resources.length + 1,
-          is_active: true,
           is_premium: isResourcePremium,
-          required_plan: resourceRequiredPlan
-        }])
-        .select()
-        .single();
+          required_plan: requiredPlan,
+          topic_id: activeTopic,
+          resource_order: resources.length,
+          is_active: true
+        }]);
 
       if (error) throw error;
 
@@ -278,9 +242,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         description: "Recurso criado com sucesso",
       });
 
-      setShowResourceDialog(false);
+      setIsResourceDialogOpen(false);
       clearResourceForm();
-      fetchResources(selectedTopic.id);
+      fetchResources(activeTopic);
+      onSave();
     } catch (error: any) {
       console.error('Error creating resource:', error);
       toast({
@@ -292,7 +257,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
   };
 
   const updateResource = async () => {
-    if (!editingResource) return;
+    if (!selectedResource) return;
 
     try {
       const { error } = await supabase
@@ -304,10 +269,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
           resource_url: resourceUrl,
           thumbnail_url: thumbnailUrl,
           is_premium: isResourcePremium,
-          required_plan: resourceRequiredPlan,
+          required_plan: requiredPlan,
           updated_at: new Date().toISOString()
         })
-        .eq('id', editingResource.id);
+        .eq('id', selectedResource.id);
 
       if (error) throw error;
 
@@ -316,17 +281,43 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         description: "Recurso atualizado com sucesso",
       });
 
-      setShowResourceDialog(false);
-      setEditingResource(null);
+      setIsResourceDialogOpen(false);
       clearResourceForm();
-      if (selectedTopic) {
-        fetchResources(selectedTopic.id);
-      }
+      fetchResources(activeTopic!);
+      onSave();
     } catch (error: any) {
       console.error('Error updating resource:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao atualizar recurso",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteTopic = async (topicId: string) => {
+    if (!confirm("Tem certeza que deseja excluir este tópico?")) return;
+
+    try {
+      const { error } = await supabase
+        .from('content_topics')
+        .update({ is_active: false })
+        .eq('id', topicId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Tópico excluído com sucesso",
+      });
+
+      fetchTopics();
+      onSave();
+    } catch (error: any) {
+      console.error('Error deleting topic:', error);
+      toast({
+        title: "Erro",
+        description: error.message || "Erro ao excluir tópico",
         variant: "destructive",
       });
     }
@@ -338,7 +329,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     try {
       const { error } = await supabase
         .from('topic_resources')
-        .delete()
+        .update({ is_active: false })
         .eq('id', resourceId);
 
       if (error) throw error;
@@ -348,9 +339,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         description: "Recurso excluído com sucesso",
       });
 
-      if (selectedTopic) {
-        fetchResources(selectedTopic.id);
-      }
+      fetchResources(activeTopic!);
+      onSave();
     } catch (error: any) {
       console.error('Error deleting resource:', error);
       toast({
@@ -361,203 +351,213 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     }
   };
 
-  const clearTopicForm = () => {
-    setTopicTitle("");
-    setTopicDescription("");
-    setTopicImageUrl("");
-  };
-
-  const clearResourceForm = () => {
-    setResourceTitle("");
-    setResourceDescription("");
-    setResourceType("link");
-    setResourceUrl("");
-    setThumbnailUrl("");
-    setIsResourcePremium(false);
-    setResourceRequiredPlan("free");
-  };
-
-  const openEditTopic = (topic: Topic) => {
-    setEditingTopic(topic);
+  const openTopicEditDialog = (topic: Topic) => {
+    setSelectedTopic(topic);
     setTopicTitle(topic.title);
     setTopicDescription(topic.description || "");
     setTopicImageUrl(topic.topic_image_url || "");
-    setShowTopicDialog(true);
+    setIsTopicDialogOpen(true);
   };
 
-  const openEditResource = (resource: Resource) => {
-    setEditingResource(resource);
+  const openResourceEditDialog = (resource: Resource) => {
+    setSelectedResource(resource);
     setResourceTitle(resource.title);
     setResourceDescription(resource.description || "");
     setResourceType(resource.resource_type);
     setResourceUrl(resource.resource_url);
     setThumbnailUrl(resource.thumbnail_url || "");
     setIsResourcePremium(resource.is_premium);
-    setResourceRequiredPlan(resource.required_plan);
-    setShowResourceDialog(true);
+    setRequiredPlan(resource.required_plan);
+    setIsResourceDialogOpen(true);
+  };
+
+  const clearTopicForm = () => {
+    setSelectedTopic(null);
+    setTopicTitle("");
+    setTopicDescription("");
+    setTopicImageUrl("");
+  };
+
+  const clearResourceForm = () => {
+    setSelectedResource(null);
+    setResourceTitle("");
+    setResourceDescription("");
+    setResourceType("link");
+    setResourceUrl("");
+    setThumbnailUrl("");
+    setIsResourcePremium(false);
+    setRequiredPlan("free");
   };
 
   const getResourceIcon = (type: string) => {
     switch (type) {
       case 'video': return <Video className="w-4 h-4" />;
       case 'pdf': return <FileText className="w-4 h-4" />;
-      case 'link':
-      case 'unlock_link': return <Link className="w-4 h-4" />;
+      case 'unlock_link':
+      case 'link': 
       default: return <ExternalLink className="w-4 h-4" />;
     }
   };
 
+  const getResourceTypeBadge = (type: string) => {
+    const colors = {
+      video: 'bg-red-100 text-red-800',
+      pdf: 'bg-blue-100 text-blue-800',
+      link: 'bg-green-100 text-green-800',
+      unlock_link: 'bg-purple-100 text-purple-800'
+    };
+    return colors[type as keyof typeof colors] || colors.link;
+  };
+
   if (loading) {
-    return <div>Carregando...</div>;
+    return <div className="flex justify-center p-8">Carregando...</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* Topics Section */}
-      <Card>
-        <CardHeader>
+      <div className="flex items-center justify-between">
+        <h3 className="text-2xl font-bold">Gestão de Tópicos</h3>
+        <Button onClick={() => setIsTopicDialogOpen(true)}>
+          <Plus className="w-4 h-4 mr-2" />
+          Novo Tópico
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Topics Sidebar */}
+        <div className="space-y-4">
+          <h4 className="font-semibold">Tópicos</h4>
+          {topics.map((topic) => (
+            <Card 
+              key={topic.id} 
+              className={`cursor-pointer transition-colors ${
+                activeTopic === topic.id ? 'ring-2 ring-primary' : ''
+              }`}
+              onClick={() => setActiveTopic(topic.id)}
+            >
+              <CardHeader className="p-4">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm">{topic.title}</CardTitle>
+                  <div className="flex gap-1">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openTopicEditDialog(topic);
+                      }}
+                    >
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        deleteTopic(topic.id);
+                      }}
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
+                </div>
+                {topic.description && (
+                  <p className="text-xs text-muted-foreground line-clamp-2">
+                    {topic.description}
+                  </p>
+                )}
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+
+        {/* Resources Content */}
+        <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Tópicos do Conteúdo</CardTitle>
-              <CardDescription>
-                Organize o conteúdo em tópicos estruturados
-              </CardDescription>
-            </div>
-            <Button onClick={() => setShowTopicDialog(true)}>
+            <h4 className="font-semibold">
+              Recursos {activeTopic && topics.find(t => t.id === activeTopic)?.title && 
+                `- ${topics.find(t => t.id === activeTopic)?.title}`}
+            </h4>
+            <Button 
+              onClick={() => setIsResourceDialogOpen(true)}
+              disabled={!activeTopic}
+            >
               <Plus className="w-4 h-4 mr-2" />
-              Novo Tópico
+              Novo Recurso
             </Button>
           </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {topics.map((topic) => (
-              <Card key={topic.id} className={`cursor-pointer transition-colors ${
-                selectedTopic?.id === topic.id ? 'ring-2 ring-primary' : 'hover:bg-muted'
-              }`} onClick={() => setSelectedTopic(topic)}>
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold">{topic.title}</h3>
-                    <div className="flex gap-1">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditTopic(topic);
-                        }}
-                      >
-                        <Edit className="w-3 h-3" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteTopic(topic.id);
-                        }}
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  </div>
-                  {topic.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {topic.description}
-                    </p>
-                  )}
-                  <Badge variant="secondary" className="mt-2">
-                    Ordem: {topic.topic_order}
-                  </Badge>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Resources Section */}
-      {selectedTopic && (
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recursos - {selectedTopic.title}</CardTitle>
-                <CardDescription>
-                  Adicione vídeos, links, PDFs e outros recursos
-                </CardDescription>
-              </div>
-              <Button onClick={() => setShowResourceDialog(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Novo Recurso
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
+          {activeTopic ? (
+            <div className="grid gap-4 md:grid-cols-2">
               {resources.map((resource) => (
                 <Card key={resource.id}>
-                  <CardContent className="p-4">
+                  <CardHeader className="p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2">
                         {getResourceIcon(resource.resource_type)}
-                        <div>
-                          <h4 className="font-semibold">{resource.title}</h4>
-                          {resource.description && (
-                            <p className="text-sm text-muted-foreground">
-                              {resource.description}
-                            </p>
-                          )}
-                          <div className="flex gap-2 mt-2">
-                            <Badge variant="secondary">{resource.resource_type}</Badge>
-                            {resource.is_premium && (
-                              <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
-                            )}
-                            <Badge variant="outline">{resource.required_plan}</Badge>
-                          </div>
-                        </div>
+                        <CardTitle className="text-sm">{resource.title}</CardTitle>
                       </div>
-                      <div className="flex gap-2">
+                      <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => openEditResource(resource)}
+                          onClick={() => openResourceEditDialog(resource)}
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3 h-3" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => deleteResource(resource.id)}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => window.open(resource.resource_url, '_blank')}
-                        >
-                          <ExternalLink className="w-4 h-4" />
+                          <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
                     </div>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    {resource.description && (
+                      <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        {resource.description}
+                      </p>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      <Badge className={getResourceTypeBadge(resource.resource_type)}>
+                        {resource.resource_type}
+                      </Badge>
+                      {resource.is_premium && (
+                        <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
+                      )}
+                      <Badge variant="outline">{resource.required_plan}</Badge>
+                    </div>
+                    {resource.thumbnail_url && (
+                      <img
+                        src={resource.thumbnail_url}
+                        alt={resource.title}
+                        className="w-full h-20 object-cover rounded mt-3"
+                      />
+                    )}
                   </CardContent>
                 </Card>
               ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Selecione um tópico para ver seus recursos
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Topic Dialog */}
-      <Dialog open={showTopicDialog} onOpenChange={setShowTopicDialog}>
+      <Dialog open={isTopicDialogOpen} onOpenChange={setIsTopicDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingTopic ? 'Editar Tópico' : 'Novo Tópico'}
+              {selectedTopic ? 'Editar Tópico' : 'Novo Tópico'}
             </DialogTitle>
             <DialogDescription>
-              {editingTopic ? 'Edite os detalhes do tópico' : 'Adicione um novo tópico ao conteúdo'}
+              {selectedTopic ? 'Altere os detalhes do tópico' : 'Adicione um novo tópico ao conteúdo'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -590,14 +590,19 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
               />
             </div>
             <div className="flex gap-2">
-              <Button onClick={editingTopic ? updateTopic : createTopic} className="flex-1">
-                {editingTopic ? 'Atualizar' : 'Criar'}
+              <Button 
+                onClick={selectedTopic ? updateTopic : createTopic} 
+                className="flex-1"
+              >
+                {selectedTopic ? 'Atualizar' : 'Criar'}
               </Button>
-              <Button variant="outline" onClick={() => {
-                setShowTopicDialog(false);
-                setEditingTopic(null);
-                clearTopicForm();
-              }}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsTopicDialogOpen(false);
+                  clearTopicForm();
+                }}
+              >
                 Cancelar
               </Button>
             </div>
@@ -606,26 +611,43 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       </Dialog>
 
       {/* Resource Dialog */}
-      <Dialog open={showResourceDialog} onOpenChange={setShowResourceDialog}>
-        <DialogContent>
+      <Dialog open={isResourceDialogOpen} onOpenChange={setIsResourceDialogOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editingResource ? 'Editar Recurso' : 'Novo Recurso'}
+              {selectedResource ? 'Editar Recurso' : 'Novo Recurso'}
             </DialogTitle>
             <DialogDescription>
-              {editingResource ? 'Edite os detalhes do recurso' : 'Adicione um novo recurso ao tópico'}
+              {selectedResource ? 'Altere os detalhes do recurso' : 'Adicione um novo recurso ao tópico'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <div>
-              <Label htmlFor="resource-title">Título</Label>
-              <Input
-                id="resource-title"
-                value={resourceTitle}
-                onChange={(e) => setResourceTitle(e.target.value)}
-                placeholder="Título do recurso"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="resource-title">Título</Label>
+                <Input
+                  id="resource-title"
+                  value={resourceTitle}
+                  onChange={(e) => setResourceTitle(e.target.value)}
+                  placeholder="Título do recurso"
+                />
+              </div>
+              <div>
+                <Label htmlFor="resource-type">Tipo</Label>
+                <Select value={resourceType} onValueChange={(value) => setResourceType(value as Resource['resource_type'])}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="link">Link</SelectItem>
+                    <SelectItem value="video">Vídeo</SelectItem>
+                    <SelectItem value="pdf">PDF</SelectItem>
+                    <SelectItem value="unlock_link">Link de Desbloqueio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            
             <div>
               <Label htmlFor="resource-description">Descrição</Label>
               <Textarea
@@ -633,73 +655,71 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                 value={resourceDescription}
                 onChange={(e) => setResourceDescription(e.target.value)}
                 placeholder="Descrição do recurso"
-                rows={2}
+                rows={3}
               />
             </div>
-            <div>
-              <Label htmlFor="resource-type">Tipo de Recurso</Label>
-              <Select value={resourceType} onValueChange={(value) => setResourceType(value as Resource['resource_type'])}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="link">Link</SelectItem>
-                  <SelectItem value="video">Vídeo</SelectItem>
-                  <SelectItem value="pdf">PDF</SelectItem>
-                  <SelectItem value="unlock_link">Link de Desbloqueio</SelectItem>
-                </SelectContent>
-              </Select>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="resource-url">URL do Recurso</Label>
+                <Input
+                  id="resource-url"
+                  value={resourceUrl}
+                  onChange={(e) => setResourceUrl(e.target.value)}
+                  placeholder="URL do recurso"
+                />
+              </div>
+              <div>
+                <Label htmlFor="thumbnail-url">URL da Thumbnail</Label>
+                <Input
+                  id="thumbnail-url"
+                  value={thumbnailUrl}
+                  onChange={(e) => setThumbnailUrl(e.target.value)}
+                  placeholder="URL da thumbnail"
+                />
+              </div>
             </div>
-            <div>
-              <Label htmlFor="resource-url">URL do Recurso</Label>
-              <Input
-                id="resource-url"
-                value={resourceUrl}
-                onChange={(e) => setResourceUrl(e.target.value)}
-                placeholder="URL do recurso"
-              />
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="required-plan">Plano Necessário</Label>
+                <Select value={requiredPlan} onValueChange={setRequiredPlan}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o plano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">Free</SelectItem>
+                    <SelectItem value="vip">VIP</SelectItem>
+                    <SelectItem value="pro">Pro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center space-x-2 pt-6">
+                <input
+                  type="checkbox"
+                  id="is-resource-premium"
+                  className="h-4 w-4"
+                  checked={isResourcePremium}
+                  onChange={(e) => setIsResourcePremium(e.target.checked)}
+                />
+                <Label htmlFor="is-resource-premium">Premium</Label>
+              </div>
             </div>
-            <div>
-              <Label htmlFor="thumbnail-url">URL da Thumbnail</Label>
-              <Input
-                id="thumbnail-url"
-                value={thumbnailUrl}
-                onChange={(e) => setThumbnailUrl(e.target.value)}
-                placeholder="URL da thumbnail (opcional)"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="is-resource-premium"
-                className="h-4 w-4"
-                checked={isResourcePremium}
-                onChange={(e) => setIsResourcePremium(e.target.checked)}
-              />
-              <Label htmlFor="is-resource-premium">Premium</Label>
-            </div>
-            <div>
-              <Label htmlFor="resource-required-plan">Plano Necessário</Label>
-              <Select value={resourceRequiredPlan} onValueChange={setResourceRequiredPlan}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o plano" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="free">Free</SelectItem>
-                  <SelectItem value="vip">VIP</SelectItem>
-                  <SelectItem value="pro">Pro</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+
             <div className="flex gap-2">
-              <Button onClick={editingResource ? updateResource : createResource} className="flex-1">
-                {editingResource ? 'Atualizar' : 'Criar'}
+              <Button 
+                onClick={selectedResource ? updateResource : createResource} 
+                className="flex-1"
+              >
+                {selectedResource ? 'Atualizar' : 'Criar'}
               </Button>
-              <Button variant="outline" onClick={() => {
-                setShowResourceDialog(false);
-                setEditingResource(null);
-                clearResourceForm();
-              }}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsResourceDialogOpen(false);
+                  clearResourceForm();
+                }}
+              >
                 Cancelar
               </Button>
             </div>

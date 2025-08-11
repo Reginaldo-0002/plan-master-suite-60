@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,9 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { CheckCheck, Copy, Edit, MessageSquare, Plus, Search, Trash2, Upload, Video } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,8 +20,10 @@ interface Content {
   description: string | null;
   content_type: 'product' | 'tool' | 'course' | 'tutorial';
   video_url: string | null;
+  content_url: string | null;
   hero_image_url: string | null;
   hero_image_alt: string | null;
+  image_url: string | null;
   carousel_image_url: string | null;
   is_active: boolean;
   is_premium: boolean;
@@ -51,8 +52,10 @@ export const AdminContentManagement = () => {
   const [description, setDescription] = useState("");
   const [contentType, setContentType] = useState<Content['content_type']>("product");
   const [videoUrl, setVideoUrl] = useState("");
+  const [contentUrl, setContentUrl] = useState("");
   const [heroImageUrl, setHeroImageUrl] = useState("");
   const [heroImageAlt, setHeroImageAlt] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [carouselImageUrl, setCarouselImageUrl] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [isPremium, setIsPremium] = useState(false);
@@ -80,8 +83,10 @@ export const AdminContentManagement = () => {
           description,
           content_type,
           video_url,
+          content_url,
           hero_image_url,
           hero_image_alt,
+          image_url,
           carousel_image_url,
           is_active,
           is_premium,
@@ -134,8 +139,10 @@ export const AdminContentManagement = () => {
           description,
           content_type: contentType,
           video_url: videoUrl,
+          content_url: contentUrl,
           hero_image_url: heroImageUrl,
           hero_image_alt: heroImageAlt,
+          image_url: imageUrl,
           carousel_image_url: carouselImageUrl,
           is_active: isActive,
           is_premium: isPremium,
@@ -177,8 +184,10 @@ export const AdminContentManagement = () => {
           description,
           content_type: contentType,
           video_url: videoUrl,
+          content_url: contentUrl,
           hero_image_url: heroImageUrl,
           hero_image_alt: heroImageAlt,
+          image_url: imageUrl,
           carousel_image_url: carouselImageUrl,
           is_active: isActive,
           is_premium: isPremium,
@@ -239,15 +248,17 @@ export const AdminContentManagement = () => {
 
   const duplicateContent = async (content: Content) => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('content')
         .insert([{
           title: `${content.title} (Cópia)`,
           description: content.description,
           content_type: content.content_type,
           video_url: content.video_url,
+          content_url: content.content_url,
           hero_image_url: content.hero_image_url,
           hero_image_alt: content.hero_image_alt,
+          image_url: content.image_url,
           carousel_image_url: content.carousel_image_url,
           is_active: content.is_active,
           is_premium: content.is_premium,
@@ -256,9 +267,7 @@ export const AdminContentManagement = () => {
           difficulty_level: content.difficulty_level,
           estimated_duration: content.estimated_duration,
           status: 'draft'
-        }])
-        .select()
-        .single();
+        }]);
 
       if (error) throw error;
 
@@ -284,8 +293,10 @@ export const AdminContentManagement = () => {
     setDescription(content.description || "");
     setContentType(content.content_type);
     setVideoUrl(content.video_url || "");
+    setContentUrl(content.content_url || "");
     setHeroImageUrl(content.hero_image_url || "");
     setHeroImageAlt(content.hero_image_alt || "");
+    setImageUrl(content.image_url || "");
     setCarouselImageUrl(content.carousel_image_url || "");
     setIsActive(content.is_active);
     setIsPremium(content.is_premium);
@@ -301,8 +312,10 @@ export const AdminContentManagement = () => {
     setDescription("");
     setContentType("product");
     setVideoUrl("");
+    setContentUrl("");
     setHeroImageUrl("");
     setHeroImageAlt("");
+    setImageUrl("");
     setCarouselImageUrl("");
     setIsActive(true);
     setIsPremium(false);
@@ -382,7 +395,7 @@ export const AdminContentManagement = () => {
                 <CardContent className="p-0">
                   <div className="relative aspect-video overflow-hidden rounded-t-lg">
                     <img
-                      src={content.hero_image_url || content.carousel_image_url || '/placeholder.svg'}
+                      src={content.hero_image_url || content.image_url || content.carousel_image_url || '/placeholder.svg'}
                       alt={content.hero_image_alt || content.title}
                       className="w-full h-full object-cover"
                       style={{ aspectRatio: '16/9' }}
@@ -395,7 +408,7 @@ export const AdminContentManagement = () => {
                         {content.description}
                       </p>
                     )}
-                    <div className="flex gap-2 mt-3">
+                    <div className="flex gap-2 mt-3 flex-wrap">
                       <Badge variant="secondary">{content.content_type}</Badge>
                       {content.is_premium && (
                         <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
@@ -410,7 +423,7 @@ export const AdminContentManagement = () => {
                   </div>
                 </CardContent>
                 <CardContent className="pt-0">
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     <Button
                       variant="ghost"
                       size="sm"
@@ -446,7 +459,7 @@ export const AdminContentManagement = () => {
           </div>
           
           <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Editar Conteúdo</DialogTitle>
                 <DialogDescription>
@@ -454,15 +467,32 @@ export const AdminContentManagement = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Título</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Título do conteúdo"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="title">Título</Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Título do conteúdo"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="content-type">Tipo de Conteúdo</Label>
+                    <Select value={contentType} onValueChange={(value) => setContentType(value as Content['content_type'])}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="product">Produto</SelectItem>
+                        <SelectItem value="tool">Ferramenta</SelectItem>
+                        <SelectItem value="course">Curso</SelectItem>
+                        <SelectItem value="tutorial">Tutorial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+                
                 <div>
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea
@@ -473,29 +503,28 @@ export const AdminContentManagement = () => {
                     rows={3}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="content-type">Tipo de Conteúdo</Label>
-                  <Select value={contentType} onValueChange={(value) => setContentType(value as Content['content_type'])}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="product">Produto</SelectItem>
-                      <SelectItem value="tool">Ferramenta</SelectItem>
-                      <SelectItem value="course">Curso</SelectItem>
-                      <SelectItem value="tutorial">Tutorial</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="video-url">URL do Vídeo</Label>
+                    <Input
+                      id="video-url"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="URL do vídeo"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="content-url">URL do Conteúdo</Label>
+                    <Input
+                      id="content-url"
+                      value={contentUrl}
+                      onChange={(e) => setContentUrl(e.target.value)}
+                      placeholder="URL do conteúdo"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="video-url">URL do Vídeo</Label>
-                  <Input
-                    id="video-url"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="URL do vídeo"
-                  />
-                </div>
+
                 <div>
                   <Label htmlFor="hero-image-url">URL da Imagem Principal</Label>
                   <div className="flex gap-2">
@@ -530,81 +559,102 @@ export const AdminContentManagement = () => {
                     />
                   )}
                 </div>
-                <div>
-                  <Label htmlFor="hero-image-alt">Texto Alternativo da Imagem</Label>
-                  <Input
-                    id="hero-image-alt"
-                    value={heroImageAlt}
-                    onChange={(e) => setHeroImageAlt(e.target.value)}
-                    placeholder="Descrição da imagem para acessibilidade"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="hero-image-alt">Texto Alternativo da Imagem</Label>
+                    <Input
+                      id="hero-image-alt"
+                      value={heroImageAlt}
+                      onChange={(e) => setHeroImageAlt(e.target.value)}
+                      placeholder="Descrição da imagem para acessibilidade"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="image-url">URL da Imagem Alternativa</Label>
+                    <Input
+                      id="image-url"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="URL da imagem alternativa"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="difficulty-level">Nível de Dificuldade</Label>
-                  <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o nível" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">Iniciante</SelectItem>
-                      <SelectItem value="intermediate">Intermediário</SelectItem>
-                      <SelectItem value="advanced">Avançado</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="difficulty-level">Nível de Dificuldade</Label>
+                    <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o nível" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Iniciante</SelectItem>
+                        <SelectItem value="intermediate">Intermediário</SelectItem>
+                        <SelectItem value="advanced">Avançado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="estimated-duration">Duração Estimada (minutos)</Label>
+                    <Input
+                      id="estimated-duration"
+                      type="number"
+                      value={estimatedDuration || ""}
+                      onChange={(e) => setEstimatedDuration(e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="Duração em minutos"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="estimated-duration">Duração Estimada (minutos)</Label>
-                  <Input
-                    id="estimated-duration"
-                    type="number"
-                    value={estimatedDuration || ""}
-                    onChange={(e) => setEstimatedDuration(e.target.value ? parseInt(e.target.value) : null)}
-                    placeholder="Duração em minutos"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="required-plan">Plano Necessário</Label>
+                    <Select value={requiredPlan} onValueChange={(value) => setRequiredPlan(value as Content['required_plan'])}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="is-active"
+                        className="h-4 w-4"
+                        checked={isActive}
+                        onChange={(e) => setIsActive(e.target.checked)}
+                      />
+                      <Label htmlFor="is-active">Ativo</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="is-premium"
+                        className="h-4 w-4"
+                        checked={isPremium}
+                        onChange={(e) => setIsPremium(e.target.checked)}
+                      />
+                      <Label htmlFor="is-premium">Premium</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="show-in-carousel"
+                        className="h-4 w-4"
+                        checked={showInCarousel}
+                        onChange={(e) => setShowInCarousel(e.target.checked)}
+                      />
+                      <Label htmlFor="show-in-carousel">Mostrar no Carousel</Label>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is-active"
-                    className="h-4 w-4"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                  />
-                  <Label htmlFor="is-active">Ativo</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is-premium"
-                    className="h-4 w-4"
-                    checked={isPremium}
-                    onChange={(e) => setIsPremium(e.target.checked)}
-                  />
-                  <Label htmlFor="is-premium">Premium</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="show-in-carousel"
-                    className="h-4 w-4"
-                    checked={showInCarousel}
-                    onChange={(e) => setShowInCarousel(e.target.checked)}
-                  />
-                  <Label htmlFor="show-in-carousel">Mostrar no Carousel</Label>
-                </div>
-                <div>
-                  <Label htmlFor="required-plan">Plano Necessário</Label>
-                  <Select value={requiredPlan} onValueChange={(value) => setRequiredPlan(value as Content['required_plan'])}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free">Free</SelectItem>
-                      <SelectItem value="vip">VIP</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
                 <div className="flex gap-2">
                   <Button onClick={updateContent} className="flex-1">
                     Atualizar
@@ -618,7 +668,7 @@ export const AdminContentManagement = () => {
           </Dialog>
 
           <Dialog open={isNewDialogOpen} onOpenChange={setIsNewDialogOpen}>
-            <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>Novo Conteúdo</DialogTitle>
                 <DialogDescription>
@@ -626,15 +676,32 @@ export const AdminContentManagement = () => {
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
-                <div>
-                  <Label htmlFor="title">Título</Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Título do conteúdo"
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="title">Título</Label>
+                    <Input
+                      id="title"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="Título do conteúdo"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="content-type">Tipo de Conteúdo</Label>
+                    <Select value={contentType} onValueChange={(value) => setContentType(value as Content['content_type'])}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="product">Produto</SelectItem>
+                        <SelectItem value="tool">Ferramenta</SelectItem>
+                        <SelectItem value="course">Curso</SelectItem>
+                        <SelectItem value="tutorial">Tutorial</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
+                
                 <div>
                   <Label htmlFor="description">Descrição</Label>
                   <Textarea
@@ -645,29 +712,28 @@ export const AdminContentManagement = () => {
                     rows={3}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="content-type">Tipo de Conteúdo</Label>
-                  <Select value={contentType} onValueChange={(value) => setContentType(value as Content['content_type'])}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="product">Produto</SelectItem>
-                      <SelectItem value="tool">Ferramenta</SelectItem>
-                      <SelectItem value="course">Curso</SelectItem>
-                      <SelectItem value="tutorial">Tutorial</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="video-url">URL do Vídeo</Label>
+                    <Input
+                      id="video-url"
+                      value={videoUrl}
+                      onChange={(e) => setVideoUrl(e.target.value)}
+                      placeholder="URL do vídeo"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="content-url">URL do Conteúdo</Label>
+                    <Input
+                      id="content-url"
+                      value={contentUrl}
+                      onChange={(e) => setContentUrl(e.target.value)}
+                      placeholder="URL do conteúdo"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="video-url">URL do Vídeo</Label>
-                  <Input
-                    id="video-url"
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    placeholder="URL do vídeo"
-                  />
-                </div>
+
                 <div>
                   <Label htmlFor="hero-image-url">URL da Imagem Principal</Label>
                   <div className="flex gap-2">
@@ -702,81 +768,102 @@ export const AdminContentManagement = () => {
                     />
                   )}
                 </div>
-                <div>
-                  <Label htmlFor="hero-image-alt">Texto Alternativo da Imagem</Label>
-                  <Input
-                    id="hero-image-alt"
-                    value={heroImageAlt}
-                    onChange={(e) => setHeroImageAlt(e.target.value)}
-                    placeholder="Descrição da imagem para acessibilidade"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="hero-image-alt">Texto Alternativo da Imagem</Label>
+                    <Input
+                      id="hero-image-alt"
+                      value={heroImageAlt}
+                      onChange={(e) => setHeroImageAlt(e.target.value)}
+                      placeholder="Descrição da imagem para acessibilidade"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="image-url">URL da Imagem Alternativa</Label>
+                    <Input
+                      id="image-url"
+                      value={imageUrl}
+                      onChange={(e) => setImageUrl(e.target.value)}
+                      placeholder="URL da imagem alternativa"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="difficulty-level">Nível de Dificuldade</Label>
-                  <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o nível" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="beginner">Iniciante</SelectItem>
-                      <SelectItem value="intermediate">Intermediário</SelectItem>
-                      <SelectItem value="advanced">Avançado</SelectItem>
-                    </SelectContent>
-                  </Select>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="difficulty-level">Nível de Dificuldade</Label>
+                    <Select value={difficultyLevel} onValueChange={setDifficultyLevel}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o nível" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="beginner">Iniciante</SelectItem>
+                        <SelectItem value="intermediate">Intermediário</SelectItem>
+                        <SelectItem value="advanced">Avançado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="estimated-duration">Duração Estimada (minutos)</Label>
+                    <Input
+                      id="estimated-duration"
+                      type="number"
+                      value={estimatedDuration || ""}
+                      onChange={(e) => setEstimatedDuration(e.target.value ? parseInt(e.target.value) : null)}
+                      placeholder="Duração em minutos"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="estimated-duration">Duração Estimada (minutos)</Label>
-                  <Input
-                    id="estimated-duration"
-                    type="number"
-                    value={estimatedDuration || ""}
-                    onChange={(e) => setEstimatedDuration(e.target.value ? parseInt(e.target.value) : null)}
-                    placeholder="Duração em minutos"
-                  />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="required-plan">Plano Necessário</Label>
+                    <Select value={requiredPlan} onValueChange={(value) => setRequiredPlan(value as Content['required_plan'])}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o plano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="free">Free</SelectItem>
+                        <SelectItem value="vip">VIP</SelectItem>
+                        <SelectItem value="pro">Pro</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="is-active"
+                        className="h-4 w-4"
+                        checked={isActive}
+                        onChange={(e) => setIsActive(e.target.checked)}
+                      />
+                      <Label htmlFor="is-active">Ativo</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="is-premium"
+                        className="h-4 w-4"
+                        checked={isPremium}
+                        onChange={(e) => setIsPremium(e.target.checked)}
+                      />
+                      <Label htmlFor="is-premium">Premium</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id="show-in-carousel"
+                        className="h-4 w-4"
+                        checked={showInCarousel}
+                        onChange={(e) => setShowInCarousel(e.target.checked)}
+                      />
+                      <Label htmlFor="show-in-carousel">Mostrar no Carousel</Label>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is-active"
-                    className="h-4 w-4"
-                    checked={isActive}
-                    onChange={(e) => setIsActive(e.target.checked)}
-                  />
-                  <Label htmlFor="is-active">Ativo</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is-premium"
-                    className="h-4 w-4"
-                    checked={isPremium}
-                    onChange={(e) => setIsPremium(e.target.checked)}
-                  />
-                  <Label htmlFor="is-premium">Premium</Label>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="show-in-carousel"
-                    className="h-4 w-4"
-                    checked={showInCarousel}
-                    onChange={(e) => setShowInCarousel(e.target.checked)}
-                  />
-                  <Label htmlFor="show-in-carousel">Mostrar no Carousel</Label>
-                </div>
-                <div>
-                  <Label htmlFor="required-plan">Plano Necessário</Label>
-                  <Select value={requiredPlan} onValueChange={(value) => setRequiredPlan(value as Content['required_plan'])}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o plano" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free">Free</SelectItem>
-                      <SelectItem value="vip">VIP</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+
                 <div className="flex gap-2">
                   <Button onClick={createContent} className="flex-1">
                     Criar
