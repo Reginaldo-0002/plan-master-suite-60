@@ -83,10 +83,11 @@ export const useCleanupLogic = () => {
         validationPassed: true
       });
       
+      // Usar os novos parâmetros corrigidos da função
       const { data, error } = await supabase.rpc('system_cleanup', {
-        cleanup_type: cleanupType,
-        target_tables: null,
-        keep_admin: keepAdmin
+        p_cleanup_type: cleanupType,
+        p_target_tables: null,
+        p_keep_admin: keepAdmin
       });
 
       console.log('Cleanup result:', { data, error });
@@ -158,6 +159,10 @@ export const useCleanupLogic = () => {
     
     // Tratamento específico por código de erro
     switch (error.code) {
+      case 'P0001':
+        errorTitle = "Erro de Execução";
+        errorMessage = "Erro interno da função de limpeza. O sistema foi corrigido, tente novamente.";
+        break;
       case '21000':
         errorTitle = "Erro de Sintaxe SQL";
         errorMessage = "Erro na estrutura do comando SQL. O sistema foi corrigido, tente novamente.";
