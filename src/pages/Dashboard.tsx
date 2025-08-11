@@ -9,6 +9,7 @@ import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { RulesSection } from "@/components/dashboard/RulesSection";
 import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
+import { CarouselSection } from "@/components/dashboard/CarouselSection";
 import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
@@ -21,6 +22,43 @@ export default function Dashboard() {
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  // Get initial section from URL
+  useEffect(() => {
+    const path = window.location.pathname;
+    const urlParams = new URLSearchParams(window.location.search);
+    const sectionParam = urlParams.get('section');
+    
+    if (sectionParam) {
+      setActiveSection(sectionParam as ActiveSection);
+    } else {
+      switch (path) {
+        case '/rules':
+          setActiveSection('rules');
+          break;
+        case '/em-breve':
+          setActiveSection('coming-soon');
+          break;
+        case '/carousel':
+          setActiveSection('carousel');
+          break;
+        case '/produtos':
+          setActiveSection('products');
+          break;
+        case '/cursos':
+          setActiveSection('courses');
+          break;
+        case '/ferramentas':
+          setActiveSection('tools');
+          break;
+        case '/tutoriais':
+          setActiveSection('tutorials');
+          break;
+        default:
+          setActiveSection('dashboard');
+      }
+    }
+  }, []);
 
   useEffect(() => {
     fetchProfile();
@@ -127,10 +165,10 @@ export default function Dashboard() {
       case "coming-soon":
         return <ComingSoonSection />;
       case "carousel":
-        return <ContentSection type="carousel" userPlan={profile.plan} />;
+        return <CarouselSection userPlan={profile.plan} />;
       case "profile":
         return (
-          <ProfileSettings 
+          <ProfileSettings
             profile={profile} 
             onProfileUpdate={handleProfileUpdate} 
           />

@@ -1,14 +1,16 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useOptimizedQueries } from "@/hooks/useOptimizedQueries";
 
 export const RulesSection = () => {
   const [rulesContent, setRulesContent] = useState("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { optimizedRulesFetch } = useOptimizedQueries();
 
   useEffect(() => {
     fetchRules();
@@ -16,23 +18,29 @@ export const RulesSection = () => {
 
   const fetchRules = async () => {
     try {
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('value')
-        .eq('key', 'site_rules')
-        .single();
+      const data = await optimizedRulesFetch();
 
-      if (error && error.code !== 'PGRST116') {
-        throw error;
-      }
-
-      if (data?.value && typeof data.value === 'object' && 'content' in data.value) {
-        setRulesContent(data.value.content as string);
-      } else if (data?.value && typeof data.value === 'string') {
-        setRulesContent(data.value);
+      if (data && 'value' in data && data.value) {
+        const value = data.value as any;
+        if (typeof value === 'object' && 'content' in value) {
+          setRulesContent(value.content as string);
+        } else if (typeof value === 'string') {
+          setRulesContent(value);
+        } else {
+          setRulesContent(defaultRulesContent);
+        }
       } else {
-        // Default rules content
-        setRulesContent(`# Regras da Plataforma
+        setRulesContent(defaultRulesContent);
+      }
+    } catch (error) {
+      console.error('Error fetching rules:', error);
+      setRulesContent(defaultRulesContent);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const defaultRulesContent = useMemo(() => `# Regras da Plataforma
 
 ## 1. Termos de Uso
 
@@ -78,19 +86,7 @@ Estas regras podem ser alteradas a qualquer momento. Os usuários serão notific
 
 ---
 
-*Última atualização: ${new Date().toLocaleDateString('pt-BR')}*`);
-      }
-    } catch (error) {
-      console.error('Error fetching rules:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar regras",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+*Última atualização: ${new Date().toLocaleDateString('pt-BR')}*`, []);
 
   const formatMarkdown = (content: string) => {
     return content

@@ -11,14 +11,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Auth from "./pages/Auth";
-import Rules from "./pages/Rules";
-import { ContentCarouselPage } from "./pages/ContentCarouselPage";
-import ComingSoon from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
-import Products from "./pages/Products";
-import Courses from "./pages/Courses";
-import Tools from "./pages/Tools";
-import Tutorials from "./pages/Tutorials";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -63,13 +56,14 @@ function App() {
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/admin" element={<AdminDashboard />} />
-                  <Route path="/rules" element={<Rules />} />
-                  <Route path="/produtos" element={<Products />} />
-                  <Route path="/cursos" element={<Courses />} />
-                  <Route path="/ferramentas" element={<Tools />} />
-                  <Route path="/tutoriais" element={<Tutorials />} />
-                  <Route path="/carousel" element={<ContentCarouselPage userPlan="free" />} />
-                  <Route path="/em-breve" element={<ComingSoon />} />
+                  {/* All content sections now handled within Dashboard */}
+                  <Route path="/rules" element={<Dashboard />} />
+                  <Route path="/produtos" element={<Dashboard />} />
+                  <Route path="/cursos" element={<Dashboard />} />
+                  <Route path="/ferramentas" element={<Dashboard />} />
+                  <Route path="/tutoriais" element={<Dashboard />} />
+                  <Route path="/carousel" element={<Dashboard />} />
+                  <Route path="/em-breve" element={<Dashboard />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>

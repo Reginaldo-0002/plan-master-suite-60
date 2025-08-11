@@ -1,4 +1,4 @@
-
+import React, { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +30,7 @@ interface SidebarProps {
   onSectionChange: (section: ActiveSection) => void;
 }
 
-export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProps) => {
+export const Sidebar = memo(({ profile, activeSection, onSectionChange }: SidebarProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -146,4 +146,4 @@ export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProp
       </div>
     </div>
   );
-};
+});

@@ -43,8 +43,9 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       case 'tools': return 'tool';
       case 'courses': return 'course';
       case 'tutorials': return 'tutorial';
-      case 'rules': return null; // Rules should use admin_settings
-      case 'carousel': return null; // Special case for carousel content
+      case 'rules': return null; // Rules handled by RulesSection
+      case 'carousel': return null; // Carousel shows all types
+      case 'coming-soon': return null; // Coming soon handled separately
       default: return null;
     }
   };

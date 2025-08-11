@@ -35,21 +35,39 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       const fileName = `${userId}-${Date.now()}.${fileExt}`;
       const filePath = `${userId}/${fileName}`;
 
+      // Remove old avatar if exists
+      if (currentAvatarUrl) {
+        try {
+          const oldPath = currentAvatarUrl.split('/').slice(-2).join('/');
+          await supabase.storage
+            .from('avatars')
+            .remove([oldPath]);
+        } catch (error) {
+          console.log('Could not remove old avatar:', error);
+        }
+      }
+
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
+          cacheControl: '3600',
           upsert: true
         });
 
       if (uploadError) {
-        throw uploadError;
+        console.error('Upload error:', uploadError);
+        throw new Error(`Erro no upload: ${uploadError.message}`);
       }
 
       // Get public URL
       const { data: { publicUrl } } = supabase.storage
         .from('avatars')
         .getPublicUrl(filePath);
+
+      if (!publicUrl) {
+        throw new Error('Erro ao obter URL da imagem');
+      }
 
       // Update profile in database
       const { error: updateError } = await supabase
@@ -58,7 +76,8 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
         .eq('user_id', userId);
 
       if (updateError) {
-        throw updateError;
+        console.error('Database update error:', updateError);
+        throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
       }
 
       onAvatarUpdate(publicUrl);
