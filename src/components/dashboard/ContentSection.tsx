@@ -22,7 +22,7 @@ interface Content {
 }
 
 interface ContentSectionProps {
-  type: 'products' | 'tools' | 'courses' | 'rules' | 'coming-soon';
+  type: 'products' | 'tools' | 'courses' | 'tutorials' | 'rules' | 'coming-soon' | 'carousel';
   userPlan: 'free' | 'vip' | 'pro';
 }
 
@@ -42,7 +42,9 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       case 'products': return 'product';
       case 'tools': return 'tool';
       case 'courses': return 'course';
+      case 'tutorials': return 'tutorial';
       case 'rules': return 'tutorial';
+      case 'carousel': return null; // Special case for carousel content
       default: return null;
     }
   };
@@ -167,7 +169,10 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
       case 'products': return 'Produtos';
       case 'tools': return 'Ferramentas';
       case 'courses': return 'Cursos';
+      case 'tutorials': return 'Tutoriais';
       case 'rules': return 'Regras e Tutoriais';
+      case 'coming-soon': return 'Em Breve';
+      case 'carousel': return 'Carrossel';
       default: return 'Conteúdo';
     }
   };
