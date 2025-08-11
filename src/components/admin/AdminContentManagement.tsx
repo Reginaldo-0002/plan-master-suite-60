@@ -11,20 +11,30 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit2, Trash2, Video, FileText, Eye, Save } from "lucide-react";
+import { Plus, Edit2, Trash2, Video, FileText, Save } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Content {
   id: string;
   title: string;
   description: string | null;
-  content_type: string;
+  content_type: 'product' | 'tool' | 'course' | 'tutorial';
   video_url: string | null;
-  required_plan: string;
+  required_plan: 'free' | 'vip' | 'pro';
   is_active: boolean;
   order_index: number;
   created_at: string;
   updated_at: string;
+}
+
+interface FormData {
+  title: string;
+  description: string;
+  content_type: 'product' | 'tool' | 'course' | 'tutorial';
+  video_url: string;
+  required_plan: 'free' | 'vip' | 'pro';
+  is_active: boolean;
+  order_index: number;
 }
 
 export const AdminContentManagement = () => {
@@ -32,10 +42,10 @@ export const AdminContentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<FormData>({
     title: "",
     description: "",
-    content_type: "video",
+    content_type: "product",
     video_url: "",
     required_plan: "free",
     is_active: true,
@@ -209,7 +219,7 @@ export const AdminContentManagement = () => {
     setFormData({
       title: "",
       description: "",
-      content_type: "video",
+      content_type: "product",
       video_url: "",
       required_plan: "free",
       is_active: true,
@@ -229,8 +239,10 @@ export const AdminContentManagement = () => {
 
   const getContentTypeIcon = (type: string) => {
     switch (type) {
-      case 'video': return <Video className="w-4 h-4" />;
-      case 'text': return <FileText className="w-4 h-4" />;
+      case 'product': return <Video className="w-4 h-4" />;
+      case 'tool': return <FileText className="w-4 h-4" />;
+      case 'course': return <Video className="w-4 h-4" />;
+      case 'tutorial': return <FileText className="w-4 h-4" />;
       default: return <FileText className="w-4 h-4" />;
     }
   };
@@ -241,7 +253,7 @@ export const AdminContentManagement = () => {
         <div>
           <h2 className="text-3xl font-bold tracking-tight text-foreground">Gestão de Conteúdo</h2>
           <p className="text-muted-foreground">
-            Gerencie vídeos, cursos e materiais da plataforma
+            Gerencie produtos, ferramentas, cursos e tutoriais da plataforma
           </p>
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)}>
@@ -372,36 +384,35 @@ export const AdminContentManagement = () => {
               <Label htmlFor="content_type">Tipo de Conteúdo</Label>
               <Select 
                 value={formData.content_type} 
-                onValueChange={(value) => setFormData({...formData, content_type: value})}
+                onValueChange={(value: 'product' | 'tool' | 'course' | 'tutorial') => setFormData({...formData, content_type: value})}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="video">Vídeo</SelectItem>
-                  <SelectItem value="text">Texto</SelectItem>
+                  <SelectItem value="product">Produto</SelectItem>
+                  <SelectItem value="tool">Ferramenta</SelectItem>
                   <SelectItem value="course">Curso</SelectItem>
+                  <SelectItem value="tutorial">Tutorial</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            {formData.content_type === 'video' && (
-              <div>
-                <Label htmlFor="video_url">URL do Vídeo</Label>
-                <Input
-                  id="video_url"
-                  value={formData.video_url}
-                  onChange={(e) => setFormData({...formData, video_url: e.target.value})}
-                  placeholder="https://..."
-                />
-              </div>
-            )}
+            <div>
+              <Label htmlFor="video_url">URL do Vídeo</Label>
+              <Input
+                id="video_url"
+                value={formData.video_url}
+                onChange={(e) => setFormData({...formData, video_url: e.target.value})}
+                placeholder="https://..."
+              />
+            </div>
             
             <div>
               <Label htmlFor="required_plan">Plano Necessário</Label>
               <Select 
                 value={formData.required_plan} 
-                onValueChange={(value) => setFormData({...formData, required_plan: value})}
+                onValueChange={(value: 'free' | 'vip' | 'pro') => setFormData({...formData, required_plan: value})}
               >
                 <SelectTrigger>
                   <SelectValue />
