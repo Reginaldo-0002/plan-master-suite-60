@@ -32,13 +32,13 @@ export const MagneticBackground = () => {
     // Initialize particles
     const initParticles = () => {
       particlesRef.current = [];
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 30; i++) {
         particlesRef.current.push({
           x: Math.random() * canvas.width,
           y: Math.random() * canvas.height,
-          vx: (Math.random() - 0.5) * 0.5,
-          vy: (Math.random() - 0.5) * 0.5,
-          size: Math.random() * 2 + 1,
+          vx: (Math.random() - 0.5) * 0.3,
+          vy: (Math.random() - 0.5) * 0.3,
+          size: Math.random() * 1.5 + 0.5,
           life: Math.random() * 100,
           maxLife: 100,
         });
@@ -59,15 +59,15 @@ export const MagneticBackground = () => {
       // Draw magnetic field lines
       const { x: mouseX, y: mouseY } = mouseRef.current;
       
-      ctx.strokeStyle = 'rgba(79, 70, 229, 0.1)';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(79, 70, 229, 0.05)';
+      ctx.lineWidth = 0.8;
       
-      for (let i = 0; i < 8; i++) {
-        const angle = (i / 8) * Math.PI * 2;
-        const startX = mouseX + Math.cos(angle) * 100;
-        const startY = mouseY + Math.sin(angle) * 100;
-        const endX = mouseX + Math.cos(angle) * 300;
-        const endY = mouseY + Math.sin(angle) * 300;
+      for (let i = 0; i < 6; i++) {
+        const angle = (i / 6) * Math.PI * 2;
+        const startX = mouseX + Math.cos(angle) * 80;
+        const startY = mouseY + Math.sin(angle) * 80;
+        const endX = mouseX + Math.cos(angle) * 200;
+        const endY = mouseY + Math.sin(angle) * 200;
         
         ctx.beginPath();
         ctx.moveTo(startX, startY);
@@ -82,15 +82,15 @@ export const MagneticBackground = () => {
         const dy = mouseY - particle.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         
-        if (distance < 200) {
-          const force = (200 - distance) / 200 * 0.02;
+        if (distance < 150) {
+          const force = (150 - distance) / 150 * 0.015;
           particle.vx += dx / distance * force;
           particle.vy += dy / distance * force;
         }
         
         // Apply drag
-        particle.vx *= 0.99;
-        particle.vy *= 0.99;
+        particle.vx *= 0.98;
+        particle.vy *= 0.98;
         
         // Update position
         particle.x += particle.vx;
@@ -106,7 +106,7 @@ export const MagneticBackground = () => {
         
         // Draw particle
         const alpha = 1 - (particle.life / particle.maxLife);
-        ctx.fillStyle = `rgba(79, 70, 229, ${alpha * 0.6})`;
+        ctx.fillStyle = `rgba(79, 70, 229, ${alpha * 0.4})`;
         ctx.beginPath();
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
         ctx.fill();
@@ -119,10 +119,10 @@ export const MagneticBackground = () => {
           const dy = particle.y - otherParticle.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
           
-          if (distance < 100) {
-            const alpha = (100 - distance) / 100 * 0.3;
+          if (distance < 80) {
+            const alpha = (80 - distance) / 80 * 0.2;
             ctx.strokeStyle = `rgba(79, 70, 229, ${alpha})`;
-            ctx.lineWidth = 0.5;
+            ctx.lineWidth = 0.3;
             ctx.beginPath();
             ctx.moveTo(particle.x, particle.y);
             ctx.lineTo(otherParticle.x, otherParticle.y);
@@ -148,7 +148,7 @@ export const MagneticBackground = () => {
   return (
     <canvas
       ref={canvasRef}
-      className="fixed inset-0 w-full h-full pointer-events-none z-0"
+      className="fixed inset-0 w-full h-full pointer-events-none z-[-1]"
       style={{ background: 'linear-gradient(135deg, hsl(240, 21%, 15%) 0%, hsl(240, 27%, 9%) 50%, hsl(240, 21%, 15%) 100%)' }}
     />
   );

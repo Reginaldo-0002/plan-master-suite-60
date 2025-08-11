@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +29,10 @@ interface Profile {
   areas_accessed: number;
   referral_code: string;
   referral_earnings: number;
+  loyalty_level: string;
+  total_points: number;
+  last_activity: string | null;
+  preferences: any;
   created_at: string;
   updated_at: string;
 }
@@ -88,9 +93,9 @@ export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProp
   ];
 
   return (
-    <div className="w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
+    <div className="w-64 bg-card border-r border-border flex flex-col relative z-20">
       {/* Header */}
-      <div className="p-6 border-b border-sidebar-border">
+      <div className="p-6 border-b border-border bg-gradient-to-b from-card/90 to-card backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <Avatar className="w-10 h-10">
             <AvatarImage src={profile?.avatar_url || ""} />
@@ -99,7 +104,7 @@ export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProp
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-sidebar-foreground truncate">
+            <p className="font-medium text-foreground truncate">
               {profile?.full_name || 'Usuário'}
             </p>
             <Badge className={`text-xs ${getPlanColor(profile?.plan || 'free')}`}>
@@ -111,16 +116,16 @@ export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProp
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2">
+      <nav className="flex-1 p-4 space-y-2 bg-card/50 backdrop-blur-sm">
         {menuItems.map((item) => (
           <Button
             key={item.id}
             variant={activeSection === item.id ? "default" : "ghost"}
             size="sm"
-            className={`w-full justify-start transition-base ${
+            className={`w-full justify-start transition-all duration-300 ${
               activeSection === item.id 
-                ? 'gradient-primary text-primary-foreground shadow-sm' 
-                : 'text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                ? 'gradient-primary text-primary-foreground shadow-lg animate-glow' 
+                : 'text-foreground hover:bg-accent hover:text-accent-foreground border border-transparent hover:border-primary/20'
             }`}
             onClick={() => onSectionChange(item.id as ActiveSection)}
           >
@@ -131,11 +136,11 @@ export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProp
       </nav>
 
       {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border space-y-2">
+      <div className="p-4 border-t border-border space-y-2 bg-card/50 backdrop-blur-sm">
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          className="w-full justify-start text-foreground hover:bg-accent hover:text-accent-foreground border border-transparent hover:border-primary/20 transition-all duration-300"
           onClick={() => onSectionChange('settings')}
         >
           <Settings className="w-4 h-4 mr-3" />
@@ -144,7 +149,7 @@ export const Sidebar = ({ profile, activeSection, onSectionChange }: SidebarProp
         <Button
           variant="ghost"
           size="sm"
-          className="w-full justify-start text-destructive hover:bg-destructive-light hover:text-destructive"
+          className="w-full justify-start text-destructive hover:bg-destructive/10 hover:text-destructive border border-transparent hover:border-destructive/20 transition-all duration-300"
           onClick={handleLogout}
         >
           <LogOut className="w-4 h-4 mr-3" />

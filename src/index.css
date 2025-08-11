@@ -31,6 +31,13 @@
     --gradient-primary: linear-gradient(135deg, hsl(217, 100%, 60%) 0%, hsl(271, 100%, 65%) 50%, hsl(193, 100%, 50%) 100%);
     --shadow-card: 0 10px 40px rgba(79, 70, 229, 0.1);
     --card-border: rgba(79, 70, 229, 0.2);
+    
+    /* Sidebar specific variables */
+    --sidebar: 240 21% 15%;
+    --sidebar-foreground: 60 9.1% 97.8%;
+    --sidebar-border: 240 11% 27%;
+    --sidebar-accent: 240 11% 27%;
+    --sidebar-accent-foreground: 60 9.1% 97.8%;
   }
 
   .dark {
@@ -53,6 +60,13 @@
     --border: 240 11% 27%;
     --input: 240 11% 27%;
     --ring: 217 100% 60%;
+    
+    /* Sidebar specific variables for dark mode */
+    --sidebar: 240 21% 15%;
+    --sidebar-foreground: 60 9.1% 97.8%;
+    --sidebar-border: 240 11% 27%;
+    --sidebar-accent: 240 11% 27%;
+    --sidebar-accent-foreground: 60 9.1% 97.8%;
   }
 }
 
@@ -115,6 +129,33 @@
 
   ::-webkit-scrollbar-thumb:hover {
     background: hsl(217, 100%, 70%);
+  }
+
+  /* Futuristic animations */
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  @keyframes glow {
+    from {
+      box-shadow: 0 0 20px rgba(79, 70, 229, 0.1);
+    }
+    to {
+      box-shadow: 0 0 30px rgba(79, 70, 229, 0.3);
+    }
+  }
+
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
   }
 }
 

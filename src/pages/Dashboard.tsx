@@ -96,8 +96,8 @@ const Dashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -128,16 +128,16 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-background relative">
       <Sidebar
         profile={profile}
         activeSection={activeSection === 'carousel' ? 'dashboard' : activeSection}
         onSectionChange={handleSectionChange}
       />
-      <div className="flex-1 ml-64">
-        <div className="p-6">
+      <div className="flex-1 flex flex-col relative z-10">
+        <main className="flex-1 overflow-auto">
           {renderActiveSection()}
-        </div>
+        </main>
       </div>
       <SupportChat />
     </div>
