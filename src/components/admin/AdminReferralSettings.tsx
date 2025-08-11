@@ -4,25 +4,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Edit, Trash2, Plus, DollarSign, Percent } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Edit, Trash2, DollarSign, Percent } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+type CommissionType = "fixed" | "percentage";
+type UserPlan = "free" | "vip" | "pro";
+
 interface ReferralSetting {
   id: string;
-  commission_type: 'fixed' | 'percentage';
+  commission_type: CommissionType;
   amount: number;
-  target_plan: 'free' | 'vip' | 'pro';
+  target_plan: UserPlan;
   is_active: boolean;
   min_payout: number;
   description: string | null;
   max_referrals_per_user: number | null;
   created_at: string;
   updated_at: string;
+  created_by: string | null;
 }
 
 export const AdminReferralSettings = () => {
@@ -33,12 +36,12 @@ export const AdminReferralSettings = () => {
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
-    commission_type: 'percentage' as 'fixed' | 'percentage',
+    commission_type: "percentage" as CommissionType,
     amount: 0,
-    target_plan: 'vip' as 'free' | 'vip' | 'pro',
+    target_plan: "vip" as UserPlan,
     is_active: true,
     min_payout: 50,
-    description: '',
+    description: "",
     max_referrals_per_user: null as number | null
   });
 
@@ -54,12 +57,27 @@ export const AdminReferralSettings = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setSettings(data || []);
+
+      const transformedData: ReferralSetting[] = (data || []).map(item => ({
+        id: item.id,
+        commission_type: item.commission_type as CommissionType,
+        amount: item.amount,
+        target_plan: item.target_plan as UserPlan,
+        is_active: item.is_active,
+        min_payout: item.min_payout,
+        description: item.description,
+        max_referrals_per_user: item.max_referrals_per_user,
+        created_at: item.created_at,
+        updated_at: item.updated_at,
+        created_by: item.created_by
+      }));
+
+      setSettings(transformedData);
     } catch (error: any) {
       console.error('Error fetching referral settings:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar configurações de indicação",
+        description: "Erro ao carregar configurações",
         variant: "destructive",
       });
     } finally {
@@ -73,20 +91,27 @@ export const AdminReferralSettings = () => {
     if (formData.amount <= 0) {
       toast({
         title: "Erro",
-        description: "O valor da comissão deve ser maior que zero",
+        description: "Valor deve ser maior que zero",
         variant: "destructive",
       });
       return;
     }
 
     try {
+      const settingData = {
+        commission_type: formData.commission_type,
+        amount: formData.amount,
+        target_plan: formData.target_plan,
+        is_active: formData.is_active,
+        min_payout: formData.min_payout,
+        description: formData.description || null,
+        max_referrals_per_user: formData.max_referrals_per_user
+      };
+
       if (editingSetting) {
         const { error } = await supabase
           .from('referral_settings')
-          .update({
-            ...formData,
-            max_referrals_per_user: formData.max_referrals_per_user || null
-          })
+          .update(settingData)
           .eq('id', editingSetting.id);
 
         if (error) throw error;
@@ -98,10 +123,7 @@ export const AdminReferralSettings = () => {
       } else {
         const { error } = await supabase
           .from('referral_settings')
-          .insert([{
-            ...formData,
-            max_referrals_per_user: formData.max_referrals_per_user || null
-          }]);
+          .insert([settingData]);
 
         if (error) throw error;
 
@@ -125,12 +147,12 @@ export const AdminReferralSettings = () => {
 
   const resetForm = () => {
     setFormData({
-      commission_type: 'percentage',
+      commission_type: "percentage",
       amount: 0,
-      target_plan: 'vip',
+      target_plan: "vip",
       is_active: true,
       min_payout: 50,
-      description: '',
+      description: "",
       max_referrals_per_user: null
     });
     setEditingSetting(null);
@@ -145,7 +167,7 @@ export const AdminReferralSettings = () => {
       target_plan: setting.target_plan,
       is_active: setting.is_active,
       min_payout: setting.min_payout,
-      description: setting.description || '',
+      description: setting.description || "",
       max_referrals_per_user: setting.max_referrals_per_user
     });
     setShowForm(true);
@@ -170,7 +192,7 @@ export const AdminReferralSettings = () => {
       console.error('Error toggling setting:', error);
       toast({
         title: "Erro",
-        description: "Erro ao alterar configuração",
+        description: "Erro ao alterar status",
         variant: "destructive",
       });
     }
@@ -203,23 +225,6 @@ export const AdminReferralSettings = () => {
     }
   };
 
-  const getPlanBadgeColor = (plan: string) => {
-    switch (plan) {
-      case 'free': return 'bg-plan-free text-white';
-      case 'vip': return 'bg-plan-vip text-white';
-      case 'pro': return 'bg-plan-pro text-white';
-      default: return 'bg-plan-free text-white';
-    }
-  };
-
-  const formatCommission = (setting: ReferralSetting) => {
-    if (setting.commission_type === 'fixed') {
-      return `R$ ${setting.amount.toFixed(2)}`;
-    } else {
-      return `${setting.amount}%`;
-    }
-  };
-
   if (loading) {
     return <div className="flex justify-center p-8">Carregando...</div>;
   }
@@ -227,10 +232,7 @@ export const AdminReferralSettings = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-futuristic-primary">Configurações de Indicação</h2>
-          <p className="text-muted-foreground">Configure comissões e regras para o programa de indicações</p>
-        </div>
+        <h2 className="text-2xl font-bold text-futuristic-primary">Configurações de Indicação</h2>
         <Button onClick={() => setShowForm(true)} className="bg-futuristic-gradient hover:opacity-90">
           <Plus className="w-4 h-4 mr-2" />
           Nova Configuração
@@ -244,7 +246,7 @@ export const AdminReferralSettings = () => {
               {editingSetting ? 'Editar Configuração' : 'Nova Configuração'}
             </CardTitle>
             <CardDescription>
-              Configure valores de comissão por plano e tipo
+              Configure os valores de comissão por indicação para cada plano
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -252,58 +254,47 @@ export const AdminReferralSettings = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="target_plan">Plano Alvo</Label>
-                  <Select value={formData.target_plan} onValueChange={(value: 'free' | 'vip' | 'pro') => setFormData({ ...formData, target_plan: value })}>
+                  <Select value={formData.target_plan} onValueChange={(value: UserPlan) => setFormData({ ...formData, target_plan: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="free">Gratuito</SelectItem>
                       <SelectItem value="vip">VIP</SelectItem>
                       <SelectItem value="pro">Pro</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="commission_type">Tipo de Comissão</Label>
-                  <Select value={formData.commission_type} onValueChange={(value: 'fixed' | 'percentage') => setFormData({ ...formData, commission_type: value })}>
+                  <Select value={formData.commission_type} onValueChange={(value: CommissionType) => setFormData({ ...formData, commission_type: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixed">Valor Fixo (R$)</SelectItem>
-                      <SelectItem value="percentage">Percentual (%)</SelectItem>
+                      <SelectItem value="percentage">Percentual</SelectItem>
+                      <SelectItem value="fixed">Valor Fixo</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="amount">
-                    {formData.commission_type === 'fixed' ? 'Valor da Comissão (R$)' : 'Percentual da Comissão (%)'}
+                    {formData.commission_type === 'percentage' ? 'Percentual (%)' : 'Valor (R$)'}
                   </Label>
-                  <div className="relative">
-                    <Input
-                      id="amount"
-                      type="number"
-                      step="0.01"
-                      value={formData.amount}
-                      onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
-                      placeholder={formData.commission_type === 'fixed' ? '10.00' : '5'}
-                      className="pl-8"
-                    />
-                    <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
-                      {formData.commission_type === 'fixed' ? 
-                        <DollarSign className="w-4 h-4 text-muted-foreground" /> : 
-                        <Percent className="w-4 h-4 text-muted-foreground" />
-                      }
-                    </div>
-                  </div>
+                  <Input
+                    id="amount"
+                    type="number"
+                    step="0.01"
+                    value={formData.amount}
+                    onChange={(e) => setFormData({ ...formData, amount: parseFloat(e.target.value) || 0 })}
+                    placeholder={formData.commission_type === 'percentage' ? '5.00' : '10.00'}
+                    required
+                  />
                 </div>
-
                 <div className="space-y-2">
-                  <Label htmlFor="min_payout">Valor Mínimo para Saque (R$)</Label>
+                  <Label htmlFor="min_payout">Mínimo para Saque (R$)</Label>
                   <Input
                     id="min_payout"
                     type="number"
@@ -311,29 +302,28 @@ export const AdminReferralSettings = () => {
                     value={formData.min_payout}
                     onChange={(e) => setFormData({ ...formData, min_payout: parseFloat(e.target.value) || 0 })}
                     placeholder="50.00"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="max_referrals">Máx. Indicações por Usuário</Label>
+                  <Input
+                    id="max_referrals"
+                    type="number"
+                    value={formData.max_referrals_per_user || ''}
+                    onChange={(e) => setFormData({ ...formData, max_referrals_per_user: e.target.value ? parseInt(e.target.value) : null })}
+                    placeholder="Ilimitado"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="max_referrals">Máximo de Indicações por Usuário (opcional)</Label>
+                <Label htmlFor="description">Descrição (Opcional)</Label>
                 <Input
-                  id="max_referrals"
-                  type="number"
-                  value={formData.max_referrals_per_user || ''}
-                  onChange={(e) => setFormData({ ...formData, max_referrals_per_user: e.target.value ? parseInt(e.target.value) : null })}
-                  placeholder="Deixe vazio para ilimitado"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
-                <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                   placeholder="Descrição da configuração"
-                  rows={3}
                 />
               </div>
 
@@ -343,7 +333,7 @@ export const AdminReferralSettings = () => {
                   checked={formData.is_active}
                   onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                 />
-                <Label htmlFor="is_active">Configuração ativa</Label>
+                <Label htmlFor="is_active">Configuração Ativa</Label>
               </div>
 
               <div className="flex gap-2">
@@ -360,68 +350,59 @@ export const AdminReferralSettings = () => {
       )}
 
       <div className="grid gap-4">
-        {settings.length === 0 ? (
-          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
-            <CardContent className="flex items-center justify-center p-8">
-              <div className="text-center space-y-2">
-                <DollarSign className="w-12 h-12 text-muted-foreground mx-auto" />
-                <p className="text-muted-foreground">Nenhuma configuração de indicação criada ainda</p>
-                <Button onClick={() => setShowForm(true)} variant="outline">
-                  Criar primeira configuração
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          settings.map((setting) => (
-            <Card key={setting.id} className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Badge className={getPlanBadgeColor(setting.target_plan)}>
-                        {setting.target_plan.toUpperCase()}
-                      </Badge>
-                      <Badge variant="outline" className="text-futuristic-accent">
-                        {formatCommission(setting)}
-                      </Badge>
-                      <Badge variant={setting.is_active ? "default" : "secondary"}>
-                        {setting.is_active ? 'Ativo' : 'Inativo'}
-                      </Badge>
-                    </div>
-                    <div className="text-sm text-muted-foreground">
-                      <p>Valor mínimo para saque: R$ {setting.min_payout.toFixed(2)}</p>
-                      {setting.max_referrals_per_user && (
-                        <p>Máximo de indicações: {setting.max_referrals_per_user}</p>
-                      )}
-                    </div>
-                  </div>
+        {settings.map((setting) => (
+          <Card key={setting.id} className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <CardTitle className="text-futuristic-primary flex items-center gap-2">
+                    {setting.commission_type === 'percentage' ? (
+                      <Percent className="w-4 h-4" />
+                    ) : (
+                      <DollarSign className="w-4 h-4" />
+                    )}
+                    Plano {setting.target_plan.toUpperCase()}
+                  </CardTitle>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => toggleActive(setting)}
-                      className={setting.is_active ? "border-yellow-500 text-yellow-500" : "border-green-500 text-green-500"}
-                    >
-                      {setting.is_active ? 'Desativar' : 'Ativar'}
-                    </Button>
-                    <Button variant="outline" size="sm" onClick={() => startEdit(setting)}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="destructive" size="sm" onClick={() => deleteSetting(setting.id)}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <Badge variant={setting.is_active ? "default" : "secondary"}>
+                      {setting.is_active ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                    <Badge variant="outline">
+                      {setting.commission_type === 'percentage' 
+                        ? `${setting.amount}%` 
+                        : `R$ ${setting.amount.toFixed(2)}`
+                      }
+                    </Badge>
+                    <Badge variant="outline">
+                      Mín: R$ {setting.min_payout.toFixed(2)}
+                    </Badge>
                   </div>
                 </div>
-              </CardHeader>
-              {setting.description && (
-                <CardContent>
-                  <p className="text-muted-foreground">{setting.description}</p>
-                </CardContent>
-              )}
-            </Card>
-          ))
-        )}
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => toggleActive(setting)}
+                    className={setting.is_active ? "border-green-500 text-green-500" : "border-red-500 text-red-500"}
+                  >
+                    {setting.is_active ? 'Ativo' : 'Inativo'}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => startEdit(setting)}>
+                    <Edit className="w-4 h-4" />
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => deleteSetting(setting.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            {setting.description && (
+              <CardContent>
+                <p className="text-muted-foreground">{setting.description}</p>
+              </CardContent>
+            )}
+          </Card>
+        ))}
       </div>
     </div>
   );

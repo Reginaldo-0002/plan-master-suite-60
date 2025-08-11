@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminSidebar } from "./AdminSidebar";
@@ -8,15 +9,10 @@ import { AdminUpcomingReleases } from "./AdminUpcomingReleases";
 import { AdminSystemCleanup } from "./AdminSystemCleanup";
 import { ContentTopicsEditor } from "@/components/content/ContentTopicsEditor";
 import { AdminUserManagement } from "./AdminUserManagement";
-import { AdminFinancialDashboard } from "./AdminFinancialDashboard";
 import { AdminCarouselManagement } from "./AdminCarouselManagement";
-import { AdminNotificationCenter } from "./AdminNotificationCenter";
 import { AdminToolsManagement } from "./AdminToolsManagement";
-import { AdminSupportCenter } from "./AdminSupportCenter";
-import { AdminChatHandler } from "./AdminChatHandler";
 import { AdminTeamManagement } from "./AdminTeamManagement";
-import { AdminAutoStatusManagement } from "./AdminAutoStatusManagement";
-import { AdminRulesManagement } from "./AdminRulesManagement";
+import { AdminRulesEditor } from "./AdminRulesEditor";
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -32,8 +28,6 @@ export const AdminDashboard = ({ activeTab, setActiveTab }: AdminDashboardProps)
         return <AdminDashboardContent />;
       case 'users':
         return <AdminUserManagement />;
-      case 'financials':
-        return <AdminFinancialDashboard />;
       case 'content':
         return selectedContentId ? (
           <div className="space-y-4">
@@ -57,22 +51,14 @@ export const AdminDashboard = ({ activeTab, setActiveTab }: AdminDashboardProps)
         return <AdminUpcomingReleases />;
       case 'carousel':
         return <AdminCarouselManagement />;
-      case 'notifications':
-        return <AdminNotificationCenter />;
       case 'referral-settings':
         return <AdminReferralSettings />;
       case 'tools':
         return <AdminToolsManagement />;
-      case 'support':
-        return <AdminSupportCenter />;
-      case 'chat':
-        return <AdminChatHandler />;
       case 'team':
         return <AdminTeamManagement />;
-      case 'auto-status':
-        return <AdminAutoStatusManagement />;
       case 'rules':
-        return <AdminRulesManagement />;
+        return <AdminRulesEditor />;
       case 'system-cleanup':
         return <AdminSystemCleanup />;
       default:

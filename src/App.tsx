@@ -10,8 +10,8 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Auth from "./pages/Auth";
 import Rules from "./pages/Rules";
-import ContentCarouselPage from "./pages/ContentCarouselPage";
-import ComingSoon from "./pages/ComingSoon";
+import { ContentCarouselPage } from "./pages/ContentCarouselPage";
+import { ComingSoon } from "./pages/ComingSoon";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();

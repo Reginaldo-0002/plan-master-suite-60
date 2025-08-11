@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,12 +13,15 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+type ContentType = "course" | "tutorial" | "product" | "tool";
+type UserPlan = "free" | "vip" | "pro";
+
 interface Content {
   id: string;
   title: string;
   description: string | null;
-  content_type: string;
-  required_plan: string;
+  content_type: ContentType;
+  required_plan: UserPlan;
   status: string;
   hero_image_url: string | null;
   carousel_image_url: string | null;
@@ -37,7 +39,7 @@ interface Content {
 interface UserProfile {
   user_id: string;
   full_name: string | null;
-  plan: string;
+  plan: UserPlan;
 }
 
 export const AdminContentManagement = () => {
@@ -55,8 +57,8 @@ export const AdminContentManagement = () => {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    content_type: "course",
-    required_plan: "free",
+    content_type: "course" as ContentType,
+    required_plan: "free" as UserPlan,
     hero_image_url: "",
     carousel_image_url: "",
     show_in_carousel: false,
@@ -83,8 +85,8 @@ export const AdminContentManagement = () => {
         id: item.id,
         title: item.title,
         description: item.description,
-        content_type: item.content_type,
-        required_plan: item.required_plan,
+        content_type: item.content_type as ContentType,
+        required_plan: item.required_plan as UserPlan,
         status: item.status || 'draft',
         hero_image_url: item.hero_image_url,
         carousel_image_url: item.carousel_image_url,
@@ -140,7 +142,16 @@ export const AdminContentManagement = () => {
 
     try {
       const contentData = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        content_type: formData.content_type,
+        required_plan: formData.required_plan,
+        hero_image_url: formData.hero_image_url,
+        carousel_image_url: formData.carousel_image_url,
+        show_in_carousel: formData.show_in_carousel,
+        carousel_order: formData.carousel_order,
+        estimated_duration: formData.estimated_duration,
+        difficulty_level: formData.difficulty_level,
         scheduled_publish_at: publishDate?.toISOString(),
         auto_hide_at: hideDate?.toISOString(),
         target_users: selectedUsers.length > 0 ? selectedUsers : null,
@@ -333,15 +344,15 @@ export const AdminContentManagement = () => {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="content_type">Tipo de Conteúdo</Label>
-                  <Select value={formData.content_type} onValueChange={(value) => setFormData({ ...formData, content_type: value })}>
+                  <Select value={formData.content_type} onValueChange={(value: ContentType) => setFormData({ ...formData, content_type: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="course">Curso</SelectItem>
                       <SelectItem value="tutorial">Tutorial</SelectItem>
-                      <SelectItem value="workshop">Workshop</SelectItem>
-                      <SelectItem value="masterclass">Masterclass</SelectItem>
+                      <SelectItem value="product">Produto</SelectItem>
+                      <SelectItem value="tool">Ferramenta</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -361,7 +372,7 @@ export const AdminContentManagement = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="required_plan">Plano Necessário</Label>
-                  <Select value={formData.required_plan} onValueChange={(value) => setFormData({ ...formData, required_plan: value })}>
+                  <Select value={formData.required_plan} onValueChange={(value: UserPlan) => setFormData({ ...formData, required_plan: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

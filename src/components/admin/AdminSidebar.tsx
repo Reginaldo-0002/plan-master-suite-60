@@ -1,25 +1,25 @@
 
-import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { 
   LayoutDashboard, 
   Users, 
   FileText, 
-  MessageSquare, 
-  Settings, 
-  TrendingUp,
-  Bell,
-  Shield,
-  Wrench,
-  MonitorSpeaker,
-  DollarSign,
-  Rocket,
-  Database,
   Calendar,
-  ChevronDown,
-  ChevronRight
+  Settings,
+  Carousel,
+  DollarSign,
+  Wrench,
+  UserCheck,
+  Shield,
+  Trash2,
+  Bell,
+  MessageSquare,
+  BarChart3,
+  BookOpen,
+  Star
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -28,125 +28,125 @@ interface AdminSidebarProps {
 }
 
 export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => {
-  const [expandedSections, setExpandedSections] = useState<string[]>(['main', 'content', 'system']);
-
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => 
-      prev.includes(section) 
-        ? prev.filter(s => s !== section)
-        : [...prev, section]
-    );
-  };
-
-  const menuSections = [
+  const menuItems = [
     {
-      id: 'main',
-      title: 'Principal',
-      items: [
-        { id: 'overview', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'users', label: 'Usuários', icon: Users },
-        { id: 'financials', label: 'Financeiro', icon: TrendingUp }
-      ]
+      id: 'overview',
+      label: 'Visão Geral',
+      icon: LayoutDashboard,
+      category: 'main'
+    },
+    {
+      id: 'users',
+      label: 'Usuários',
+      icon: Users,
+      category: 'management'
     },
     {
       id: 'content',
-      title: 'Gestão de Conteúdo',
-      items: [
-        { id: 'content', label: 'Conteúdos', icon: FileText },
-        { id: 'upcoming-releases', label: 'Próximos Lançamentos', icon: Rocket, badge: 'NOVO' },
-        { id: 'carousel', label: 'Carrossel', icon: MonitorSpeaker },
-        { id: 'notifications', label: 'Notificações', icon: Bell }
-      ]
+      label: 'Conteúdo',
+      icon: FileText,
+      category: 'management'
     },
     {
-      id: 'monetization',
-      title: 'Monetização',
-      items: [
-        { id: 'referral-settings', label: 'Config. Indicações', icon: DollarSign, badge: 'NOVO' },
-        { id: 'tools', label: 'Ferramentas', icon: Wrench }
-      ]
+      id: 'upcoming-releases',
+      label: 'Próximos Lançamentos',
+      icon: Calendar,
+      category: 'management'
     },
     {
-      id: 'support',
-      title: 'Suporte & Comunicação',
-      items: [
-        { id: 'support', label: 'Suporte', icon: MessageSquare },
-        { id: 'chat', label: 'Chat Admin', icon: MessageSquare },
-        { id: 'team', label: 'Equipe', icon: Users }
-      ]
+      id: 'carousel',
+      label: 'Carrossel',
+      icon: Carousel,
+      category: 'management'
     },
     {
-      id: 'system',
-      title: 'Sistema',
-      items: [
-        { id: 'auto-status', label: 'Status Automático', icon: Settings },
-        { id: 'rules', label: 'Regras', icon: Shield },
-        { id: 'system-cleanup', label: 'Limpeza Sistema', icon: Database, badge: 'PERIGO', badgeColor: 'destructive' }
-      ]
+      id: 'referral-settings',
+      label: 'Configurar Indicações',
+      icon: DollarSign,
+      category: 'settings'
+    },
+    {
+      id: 'tools',
+      label: 'Ferramentas',
+      icon: Wrench,
+      category: 'settings'
+    },
+    {
+      id: 'team',
+      label: 'Equipe',
+      icon: UserCheck,
+      category: 'settings'
+    },
+    {
+      id: 'rules',
+      label: 'Regras',
+      icon: BookOpen,
+      category: 'settings'
+    },
+    {
+      id: 'system-cleanup',
+      label: 'Limpeza do Sistema',
+      icon: Trash2,
+      category: 'danger',
+      className: 'text-red-500 hover:text-red-400'
     }
   ];
 
+  const categories = [
+    { id: 'main', label: 'Principal' },
+    { id: 'management', label: 'Gestão' },
+    { id: 'settings', label: 'Configurações' },
+    { id: 'danger', label: 'Zona de Perigo' }
+  ];
+
   return (
-    <div className="w-64 bg-background border-r border-border">
-      <div className="p-6 border-b border-border">
-        <h2 className="text-xl font-bold text-futuristic-primary">Admin Panel</h2>
-        <p className="text-sm text-muted-foreground">Gestão completa do sistema</p>
+    <div className="w-64 bg-background/95 backdrop-blur-sm border-r border-border">
+      <div className="p-6">
+        <h2 className="text-lg font-semibold text-futuristic-primary">
+          Painel Admin
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Gestão do Sistema
+        </p>
       </div>
       
-      <ScrollArea className="h-[calc(100vh-120px)]">
-        <div className="p-4 space-y-4">
-          {menuSections.map((section) => (
-            <div key={section.id} className="space-y-2">
-              <Button
-                variant="ghost"
-                onClick={() => toggleSection(section.id)}
-                className="w-full justify-between text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                {section.title}
-                {expandedSections.includes(section.id) ? (
-                  <ChevronDown className="w-4 h-4" />
-                ) : (
-                  <ChevronRight className="w-4 h-4" />
-                )}
-              </Button>
-              
-              {expandedSections.includes(section.id) && (
-                <div className="space-y-1 ml-2">
-                  {section.items.map((item) => {
-                    const IconComponent = item.icon;
+      <ScrollArea className="flex-1 px-3">
+        <div className="space-y-4">
+          {categories.map((category) => {
+            const items = menuItems.filter(item => item.category === category.id);
+            if (items.length === 0) return null;
+            
+            return (
+              <div key={category.id}>
+                <h4 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                  {category.label}
+                </h4>
+                <div className="space-y-1">
+                  {items.map((item) => {
+                    const Icon = item.icon;
                     return (
                       <Button
                         key={item.id}
                         variant={activeTab === item.id ? "secondary" : "ghost"}
-                        className="w-full justify-start text-sm"
+                        className={cn(
+                          "w-full justify-start text-left",
+                          activeTab === item.id && "bg-futuristic-primary/10 text-futuristic-primary",
+                          item.className
+                        )}
                         onClick={() => setActiveTab(item.id)}
                       >
-                        <IconComponent className="w-4 h-4 mr-2" />
+                        <Icon className="mr-2 h-4 w-4" />
                         {item.label}
-                        {item.badge && (
-                          <Badge 
-                            variant={item.badgeColor || "default"} 
-                            className="ml-auto text-xs"
-                          >
-                            {item.badge}
-                          </Badge>
-                        )}
                       </Button>
                     );
                   })}
                 </div>
-              )}
-            </div>
-          ))}
+                {category.id !== 'danger' && <Separator className="my-3" />}
+              </div>
+            );
+          })}
         </div>
       </ScrollArea>
-
-      <div className="p-4 border-t border-border">
-        <div className="text-xs text-muted-foreground text-center">
-          <p>Sistema Admin v2.0</p>
-          <p>Gestão Completa</p>
-        </div>
-      </div>
     </div>
   );
 };
