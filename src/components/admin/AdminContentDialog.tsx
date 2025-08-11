@@ -142,10 +142,10 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full max-w-4xl h-[90vh] max-h-[800px] p-0 overflow-hidden futuristic-dialog">
+      <DialogContent className="max-w-4xl w-[95vw] h-[95vh] p-0 overflow-hidden bg-gradient-to-br from-background via-background/95 to-background/90 border border-border/50 backdrop-blur-xl shadow-2xl">
         <div className="flex flex-col h-full">
           {/* Header fixo */}
-          <DialogHeader className="px-6 py-4 border-b border-border/20 bg-background/95 backdrop-blur-sm">
+          <DialogHeader className="px-6 py-4 border-b border-border/20 bg-background/95 backdrop-blur-sm shrink-0">
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-purple-500 bg-clip-text text-transparent">
               {contentItem?.id ? 'Editar' : 'Criar'} {getContentTypeLabel(contentType)}
             </DialogTitle>
@@ -154,10 +154,10 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
             </DialogDescription>
           </DialogHeader>
 
-          {/* Área de conteúdo rolável */}
-          <div className="flex-1 overflow-hidden">
-            <ScrollArea className="h-full">
-              <div className="p-6 space-y-6">
+          {/* Área de conteúdo com rolagem */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full px-6 py-4">
+              <div className="space-y-6 pb-6">
                 {/* Campos básicos */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
@@ -169,7 +169,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                       value={formData.title}
                       onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                       placeholder="Digite o título..."
-                      className="futuristic-input"
+                      className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
                     />
                   </div>
                   <div className="space-y-2">
@@ -180,10 +180,10 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                       value={formData.required_plan} 
                       onValueChange={(value: any) => setFormData({ ...formData, required_plan: value })}
                     >
-                      <SelectTrigger className="futuristic-input">
+                      <SelectTrigger className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="futuristic-dropdown">
+                      <SelectContent className="border border-border/50 bg-background/95 backdrop-blur-xl shadow-xl">
                         <SelectItem value="free">🆓 Gratuito</SelectItem>
                         <SelectItem value="vip">⭐ VIP</SelectItem>
                         <SelectItem value="pro">💎 Pro</SelectItem>
@@ -203,7 +203,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Descreva o conteúdo..."
                     rows={4}
-                    className="futuristic-input resize-none"
+                    className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60 resize-none"
                   />
                 </div>
 
@@ -217,7 +217,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                     value={formData.video_url || ""}
                     onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
                     placeholder="https://youtube.com/watch?v=..."
-                    className="futuristic-input"
+                    className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
                   />
                 </div>
 
@@ -232,7 +232,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                       type="number"
                       value={formData.order_index}
                       onChange={(e) => setFormData({ ...formData, order_index: parseInt(e.target.value) || 0 })}
-                      className="futuristic-input"
+                      className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
                     />
                   </div>
                   <div className="flex items-center space-x-3 pt-8">
@@ -240,7 +240,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                       id="is_active"
                       checked={formData.is_active}
                       onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                      className="futuristic-switch"
+                      className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-purple-500 transition-all duration-300"
                     />
                     <Label htmlFor="is_active" className="text-sm font-semibold text-foreground cursor-pointer">
                       ✅ Ativo
@@ -255,7 +255,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                       id="show_in_carousel"
                       checked={formData.show_in_carousel}
                       onCheckedChange={(checked) => setFormData({ ...formData, show_in_carousel: checked })}
-                      className="futuristic-switch"
+                      className="data-[state=checked]:bg-gradient-to-r data-[state=checked]:from-primary data-[state=checked]:to-purple-500 transition-all duration-300"
                     />
                     <Label htmlFor="show_in_carousel" className="text-sm font-semibold text-foreground cursor-pointer">
                       🎠 Exibir no Carrossel
@@ -273,7 +273,7 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                           value={formData.carousel_image_url || ""}
                           onChange={(e) => setFormData({ ...formData, carousel_image_url: e.target.value })}
                           placeholder="https://exemplo.com/imagem.jpg"
-                          className="futuristic-input"
+                          className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
                         />
                       </div>
                       <div className="space-y-2">
@@ -285,47 +285,44 @@ export const AdminContentDialog = ({ isOpen, onClose, contentItem, contentType }
                           type="number"
                           value={formData.carousel_order}
                           onChange={(e) => setFormData({ ...formData, carousel_order: parseInt(e.target.value) || 0 })}
-                          className="futuristic-input"
+                          className="border-2 border-border/30 bg-background/80 backdrop-blur-sm focus:border-primary/60 focus:ring-2 focus:ring-primary/20 focus:bg-background/95 transition-all duration-300 hover:border-border/60"
                         />
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Espaço extra para garantir que o último campo seja visível */}
-                <div className="h-4"></div>
+                {/* Footer com botões */}
+                <div className="pt-6 border-t border-border/20">
+                  <div className="flex justify-end gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={onClose} 
+                      disabled={isLoading}
+                      className="border-2 border-border/30 bg-background/80 backdrop-blur-sm hover:border-primary/40 hover:bg-background/95 transition-all duration-300"
+                    >
+                      Cancelar
+                    </Button>
+                    <Button 
+                      onClick={handleSave} 
+                      disabled={isLoading}
+                      className="bg-gradient-to-r from-primary to-purple-500 hover:from-primary-hover hover:to-purple-600 text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 border-0"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          💾 Salvar Conteúdo
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </ScrollArea>
-          </div>
-
-          {/* Footer com botões fixos */}
-          <div className="px-6 py-4 border-t border-border/20 bg-background/95 backdrop-blur-sm">
-            <div className="flex justify-end gap-3">
-              <Button 
-                variant="outline" 
-                onClick={onClose} 
-                disabled={isLoading}
-                className="futuristic-button-secondary"
-              >
-                Cancelar
-              </Button>
-              <Button 
-                onClick={handleSave} 
-                disabled={isLoading}
-                className="futuristic-button-primary"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Salvando...
-                  </>
-                ) : (
-                  <>
-                    💾 Salvar Conteúdo
-                  </>
-                )}
-              </Button>
-            </div>
           </div>
         </div>
       </DialogContent>
