@@ -14,7 +14,202 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      content: {
+        Row: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          order_index: number | null
+          required_plan: Database["public"]["Enums"]["user_plan"]
+          title: string
+          updated_at: string | null
+          video_url: string | null
+        }
+        Insert: {
+          content_type: Database["public"]["Enums"]["content_type"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          order_index?: number | null
+          required_plan?: Database["public"]["Enums"]["user_plan"]
+          title: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Update: {
+          content_type?: Database["public"]["Enums"]["content_type"]
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          order_index?: number | null
+          required_plan?: Database["public"]["Enums"]["user_plan"]
+          title?: string
+          updated_at?: string | null
+          video_url?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          areas_accessed: number | null
+          avatar_url: string | null
+          created_at: string | null
+          full_name: string | null
+          id: string
+          pix_key: string | null
+          plan: Database["public"]["Enums"]["user_plan"]
+          referral_code: string | null
+          referral_earnings: number | null
+          total_session_time: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          areas_accessed?: number | null
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          pix_key?: string | null
+          plan?: Database["public"]["Enums"]["user_plan"]
+          referral_code?: string | null
+          referral_earnings?: number | null
+          total_session_time?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          areas_accessed?: number | null
+          avatar_url?: string | null
+          created_at?: string | null
+          full_name?: string | null
+          id?: string
+          pix_key?: string | null
+          plan?: Database["public"]["Enums"]["user_plan"]
+          referral_code?: string | null
+          referral_earnings?: number | null
+          total_session_time?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          bonus_amount: number | null
+          created_at: string | null
+          id: string
+          referred_id: string
+          referrer_id: string
+        }
+        Insert: {
+          bonus_amount?: number | null
+          created_at?: string | null
+          id?: string
+          referred_id: string
+          referrer_id: string
+        }
+        Update: {
+          bonus_amount?: number | null
+          created_at?: string | null
+          id?: string
+          referred_id?: string
+          referrer_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey"
+            columns: ["referred_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_activity_logs: {
+        Row: {
+          activity_type: string
+          created_at: string | null
+          description: string | null
+          id: string
+          ip_address: unknown | null
+          user_id: string
+        }
+        Insert: {
+          activity_type: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_id: string
+        }
+        Update: {
+          activity_type?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: unknown | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawal_requests: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          pix_key: string
+          processed_at: string | null
+          status: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          pix_key: string
+          processed_at?: string | null
+          status?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          pix_key?: string
+          processed_at?: string | null
+          status?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withdrawal_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +218,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      content_type: "product" | "tool" | "course" | "tutorial"
+      user_plan: "free" | "vip" | "pro"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +346,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      content_type: ["product", "tool", "course", "tutorial"],
+      user_plan: ["free", "vip", "pro"],
+    },
   },
 } as const
