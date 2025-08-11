@@ -107,10 +107,13 @@ const Dashboard = () => {
       case 'dashboard':
         return <DashboardContent profile={profile} />;
       case 'products':
+        return <ContentSection contentType="product" userPlan={profile.plan} />;
       case 'tools':
+        return <ContentSection contentType="tool" userPlan={profile.plan} />;
       case 'courses':
+        return <ContentSection contentType="course" userPlan={profile.plan} />;
       case 'tutorials':
-        return <ContentSection section={activeSection} userPlan={profile.plan} />;
+        return <ContentSection contentType="tutorial" userPlan={profile.plan} />;
       case 'carousel':
         return <ContentCarouselPage userPlan={profile.plan} />;
       case 'settings':
@@ -123,7 +126,7 @@ const Dashboard = () => {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar
-        activeSection={activeSection}
+        activeSection={activeSection === 'carousel' ? 'dashboard' : activeSection}
         onSectionChange={handleSectionChange}
         userPlan={profile.plan}
       />
