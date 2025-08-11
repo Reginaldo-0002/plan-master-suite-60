@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +24,9 @@ interface Content {
   order_index: number;
   created_at: string;
   updated_at: string;
+  carousel_image_url: string | null;
+  carousel_order: number | null;
+  show_in_carousel: boolean | null;
 }
 
 interface FormData {
@@ -35,6 +37,9 @@ interface FormData {
   required_plan: 'free' | 'vip' | 'pro';
   is_active: boolean;
   order_index: number;
+  carousel_image_url: string;
+  carousel_order: number;
+  show_in_carousel: boolean;
 }
 
 export const AdminContentManagement = () => {
@@ -49,7 +54,10 @@ export const AdminContentManagement = () => {
     video_url: "",
     required_plan: "free",
     is_active: true,
-    order_index: 0
+    order_index: 0,
+    carousel_image_url: "",
+    carousel_order: 0,
+    show_in_carousel: false
   });
   const { toast } = useToast();
 
@@ -211,7 +219,10 @@ export const AdminContentManagement = () => {
       video_url: content.video_url || "",
       required_plan: content.required_plan,
       is_active: content.is_active,
-      order_index: content.order_index
+      order_index: content.order_index,
+      carousel_image_url: content.carousel_image_url || "",
+      carousel_order: content.carousel_order || 0,
+      show_in_carousel: content.show_in_carousel || false
     });
   };
 
@@ -223,7 +234,10 @@ export const AdminContentManagement = () => {
       video_url: "",
       required_plan: "free",
       is_active: true,
-      order_index: 0
+      order_index: 0,
+      carousel_image_url: "",
+      carousel_order: 0,
+      show_in_carousel: false
     });
     setEditingContent(null);
   };
@@ -435,6 +449,27 @@ export const AdminContentManagement = () => {
                 placeholder="0"
               />
             </div>
+
+            <div>
+              <Label htmlFor="carousel_image_url">URL da Imagem do Carrossel (1920x1080)</Label>
+              <Input
+                id="carousel_image_url"
+                value={formData.carousel_image_url}
+                onChange={(e) => setFormData({...formData, carousel_image_url: e.target.value})}
+                placeholder="https://exemplo.com/imagem.jpg"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="carousel_order">Ordem no Carrossel</Label>
+              <Input
+                id="carousel_order"
+                type="number"
+                value={formData.carousel_order}
+                onChange={(e) => setFormData({...formData, carousel_order: parseInt(e.target.value) || 0})}
+                placeholder="0"
+              />
+            </div>
             
             <div className="flex items-center space-x-2">
               <Switch
@@ -443,6 +478,15 @@ export const AdminContentManagement = () => {
                 onCheckedChange={(checked) => setFormData({...formData, is_active: checked})}
               />
               <Label htmlFor="is_active">Ativo</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch
+                id="show_in_carousel"
+                checked={formData.show_in_carousel}
+                onCheckedChange={(checked) => setFormData({...formData, show_in_carousel: checked})}
+              />
+              <Label htmlFor="show_in_carousel">Exibir no Carrossel</Label>
             </div>
             
             <div className="flex gap-2">

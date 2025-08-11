@@ -40,6 +40,8 @@ export type Database = {
       }
       content: {
         Row: {
+          carousel_image_url: string | null
+          carousel_order: number | null
           content_type: Database["public"]["Enums"]["content_type"]
           created_at: string | null
           description: string | null
@@ -47,11 +49,14 @@ export type Database = {
           is_active: boolean | null
           order_index: number | null
           required_plan: Database["public"]["Enums"]["user_plan"]
+          show_in_carousel: boolean | null
           title: string
           updated_at: string | null
           video_url: string | null
         }
         Insert: {
+          carousel_image_url?: string | null
+          carousel_order?: number | null
           content_type: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
@@ -59,11 +64,14 @@ export type Database = {
           is_active?: boolean | null
           order_index?: number | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
+          show_in_carousel?: boolean | null
           title: string
           updated_at?: string | null
           video_url?: string | null
         }
         Update: {
+          carousel_image_url?: string | null
+          carousel_order?: number | null
           content_type?: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
@@ -71,11 +79,56 @@ export type Database = {
           is_active?: boolean | null
           order_index?: number | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
+          show_in_carousel?: boolean | null
           title?: string
           updated_at?: string | null
           video_url?: string | null
         }
         Relationships: []
+      }
+      content_topics: {
+        Row: {
+          content_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          topic_image_url: string | null
+          topic_order: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          content_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          topic_image_url?: string | null
+          topic_order?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          content_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          topic_image_url?: string | null
+          topic_order?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "content_topics_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -307,6 +360,62 @@ export type Database = {
         }
         Relationships: []
       }
+      topic_resources: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          is_premium: boolean | null
+          required_plan: string | null
+          resource_order: number | null
+          resource_type: string
+          resource_url: string
+          thumbnail_url: string | null
+          title: string
+          topic_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          required_plan?: string | null
+          resource_order?: number | null
+          resource_type: string
+          resource_url: string
+          thumbnail_url?: string | null
+          title: string
+          topic_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          required_plan?: string | null
+          resource_order?: number | null
+          resource_type?: string
+          resource_url?: string
+          thumbnail_url?: string | null
+          title?: string
+          topic_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_resources_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "content_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_activity_logs: {
         Row: {
           activity_type: string
@@ -338,6 +447,47 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_content_visibility: {
+        Row: {
+          content_id: string
+          created_at: string | null
+          id: string
+          is_visible: boolean | null
+          scheduled_hide_date: string | null
+          scheduled_show_date: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          content_id: string
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          scheduled_hide_date?: string | null
+          scheduled_show_date?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          content_id?: string
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          scheduled_hide_date?: string | null
+          scheduled_show_date?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_content_visibility_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
             referencedColumns: ["id"]
           },
         ]
