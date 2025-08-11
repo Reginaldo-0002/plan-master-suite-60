@@ -36,7 +36,6 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
-  const [selectedContentType, setSelectedContentType] = useState<'course' | 'tool' | 'tutorial' | 'product'>('course');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -78,7 +77,6 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
 
       if (error) throw error;
 
-      // Atualizar estado local imediatamente para feedback visual
       setContents(prevContents => 
         prevContents.map(c => 
           c.id === content.id 
@@ -120,7 +118,7 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
         description: "Conteúdo excluído com sucesso",
       });
       
-      await fetchContents(); // Refresh da lista
+      await fetchContents();
     } catch (error) {
       console.error('Error deleting content:', error);
       toast({
@@ -133,20 +131,18 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
 
   const openCreateDialog = () => {
     setEditingContent(null);
-    setSelectedContentType('course');
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (content: Content) => {
     setEditingContent(content);
-    setSelectedContentType(content.content_type);
     setIsDialogOpen(true);
   };
 
   const handleDialogClose = () => {
     setIsDialogOpen(false);
     setEditingContent(null);
-    fetchContents(); // Sempre atualizar a lista ao fechar
+    fetchContents();
   };
 
   const handleEditTopicsClick = (contentId: string) => {
@@ -313,8 +309,8 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
       <AdminContentDialog
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
-        contentItem={editingContent}
-        contentType={selectedContentType}
+        content={editingContent}
+        onContentSaved={handleDialogClose}
       />
     </div>
   );

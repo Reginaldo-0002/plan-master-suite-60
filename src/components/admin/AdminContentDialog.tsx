@@ -203,7 +203,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Informações Básicas */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="title">Título *</Label>
@@ -244,7 +243,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
             />
           </div>
 
-          {/* URLs e Mídia */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="video_url">URL do Vídeo</Label>
@@ -277,7 +275,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
             />
           </div>
 
-          {/* Configurações */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <Label htmlFor="required_plan">Plano Necessário</Label>
@@ -348,7 +345,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
             </div>
           </div>
 
-          {/* Tags */}
           <div>
             <Label htmlFor="tags">Tags (separadas por vírgula)</Label>
             <Input
@@ -359,7 +355,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
             />
           </div>
 
-          {/* Switches */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center space-x-2">
               <Switch
@@ -394,7 +389,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
             )}
           </div>
 
-          {/* Agendamento */}
           {formData.status === 'scheduled' && (
             <div>
               <Label htmlFor="scheduled_publish_at">Data de Publicação Agendada</Label>

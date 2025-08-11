@@ -7,21 +7,10 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, User, Gift } from "lucide-react";
+import { Loader2, User } from "lucide-react";
 import { AvatarUpload } from "@/components/media/AvatarUpload";
 import { ReferralSystem } from "./ReferralSystem";
-
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name?: string;
-  avatar_url?: string;
-  pix_key?: string;
-  plan: 'free' | 'vip' | 'pro';
-  role: string;
-  referral_code: string;
-  referral_earnings: number;
-}
+import { Profile } from "@/types/profile";
 
 interface ProfileSettingsProps {
   profile: Profile;
@@ -95,7 +84,6 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Avatar Upload */}
           <div className="flex flex-col items-center space-y-4">
             <AvatarUpload
               currentAvatarUrl={profile.avatar_url || null}
@@ -107,7 +95,6 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
 
           <Separator />
 
-          {/* Formulário de Dados Pessoais */}
           <div className="space-y-4">
             <div>
               <Label htmlFor="full_name">Nome Completo</Label>
@@ -146,7 +133,6 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
         </CardContent>
       </Card>
 
-      {/* Sistema de Indicações */}
       <ReferralSystem profile={profile} />
     </div>
   );

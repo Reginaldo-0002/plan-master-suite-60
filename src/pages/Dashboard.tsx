@@ -8,23 +8,14 @@ import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
+import { Profile } from "@/types/profile";
 
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name?: string;
-  avatar_url?: string;
-  pix_key?: string;
-  plan: 'free' | 'vip' | 'pro';
-  role: string;
-  referral_code: string;
-  referral_earnings: number;
-}
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const [activeSection, setActiveSection] = useState("dashboard");
+  const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -48,14 +39,21 @@ export default function Dashboard() {
 
       if (error) {
         if (error.code === 'PGRST116') {
-          // Profile doesn't exist, create one
           const { data: newProfile, error: createError } = await supabase
             .from('profiles')
             .insert([
               {
                 user_id: user.id,
                 plan: 'free',
-                role: 'user'
+                role: 'user',
+                full_name: null,
+                avatar_url: null,
+                pix_key: null,
+                total_session_time: 0,
+                areas_accessed: 0,
+                referral_earnings: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
               }
             ])
             .select()
@@ -109,13 +107,13 @@ export default function Dashboard() {
       case "dashboard":
         return <DashboardContent profile={profile} />;
       case "products":
-        return <ContentSection contentType="product" userPlan={profile.plan} />;
+        return <ContentSection type="products" userPlan={profile.plan} />;
       case "tools":
-        return <ContentSection contentType="tool" userPlan={profile.plan} />;
+        return <ContentSection type="tools" userPlan={profile.plan} />;
       case "courses":
-        return <ContentSection contentType="course" userPlan={profile.plan} />;
+        return <ContentSection type="courses" userPlan={profile.plan} />;
       case "tutorials":
-        return <ContentSection contentType="tutorial" userPlan={profile.plan} />;
+        return <ContentSection type="rules" userPlan={profile.plan} />;
       case "profile":
         return (
           <ProfileSettings 
@@ -141,7 +139,6 @@ export default function Dashboard() {
         {renderContent()}
       </main>
 
-      {/* Support Chat */}
       <SupportChat userId={profile.user_id} />
     </div>
   );

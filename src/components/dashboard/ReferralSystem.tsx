@@ -8,16 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Copy, Users, DollarSign, Gift } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-
-interface Profile {
-  id: string;
-  user_id: string;
-  referral_code: string;
-  referral_earnings: number;
-  plan: 'free' | 'vip' | 'pro';
-  role: string;
-  full_name?: string;
-}
+import { Profile } from "@/types/profile";
 
 interface ReferralSystemProps {
   profile: Profile;
@@ -47,13 +38,12 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
 
   useEffect(() => {
     fetchReferralData();
-  }, [profile.id]);
+  }, [profile.user_id]);
 
   const fetchReferralData = async () => {
     try {
       setLoading(true);
 
-      // Buscar referrals do usuário
       const { data: referrals, error } = await supabase
         .from('referrals')
         .select(`
@@ -62,7 +52,7 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
           created_at,
           referred_id
         `)
-        .eq('referrer_id', profile.id);
+        .eq('referrer_id', profile.user_id);
 
       if (error) throw error;
 
@@ -156,7 +146,6 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Estatísticas */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <Users className="w-8 h-8 text-primary mx-auto mb-2" />
@@ -177,7 +166,6 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
 
           <Separator />
 
-          {/* Código de Indicação */}
           <div className="space-y-4">
             <div>
               <label className="text-sm font-medium">Seu Código de Indicação</label>
@@ -210,7 +198,6 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
 
           <Separator />
 
-          {/* Como Funciona */}
           <div className="space-y-3">
             <h4 className="font-semibold">Como Funciona</h4>
             <div className="grid gap-3 text-sm">
@@ -233,7 +220,6 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
             </div>
           </div>
 
-          {/* Indicações Recentes */}
           {referralData.recent_referrals.length > 0 && (
             <>
               <Separator />

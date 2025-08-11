@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -7,21 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, Clock, Target, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
-
-interface Profile {
-  id: string;
-  user_id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  plan: 'free' | 'vip' | 'pro';
-  pix_key: string | null;
-  total_session_time: number;
-  areas_accessed: number;
-  referral_code: string;
-  referral_earnings: number;
-  created_at: string;
-  updated_at: string;
-}
+import { Profile } from "@/types/profile";
 
 interface DashboardContentProps {
   profile: Profile | null;
@@ -80,7 +65,7 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
       const { data, error } = await supabase
         .from('referrals')
         .select('*')
-        .eq('referrer_id', profile.id);
+        .eq('referrer_id', profile.user_id);
 
       if (error) throw error;
       
@@ -135,7 +120,6 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
     <>
       <MagneticBackground />
       <div className="flex-1 space-y-8 p-8 relative z-10">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground bg-gradient-to-r from-futuristic-primary to-futuristic-secondary bg-clip-text text-transparent">
