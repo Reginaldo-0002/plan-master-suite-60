@@ -20,6 +20,9 @@ import { AdminCarouselManagement } from "@/components/admin/AdminCarouselManagem
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagement";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+import { validateProfileData } from "@/lib/typeGuards";
 
 type ActiveAdminSection = 'overview' | 'users' | 'content' | 'support' | 'notifications' | 'tools' | 'financial' | 'rules' | 'team' | 'referral-settings' | 'upcoming-releases' | 'system-cleanup' | 'carousel';
 
@@ -46,18 +49,19 @@ const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState<ActiveAdminSection>('overview');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { handleAsyncError } = useErrorHandler();
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
-    try {
+    const result = await handleAsyncError(async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       
       if (error || !session) {
         navigate("/auth");
-        return;
+        return null;
       }
 
       setUser(session.user);
@@ -71,13 +75,20 @@ const AdminDashboard = () => {
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
+        navigate("/dashboard");
+        return null;
+      }
+
+      // Validar dados do perfil
+      if (!validateProfileData(profileData)) {
+        console.error('Invalid profile data:', profileData);
         toast({
           title: "Erro",
-          description: "Erro ao carregar perfil do usuário",
+          description: "Dados do perfil inválidos",
           variant: "destructive",
         });
         navigate("/dashboard");
-        return;
+        return null;
       }
 
       // If user is not admin, make them admin (first user becomes admin)
@@ -105,20 +116,33 @@ const AdminDashboard = () => {
           variant: "destructive",
         });
         navigate("/dashboard");
-        return;
+        return null;
       }
 
       setProfile(profileData as Profile);
-    } catch (error) {
-      console.error('Authentication error:', error);
+      return profileData;
+    }, {
+      title: "Erro de Autenticação",
+      showToast: false
+    });
+
+    if (!result) {
       navigate("/auth");
-    } finally {
-      setLoading(false);
     }
+    
+    setLoading(false);
   };
 
   const handleSectionChange = (tab: string) => {
-    setActiveSection(tab as ActiveAdminSection);
+    const validSections: ActiveAdminSection[] = [
+      'overview', 'users', 'content', 'support', 'notifications', 'tools', 
+      'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 
+      'system-cleanup', 'carousel'
+    ];
+    
+    if (validSections.includes(tab as ActiveAdminSection)) {
+      setActiveSection(tab as ActiveAdminSection);
+    }
   };
 
   if (loading) {
@@ -167,15 +191,19 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
-      <AdminSidebar 
-        activeTab={activeSection} 
-        setActiveTab={handleSectionChange}
-      />
-      <main className="flex-1 overflow-auto">
-        {renderActiveSection()}
-      </main>
-    </div>
+    <ErrorBoundary>
+      <div className="flex h-screen bg-background">
+        <AdminSidebar 
+          activeTab={activeSection} 
+          setActiveTab={handleSectionChange}
+        />
+        <main className="flex-1 overflow-auto">
+          <ErrorBoundary>
+            {renderActiveSection()}
+          </ErrorBoundary>
+        </main>
+      </div>
+    </ErrorBoundary>
   );
 };
 

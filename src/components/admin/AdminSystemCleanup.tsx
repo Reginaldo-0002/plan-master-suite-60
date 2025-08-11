@@ -8,6 +8,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { AlertTriangle, Trash2, Database, Users, FileText, RotateCcw } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useErrorHandler } from "@/hooks/useErrorHandler";
+
+interface CleanupResult {
+  success: boolean;
+  records_deleted: number;
+  cleanup_type: string;
+}
 
 export const AdminSystemCleanup = () => {
   const [loading, setLoading] = useState(false);
@@ -15,6 +22,7 @@ export const AdminSystemCleanup = () => {
   const [keepAdmin, setKeepAdmin] = useState(true);
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
   const { toast } = useToast();
+  const { handleAsyncError } = useErrorHandler();
 
   const cleanupOptions = [
     {
@@ -62,7 +70,8 @@ export const AdminSystemCleanup = () => {
     }
 
     setLoading(true);
-    try {
+    
+    const result = await handleAsyncError(async () => {
       const { data, error } = await supabase.rpc('system_cleanup', {
         cleanup_type: cleanupType,
         target_tables: selectedTables.length > 0 ? selectedTables : null,
@@ -70,33 +79,23 @@ export const AdminSystemCleanup = () => {
       });
 
       if (error) throw error;
+      return data as CleanupResult;
+    }, {
+      title: "Erro na Limpeza",
+      showToast: false
+    });
 
-      // Safely parse the response
-      let result;
-      if (typeof data === 'object' && data !== null) {
-        result = data as { success: boolean; records_deleted: number; cleanup_type: string };
-      } else {
-        // Fallback for unexpected response format
-        result = { success: true, records_deleted: 0, cleanup_type: cleanupType };
-      }
-
+    if (result) {
       toast({
         title: "Limpeza Executada",
         description: `${result.records_deleted} registros foram removidos`,
       });
-
+      
       setConfirmText("");
       setSelectedTables([]);
-    } catch (error: any) {
-      console.error('Error during cleanup:', error);
-      toast({
-        title: "Erro",
-        description: error.message || "Erro durante a limpeza",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
     }
+    
+    setLoading(false);
   };
 
   const handleTableSelection = (tableId: string, checked: boolean) => {
