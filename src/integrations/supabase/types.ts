@@ -214,6 +214,7 @@ export type Database = {
       }
       content: {
         Row: {
+          auto_hide_at: string | null
           auto_publish_at: string | null
           carousel_image_url: string | null
           carousel_order: number | null
@@ -230,14 +231,17 @@ export type Database = {
           order_index: number | null
           published_at: string | null
           required_plan: Database["public"]["Enums"]["user_plan"]
+          scheduled_publish_at: string | null
           show_in_carousel: boolean | null
           status: string | null
           tags: string[] | null
+          target_users: string[] | null
           title: string
           updated_at: string | null
           video_url: string | null
         }
         Insert: {
+          auto_hide_at?: string | null
           auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
@@ -254,14 +258,17 @@ export type Database = {
           order_index?: number | null
           published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
+          scheduled_publish_at?: string | null
           show_in_carousel?: boolean | null
           status?: string | null
           tags?: string[] | null
+          target_users?: string[] | null
           title: string
           updated_at?: string | null
           video_url?: string | null
         }
         Update: {
+          auto_hide_at?: string | null
           auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
@@ -278,9 +285,11 @@ export type Database = {
           order_index?: number | null
           published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
+          scheduled_publish_at?: string | null
           show_in_carousel?: boolean | null
           status?: string | null
           tags?: string[] | null
+          target_users?: string[] | null
           title?: string
           updated_at?: string | null
           video_url?: string | null
@@ -699,6 +708,48 @@ export type Database = {
         }
         Relationships: []
       }
+      referral_settings: {
+        Row: {
+          amount: number
+          commission_type: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          max_referrals_per_user: number | null
+          min_payout: number
+          target_plan: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          commission_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_referrals_per_user?: number | null
+          min_payout?: number
+          target_plan?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          commission_type?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          max_referrals_per_user?: number | null
+          min_payout?: number
+          target_plan?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       referrals: {
         Row: {
           bonus_amount: number | null
@@ -868,6 +919,39 @@ export type Database = {
         }
         Relationships: []
       }
+      system_cleanup_logs: {
+        Row: {
+          affected_tables: string[] | null
+          backup_created: boolean | null
+          backup_location: string | null
+          cleanup_type: string
+          created_at: string
+          executed_by: string | null
+          id: string
+          records_deleted: number | null
+        }
+        Insert: {
+          affected_tables?: string[] | null
+          backup_created?: boolean | null
+          backup_location?: string | null
+          cleanup_type: string
+          created_at?: string
+          executed_by?: string | null
+          id?: string
+          records_deleted?: number | null
+        }
+        Update: {
+          affected_tables?: string[] | null
+          backup_created?: boolean | null
+          backup_location?: string | null
+          cleanup_type?: string
+          created_at?: string
+          executed_by?: string | null
+          id?: string
+          records_deleted?: number | null
+        }
+        Relationships: []
+      }
       tool_status: {
         Row: {
           created_at: string
@@ -953,6 +1037,51 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      upcoming_releases: {
+        Row: {
+          announcement_image: string | null
+          content_preview: string | null
+          countdown_enabled: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          release_date: string
+          target_plans: string[] | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          announcement_image?: string | null
+          content_preview?: string | null
+          countdown_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          release_date: string
+          target_plans?: string[] | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          announcement_image?: string | null
+          content_preview?: string | null
+          countdown_enabled?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          release_date?: string
+          target_plans?: string[] | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       user_achievements: {
         Row: {
@@ -1045,6 +1174,57 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_content_access: {
+        Row: {
+          access_type: string
+          content_id: string | null
+          created_at: string
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          scheduled_at: string | null
+          topic_id: string | null
+          user_id: string
+        }
+        Insert: {
+          access_type?: string
+          content_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          scheduled_at?: string | null
+          topic_id?: string | null
+          user_id: string
+        }
+        Update: {
+          access_type?: string
+          content_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          scheduled_at?: string | null
+          topic_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_content_access_content_id_fkey"
+            columns: ["content_id"]
+            isOneToOne: false
+            referencedRelation: "content"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_content_access_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "content_topics"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_content_visibility: {
         Row: {
@@ -1245,6 +1425,18 @@ export type Database = {
           activity_type: string
         }
         Returns: undefined
+      }
+      calculate_referral_commission: {
+        Args: { referrer_user_id: string; referred_plan: string }
+        Returns: number
+      }
+      system_cleanup: {
+        Args: {
+          cleanup_type: string
+          target_tables?: string[]
+          keep_admin?: boolean
+        }
+        Returns: Json
       }
     }
     Enums: {
