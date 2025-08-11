@@ -26,6 +26,10 @@ interface Content {
   hero_image_url: string | null;
   created_at: string;
   updated_at: string;
+  order_index: number;
+  show_in_carousel: boolean;
+  carousel_order: number;
+  carousel_image_url?: string;
 }
 
 export const AdminContentManagement = () => {
