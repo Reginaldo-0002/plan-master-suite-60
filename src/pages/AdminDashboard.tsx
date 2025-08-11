@@ -117,6 +117,10 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleSectionChange = (tab: string) => {
+    setActiveSection(tab as ActiveAdminSection);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -166,7 +170,7 @@ const AdminDashboard = () => {
     <div className="flex h-screen bg-background">
       <AdminSidebar 
         activeTab={activeSection} 
-        setActiveTab={setActiveSection}
+        setActiveTab={handleSectionChange}
       />
       <main className="flex-1 overflow-auto">
         {renderActiveSection()}
