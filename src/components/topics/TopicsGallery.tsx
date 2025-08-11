@@ -81,7 +81,15 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
         .order('resource_order', { ascending: true });
 
       if (error) throw error;
-      setResources(data || []);
+      
+      // Type assertion to ensure resource_type matches our interface
+      const typedResources = (data || []).map(resource => ({
+        ...resource,
+        resource_type: resource.resource_type as 'video' | 'pdf' | 'link' | 'unlock_link',
+        required_plan: resource.required_plan as 'free' | 'vip' | 'pro'
+      }));
+      
+      setResources(typedResources);
     } catch (error) {
       console.error('Error fetching resources:', error);
       toast({

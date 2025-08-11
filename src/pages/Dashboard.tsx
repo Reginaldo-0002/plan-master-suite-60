@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,6 +8,7 @@ import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { SupportChat } from "@/components/support/SupportChat";
+import { ContentCarouselPage } from "./ContentCarouselPage";
 import { Loader2 } from "lucide-react";
 
 type ActiveSection = 'dashboard' | 'products' | 'tools' | 'courses' | 'tutorials' | 'carousel' | 'settings';
@@ -25,8 +27,6 @@ interface Profile {
   created_at: string;
   updated_at: string;
 }
-
-import { ContentCarouselPage } from "./ContentCarouselPage";
 
 const Dashboard = () => {
   const [user, setUser] = useState<User | null>(null);
