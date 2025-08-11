@@ -25,6 +25,9 @@ interface Content {
   is_active: boolean;
   is_premium: boolean;
   required_plan: 'free' | 'vip' | 'pro';
+  status: string | null;
+  published_at: string | null;
+  auto_publish_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -57,11 +60,45 @@ export const AdminContentManagement = () => {
     try {
       const { data, error } = await supabase
         .from('content')
-        .select('*')
+        .select(`
+          id,
+          title,
+          description,
+          content_type,
+          content_url,
+          image_url,
+          is_active,
+          is_premium,
+          required_plan,
+          status,
+          published_at,
+          auto_publish_at,
+          created_at,
+          updated_at
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setContent(data || []);
+      
+      // Map the data to ensure all required fields are present
+      const mappedContent: Content[] = (data || []).map(item => ({
+        id: item.id,
+        title: item.title,
+        description: item.description,
+        content_type: item.content_type,
+        content_url: item.content_url,
+        image_url: item.image_url,
+        is_active: item.is_active,
+        is_premium: item.is_premium,
+        required_plan: item.required_plan,
+        status: item.status,
+        published_at: item.published_at,
+        auto_publish_at: item.auto_publish_at,
+        created_at: item.created_at,
+        updated_at: item.updated_at
+      }));
+      
+      setContent(mappedContent);
     } catch (error) {
       console.error('Error fetching content:', error);
       toast({
@@ -95,7 +132,8 @@ export const AdminContentManagement = () => {
           image_url: imageUrl,
           is_active: isActive,
           is_premium: isPremium,
-          required_plan: requiredPlan
+          required_plan: requiredPlan,
+          status: 'draft'
         }]);
 
       if (error) throw error;
@@ -196,7 +234,8 @@ export const AdminContentManagement = () => {
           image_url: content.image_url,
           is_active: content.is_active,
           is_premium: content.is_premium,
-          required_plan: content.required_plan
+          required_plan: content.required_plan,
+          status: 'draft'
         }])
         .select()
         .single();
@@ -330,6 +369,9 @@ export const AdminContentManagement = () => {
                       <Badge variant="secondary">{content.content_type}</Badge>
                       {content.is_premium && (
                         <Badge className="bg-yellow-100 text-yellow-800">Premium</Badge>
+                      )}
+                      {content.status && (
+                        <Badge variant="outline">{content.status}</Badge>
                       )}
                     </div>
                   </div>

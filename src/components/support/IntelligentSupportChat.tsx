@@ -155,14 +155,14 @@ export const IntelligentSupportChat = ({ userId, userPlan }: IntelligentSupportC
 
   const fetchMessages = async (sessionId: string) => {
     try {
-      // For this component, we'll fetch from support_tickets/messages
-      // This is a simplified version - in real implementation you'd need proper ticket management
+      // Get the most recent ticket for this user
       const { data: tickets } = await supabase
         .from('support_tickets')
         .select(`
           id,
           support_messages (
             id,
+            ticket_id,
             sender_id,
             message,
             is_bot,
@@ -175,9 +175,20 @@ export const IntelligentSupportChat = ({ userId, userPlan }: IntelligentSupportC
         .limit(1);
 
       if (tickets && tickets[0] && tickets[0].support_messages) {
-        setMessages(tickets[0].support_messages.sort((a, b) => 
+        // Ensure all messages have ticket_id
+        const messagesWithTicketId: Message[] = tickets[0].support_messages.map(msg => ({
+          id: msg.id,
+          ticket_id: msg.ticket_id || tickets[0].id,
+          sender_id: msg.sender_id,
+          message: msg.message,
+          is_bot: msg.is_bot,
+          is_internal: msg.is_internal,
+          created_at: msg.created_at
+        })).sort((a, b) => 
           new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-        ));
+        );
+        
+        setMessages(messagesWithTicketId);
       }
     } catch (error) {
       console.error('Error fetching messages:', error);
@@ -229,7 +240,17 @@ export const IntelligentSupportChat = ({ userId, userPlan }: IntelligentSupportC
 
       if (messageError) throw messageError;
 
-      setMessages(prev => [...prev, botMessage]);
+      const messageWithTicketId: Message = {
+        id: botMessage.id,
+        ticket_id: ticketId,
+        sender_id: botMessage.sender_id,
+        message: botMessage.message,
+        is_bot: botMessage.is_bot,
+        is_internal: botMessage.is_internal,
+        created_at: botMessage.created_at
+      };
+
+      setMessages(prev => [...prev, messageWithTicketId]);
     } catch (error) {
       console.error('Error sending bot message:', error);
     }
@@ -323,7 +344,17 @@ export const IntelligentSupportChat = ({ userId, userPlan }: IntelligentSupportC
 
       if (messageError) throw messageError;
 
-      setMessages(prev => [...prev, userMessage]);
+      const messageWithTicketId: Message = {
+        id: userMessage.id,
+        ticket_id: ticketId,
+        sender_id: userMessage.sender_id,
+        message: userMessage.message,
+        is_bot: userMessage.is_bot,
+        is_internal: userMessage.is_internal,
+        created_at: userMessage.created_at
+      };
+
+      setMessages(prev => [...prev, messageWithTicketId]);
     } catch (error) {
       console.error('Error sending user message:', error);
     }
