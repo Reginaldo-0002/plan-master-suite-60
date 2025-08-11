@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -34,6 +33,7 @@ export const AdminContentManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
+  const [selectedContentType, setSelectedContentType] = useState<'course' | 'tool' | 'tutorial' | 'product'>('course');
   const { toast } = useToast();
 
   useEffect(() => {
@@ -130,20 +130,20 @@ export const AdminContentManagement = () => {
 
   const openCreateDialog = () => {
     setEditingContent(null);
+    setSelectedContentType('course');
     setIsDialogOpen(true);
   };
 
   const openEditDialog = (content: Content) => {
     setEditingContent(content);
+    setSelectedContentType(content.content_type);
     setIsDialogOpen(true);
   };
 
-  const handleDialogClose = (shouldRefresh?: boolean) => {
+  const handleDialogClose = () => {
     setIsDialogOpen(false);
     setEditingContent(null);
-    if (shouldRefresh) {
-      fetchContents();
-    }
+    fetchContents(); // Sempre atualizar a lista ao fechar
   };
 
   const getPlanBadgeColor = (plan: string) => {
@@ -295,7 +295,8 @@ export const AdminContentManagement = () => {
       <AdminContentDialog
         isOpen={isDialogOpen}
         onClose={handleDialogClose}
-        content={editingContent}
+        contentItem={editingContent}
+        contentType={selectedContentType}
       />
     </div>
   );
