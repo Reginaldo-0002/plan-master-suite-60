@@ -22,7 +22,7 @@ import {
   Images
 } from "lucide-react";
 
-type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings";
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings" | "topics";
 
 interface SidebarProps {
   profile: Profile | null;
