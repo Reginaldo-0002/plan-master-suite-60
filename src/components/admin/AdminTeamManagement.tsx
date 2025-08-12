@@ -90,19 +90,29 @@ export const AdminTeamManagement = () => {
     try {
       console.log('Updating member role:', { userId: selectedMember.user_id, newRole });
       
-      // Usar upsert na tabela user_roles com type assertion
-      const { error } = await supabase
+      // Primeiro, deletar qualquer role existente para esse usuário
+      const { error: deleteError } = await supabase
         .from('user_roles')
-        .upsert({ 
+        .delete()
+        .eq('user_id', selectedMember.user_id);
+
+      if (deleteError) {
+        console.error('Error deleting existing role:', deleteError);
+        throw deleteError;
+      }
+
+      // Então, inserir o novo role
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({ 
           user_id: selectedMember.user_id,
-          role: newRole as UserRole
-        }, {
-          onConflict: 'user_id'
+          role: newRole as UserRole,
+          assigned_by: null // Pode ser definido como o ID do admin atual se necessário
         });
 
-      if (error) {
-        console.error('Error updating role:', error);
-        throw error;
+      if (insertError) {
+        console.error('Error inserting new role:', insertError);
+        throw insertError;
       }
 
       console.log('Role updated successfully');
@@ -116,10 +126,8 @@ export const AdminTeamManagement = () => {
       setSelectedMember(null);
       setNewRole("user");
       
-      // Aguardar um pouco e recarregar os dados
-      setTimeout(() => {
-        fetchTeamMembers();
-      }, 500);
+      // Recarregar os dados imediatamente
+      fetchTeamMembers();
       
     } catch (error) {
       console.error('Error updating member role:', error);
