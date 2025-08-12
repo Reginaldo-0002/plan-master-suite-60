@@ -38,63 +38,11 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
 
   useEffect(() => {
     fetchReferralData();
-    setupRealtimeSubscription();
   }, [profile.user_id]);
-
-  const setupRealtimeSubscription = () => {
-    if (!profile.user_id) return;
-
-    console.log('Setting up real-time subscription for referrals:', profile.user_id);
-
-    const channel = supabase
-      .channel('referral-system-updates')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'referrals',
-          filter: `referrer_id=eq.${profile.user_id}`
-        },
-        (payload) => {
-          console.log('Referral real-time update:', payload);
-          fetchReferralData();
-          
-          if (payload.eventType === 'INSERT') {
-            toast({
-              title: "Nova Indicação!",
-              description: `Você ganhou uma nova comissão de R$ ${payload.new.bonus_amount || 0}`,
-            });
-          }
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'profiles',
-          filter: `user_id=eq.${profile.user_id}`
-        },
-        (payload) => {
-          console.log('Profile referral earnings update:', payload);
-          if (payload.new.referral_earnings !== payload.old.referral_earnings) {
-            fetchReferralData();
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
 
   const fetchReferralData = async () => {
     try {
       setLoading(true);
-
-      console.log('Fetching referral data with real-time for user:', profile.user_id);
 
       const { data: referrals, error } = await supabase
         .from('referrals')
@@ -104,15 +52,12 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
           created_at,
           referred_id
         `)
-        .eq('referrer_id', profile.user_id)
-        .order('created_at', { ascending: false });
+        .eq('referrer_id', profile.user_id);
 
       if (error) throw error;
 
       const totalReferrals = referrals?.length || 0;
       const totalEarnings = referrals?.reduce((sum, ref) => sum + (ref.bonus_amount || 0), 0) || 0;
-
-      console.log('Referral data updated:', { totalReferrals, totalEarnings });
 
       setReferralData({
         total_referrals: totalReferrals,
