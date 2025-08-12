@@ -281,24 +281,36 @@ export const AdminSupportManagement = () => {
         return;
       }
 
-      const { error } = await supabase
+      console.log('💬 Admin sending message to user:', selectedTicket.user_id);
+
+      // Inserir mensagem do admin
+      const { data: messageData, error } = await supabase
         .from('support_messages')
         .insert({
           ticket_id: selectedTicket.id,
           sender_id: user.id,
-          message: newMessage,
-          is_internal: false
-        });
+          message: newMessage.trim(),
+          is_internal: false,
+          is_bot: false
+        })
+        .select()
+        .single();
 
       if (error) throw error;
 
+      console.log('✅ Admin message saved:', messageData);
+
+      // Atualizar estado local
       setNewMessage("");
-      fetchTicketMessages(selectedTicket.id);
+      
+      // Recarregar mensagens para garantir sincronia
+      await fetchTicketMessages(selectedTicket.id);
       
       toast({
         title: "Sucesso",
         description: "Mensagem enviada com sucesso",
       });
+
     } catch (error) {
       console.error('Error sending message:', error);
       toast({

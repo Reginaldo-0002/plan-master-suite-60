@@ -54,6 +54,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   useEffect(() => {
     if (!ticketId || !profile?.user_id) return;
 
+    console.log('🔔 Setting up real-time subscription for ticket:', ticketId);
+
     const channel = supabase
       .channel(`ticket-messages-${ticketId}`)
       .on(
@@ -65,16 +67,25 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
           filter: `ticket_id=eq.${ticketId}`
         },
         (payload) => {
-          console.log('New message received:', payload);
+          console.log('🔔 New message received via real-time:', payload);
+          const newMessage = payload.new as Message;
+          
           // Atualizar mensagens se não for do próprio usuário
-          if (payload.new.sender_id !== profile.user_id) {
-            setMessages(prev => [...prev, payload.new as Message]);
+          if (newMessage.sender_id !== profile.user_id) {
+            console.log('🔔 Adding admin message to chat');
+            setMessages(prev => [...prev, newMessage]);
+            scrollToBottom();
+          } else {
+            console.log('🔔 Message from current user, skipping');
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('🔔 Real-time subscription status:', status);
+      });
 
     return () => {
+      console.log('🔔 Cleaning up real-time subscription');
       supabase.removeChannel(channel);
     };
   }, [ticketId, profile?.user_id]);
@@ -296,6 +307,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     }
 
     setLoading(true);
+    const messageText = newMessage.trim();
+    
     try {
       // Primeiro salvar a mensagem no ticket
       const { data: messageData, error } = await supabase
@@ -304,7 +317,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
           {
             ticket_id: ticketId,
             sender_id: profile.user_id,
-            message: newMessage.trim(),
+            message: messageText,
             is_bot: false
           }
         ])
@@ -313,6 +326,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
       if (error) throw error;
 
+      // Adicionar mensagem do usuário imediatamente
       setMessages(prev => [...prev, messageData]);
       setNewMessage("");
       setShowOptions(false);
@@ -320,6 +334,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       // Forward message to admin via edge function
       try {
         const { data: { session } } = await supabase.auth.getSession();
+        console.log('📤 Forwarding message to admin...');
+        
         const response = await fetch('https://srnwogrjwhqjjyodxalx.supabase.co/functions/v1/admin-chat-handler', {
           method: 'POST',
           headers: {
@@ -329,31 +345,37 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
           body: JSON.stringify({
             action: 'forward_to_admin',
             userId: profile.user_id,
-            message: newMessage.trim()
+            message: messageText,
+            ticketId: ticketId,
+            userProfile: {
+              full_name: profile.full_name || 'Usuário',
+              plan: profile.plan
+            }
           })
         });
 
         if (!response.ok) {
-          console.log('Failed to forward to admin, but message was saved');
+          console.log('❌ Failed to forward to admin, but message was saved');
         } else {
-          console.log('Message forwarded to admin successfully');
+          console.log('✅ Message forwarded to admin successfully');
         }
       } catch (forwardError) {
-        console.error('Error forwarding to admin:', forwardError);
-        // Não bloquear o usuário se houver erro no forwarding
+        console.error('❌ Error forwarding to admin:', forwardError);
       }
 
-      // Resposta automática
-      setTimeout(() => {
-        const autoReply = {
-          id: `auto-${Date.now()}`,
-          message: 'Recebemos sua mensagem! Um de nossos atendentes responderá em breve.',
-          sender_id: 'bot',
-          created_at: new Date().toISOString(),
-          is_bot: true
-        };
-        setMessages(prev => [...prev, autoReply]);
-      }, 1000);
+      // Resposta automática apenas para primeira mensagem
+      if (messages.length === 1) { // Só mensagem de boas-vindas
+        setTimeout(() => {
+          const autoReply = {
+            id: `auto-${Date.now()}`,
+            message: 'Recebemos sua mensagem! Um de nossos atendentes responderá em breve.',
+            sender_id: 'bot',
+            created_at: new Date().toISOString(),
+            is_bot: true
+          };
+          setMessages(prev => [...prev, autoReply]);
+        }, 1000);
+      }
 
     } catch (error) {
       console.error('Error sending message:', error);

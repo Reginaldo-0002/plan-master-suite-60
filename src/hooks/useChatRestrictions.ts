@@ -17,7 +17,6 @@ export const useChatRestrictions = (userId: string | undefined) => {
 
   const checkRestrictions = useCallback(async () => {
     if (!userId) {
-      console.log('🚫 No userId provided');
       setRestriction({
         isBlocked: false,
         reason: null,
@@ -28,10 +27,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
     }
 
     try {
-      console.log('🔍 [CHAT RESTRICTIONS] Checking for user:', userId);
-      
       const currentTime = new Date();
-      console.log('🕐 [CHAT RESTRICTIONS] Current time (UTC):', currentTime.toISOString());
 
       // ======= VERIFICAR BLOQUEIO ESPECÍFICO DO USUÁRIO PRIMEIRO =======
       const { data: userRestrictions, error: userError } = await supabase
@@ -40,9 +36,8 @@ export const useChatRestrictions = (userId: string | undefined) => {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      console.log('📋 [CHAT RESTRICTIONS] User restrictions found:', userRestrictions?.length || 0);
       if (userError) {
-        console.error('❌ [CHAT RESTRICTIONS] Error checking user restrictions:', userError);
+        console.error('❌ Error checking user restrictions:', userError);
       }
 
       // Verificar se há alguma restrição ativa
@@ -53,11 +48,8 @@ export const useChatRestrictions = (userId: string | undefined) => {
             const blockUntil = new Date(restriction.blocked_until);
             const isActive = blockUntil > currentTime;
             
-            console.log(`⏰ [CHAT RESTRICTIONS] Restriction ${restriction.id}: active=${isActive}, until=${blockUntil.toISOString()}`);
-            
             if (isActive) {
               activeUserRestriction = restriction;
-              console.log('🚫 [CHAT RESTRICTIONS] FOUND ACTIVE USER RESTRICTION');
               break;
             }
           }
@@ -66,7 +58,6 @@ export const useChatRestrictions = (userId: string | undefined) => {
 
       if (activeUserRestriction) {
         const blockUntil = new Date(activeUserRestriction.blocked_until);
-        console.log('🚫 USER IS SPECIFICALLY BLOCKED UNTIL:', blockUntil.toISOString());
         setRestriction({
           isBlocked: true,
           reason: activeUserRestriction.reason || 'Você foi temporariamente bloqueado do chat',
@@ -77,7 +68,6 @@ export const useChatRestrictions = (userId: string | undefined) => {
       }
 
       // ======= VERIFICAR BLOQUEIO GLOBAL APENAS SE NÃO HÁ BLOQUEIO ESPECÍFICO =======
-      console.log('🌐 [CHAT RESTRICTIONS] Checking global restrictions...');
       const { data: globalSettings, error: globalError } = await supabase
         .from('admin_settings')
         .select('chat_blocked_until')
@@ -89,7 +79,6 @@ export const useChatRestrictions = (userId: string | undefined) => {
         const isGloballyBlocked = blockUntil > currentTime;
         
         if (isGloballyBlocked) {
-          console.log('🌍 CHAT GLOBALLY BLOCKED UNTIL:', blockUntil.toISOString());
           setRestriction({
             isBlocked: true,
             reason: 'Chat bloqueado globalmente pelo administrador',
@@ -100,14 +89,13 @@ export const useChatRestrictions = (userId: string | undefined) => {
         }
       }
 
-      console.log('✅ [CHAT RESTRICTIONS] USER IS NOT BLOCKED - CHAT ALLOWED');
       setRestriction({
         isBlocked: false,
         reason: null,
         blockedUntil: null
       });
     } catch (error) {
-      console.error('💥 [CHAT RESTRICTIONS] Error checking chat restrictions:', error);
+      console.error('💥 Error checking chat restrictions:', error);
     } finally {
       setLoading(false);
     }
@@ -130,7 +118,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('🔄 [CHAT RESTRICTIONS] User restrictions change detected:', payload);
+          console.log('🔄 User restrictions change detected - rechecking...');
           setTimeout(checkRestrictions, 500);
         }
       )
@@ -148,14 +136,13 @@ export const useChatRestrictions = (userId: string | undefined) => {
           filter: 'key=eq.global_chat_settings'
         },
         (payload) => {
-          console.log('🔄 [CHAT RESTRICTIONS] Admin settings change detected:', payload);
+          console.log('🔄 Admin settings change detected - rechecking...');
           setTimeout(checkRestrictions, 500);
         }
       )
       .subscribe();
 
     return () => {
-      console.log('🧹 [CHAT RESTRICTIONS] Cleaning up listeners');
       supabase.removeChannel(restrictionsChannel);
       supabase.removeChannel(adminChannel);
     };
