@@ -72,7 +72,11 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
         // Parse the chatbot config properly
         const config = data.value as any;
         if (config.menu_options && Array.isArray(config.menu_options)) {
-          setChatOptions(config.menu_options);
+          setChatOptions(config.menu_options.map((option: any) => ({
+            id: option.id,
+            text: option.title,
+            response: option.response
+          })));
         } else {
         // Default chat options
         setChatOptions([

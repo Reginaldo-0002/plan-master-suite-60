@@ -112,14 +112,8 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
           metadata: { content_type: contentItem.content_type }
         }]);
 
-      // Navigate to topics always
-      const url = new URL(window.location.href);
-      url.searchParams.set('content', contentItem.id);
-      url.searchParams.set('section', 'topics');
-      window.history.pushState(null, '', url.toString());
-      
-      // Trigger navigation to topics
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      // Navigate to topics page
+      window.location.href = `/?section=topics&content=${contentItem.id}`;
     } catch (error) {
       console.error('Error accessing content:', error);
       toast({

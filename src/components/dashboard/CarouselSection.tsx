@@ -87,14 +87,8 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
           metadata: { content_type: content.content_type }
         }]);
 
-      // Navigate to topics instead of opening video directly
-      const url = new URL(window.location.href);
-      url.searchParams.set('content', content.id);
-      url.searchParams.set('section', 'topics');
-      window.history.pushState(null, '', url.toString());
-      
-      // Trigger navigation to topics
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      // Navigate to topics page
+      window.location.href = `/?section=topics&content=${content.id}`;
       
     } catch (error) {
       console.error('Error accessing content:', error);
