@@ -49,6 +49,8 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
   const fetchTopics = async () => {
     try {
       setLoading(true);
+      console.log('Fetching topics for contentId:', contentId);
+      
       const { data, error } = await supabase
         .from('content_topics')
         .select('*')
@@ -56,8 +58,17 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
         .eq('is_active', true)
         .order('topic_order', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching topics:', error);
+        throw error;
+      }
+      
+      console.log('Topics fetched successfully:', data);
       setTopics(data || []);
+      
+      if (!data || data.length === 0) {
+        console.warn('No topics found for content ID:', contentId);
+      }
     } catch (error) {
       console.error('Error fetching topics:', error);
       toast({
@@ -73,6 +84,8 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
   const fetchResources = async (topicId: string) => {
     try {
       setResourcesLoading(true);
+      console.log('Fetching resources for topicId:', topicId);
+      
       const { data, error } = await supabase
         .from('topic_resources')
         .select('*')
@@ -80,7 +93,12 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
         .eq('is_active', true)
         .order('resource_order', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching resources:', error);
+        throw error;
+      }
+      
+      console.log('Resources fetched successfully:', data);
       
       // Type assertion to ensure resource_type matches our interface
       const typedResources = (data || []).map(resource => ({
@@ -90,6 +108,10 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
       }));
       
       setResources(typedResources);
+      
+      if (!data || data.length === 0) {
+        console.warn('No resources found for topic ID:', topicId);
+      }
     } catch (error) {
       console.error('Error fetching resources:', error);
       toast({

@@ -10,7 +10,7 @@ import { ContentSection } from "@/components/dashboard/ContentSection";
 import { RulesSection } from "@/components/dashboard/RulesSection";
 import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { CarouselSection } from "@/components/dashboard/CarouselSection";
-import { TopicsGallery } from "@/components/topics/TopicsGallery";
+import { TopicsRouter } from "@/components/navigation/TopicsRouter";
 import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
@@ -191,7 +191,7 @@ export default function Dashboard() {
         return <CarouselSection userPlan={profile.plan} />;
       case "topics":
         return selectedContentId ? (
-          <TopicsGallery 
+          <TopicsRouter 
             contentId={selectedContentId}
             userPlan={profile.plan}
             onBack={() => {

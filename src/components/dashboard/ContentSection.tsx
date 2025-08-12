@@ -114,11 +114,9 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
 
       // Use React Router navigation instead of window.location.href
       console.log('Navigating to topics with content ID:', contentItem.id);
-      const newUrl = `/?section=topics&content=${contentItem.id}`;
-      window.history.pushState(null, '', newUrl);
       
-      // Dispatch a custom event to trigger re-render
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      // Force a page reload to ensure proper navigation
+      window.location.href = `/?section=topics&content=${contentItem.id}`;
     } catch (error) {
       console.error('Error accessing content:', error);
       toast({

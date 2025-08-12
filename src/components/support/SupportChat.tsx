@@ -57,6 +57,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
   const loadChatOptions = async () => {
     try {
+      console.log('Loading chat options from admin settings...');
       const { data, error } = await supabase
         .from('admin_settings')
         .select('value')
@@ -65,71 +66,65 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
       if (error) {
         console.error('Error loading chat options:', error);
+        // Use default options on error
+        setDefaultChatOptions();
         return;
       }
+
+      console.log('Admin settings response:', data);
 
       if (data?.value && typeof data.value === 'object') {
         // Parse the chatbot config properly
         const config = data.value as any;
+        console.log('Parsed config:', config);
+        
         if (config.menu_options && Array.isArray(config.menu_options)) {
-          setChatOptions(config.menu_options.map((option: any) => ({
+          const formattedOptions = config.menu_options.map((option: any) => ({
             id: option.id,
             text: option.title,
             response: option.response
-          })));
+          }));
+          console.log('Setting chat options:', formattedOptions);
+          setChatOptions(formattedOptions);
         } else {
-        // Default chat options
-        setChatOptions([
-          {
-            id: '1',
-            text: 'Como funciona o programa de afiliados?',
-            response: 'Nosso programa de afiliados permite que você ganhe comissões indicando novos usuários. A cada venda realizada por seus indicados, você recebe uma porcentagem. É fácil e rentável!'
-          },
-          {
-            id: '2', 
-            text: 'Como posso fazer upgrade do meu plano?',
-            response: 'Para fazer upgrade, acesse as configurações do seu perfil e selecione o plano desejado. O upgrade é imediato e você terá acesso a todos os recursos premium.'
-          },
-          {
-            id: '3',
-            text: 'Preciso de ajuda técnica',
-            response: 'Nossa equipe de suporte técnico está aqui para ajudar! Descreva seu problema que um especialista responderá em breve.'
-          },
-          {
-            id: '4',
-            text: 'Informações sobre pagamento',
-            response: 'Aceitamos diversos métodos de pagamento incluindo cartão de crédito, PIX e boleto. Todos os pagamentos são seguros e processados imediatamente.'
-          }
-        ]);
+          console.log('No menu_options found, using defaults');
+          setDefaultChatOptions();
         }
       } else {
-        // Default chat options
-        setChatOptions([
-          {
-            id: '1',
-            text: 'Como funciona o programa de afiliados?',
-            response: 'Nosso programa de afiliados permite que você ganhe comissões indicando novos usuários. A cada venda realizada por seus indicados, você recebe uma porcentagem. É fácil e rentável!'
-          },
-          {
-            id: '2', 
-            text: 'Como posso fazer upgrade do meu plano?',
-            response: 'Para fazer upgrade, acesse as configurações do seu perfil e selecione o plano desejado. O upgrade é imediato e você terá acesso a todos os recursos premium.'
-          },
-          {
-            id: '3',
-            text: 'Preciso de ajuda técnica',
-            response: 'Nossa equipe de suporte técnico está aqui para ajudar! Descreva seu problema que um especialista responderá em breve.'
-          },
-          {
-            id: '4',
-            text: 'Informações sobre pagamento',
-            response: 'Aceitamos diversos métodos de pagamento incluindo cartão de crédito, PIX e boleto. Todos os pagamentos são seguros e processados imediatamente.'
-          }
-        ]);
+        console.log('No chatbot config found, using defaults');
+        setDefaultChatOptions();
       }
     } catch (error) {
       console.error('Error loading chat options:', error);
+      setDefaultChatOptions();
     }
+  };
+
+  const setDefaultChatOptions = () => {
+    const defaultOptions = [
+      {
+        id: '1',
+        text: 'Como funciona o programa de afiliados?',
+        response: 'Nosso programa de afiliados permite que você ganhe comissões indicando novos usuários. A cada venda realizada por seus indicados, você recebe uma porcentagem. É fácil e rentável!'
+      },
+      {
+        id: '2', 
+        text: 'Como posso fazer upgrade do meu plano?',
+        response: 'Para fazer upgrade, acesse as configurações do seu perfil e selecione o plano desejado. O upgrade é imediato e você terá acesso a todos os recursos premium.'
+      },
+      {
+        id: '3',
+        text: 'Preciso de ajuda técnica',
+        response: 'Nossa equipe de suporte técnico está aqui para ajudar! Descreva seu problema que um especialista responderá em breve.'
+      },
+      {
+        id: '4',
+        text: 'Informações sobre pagamento',
+        response: 'Aceitamos diversos métodos de pagamento incluindo cartão de crédito, PIX e boleto. Todos os pagamentos são seguros e processados imediatamente.'
+      }
+    ];
+    console.log('Setting default chat options:', defaultOptions);
+    setChatOptions(defaultOptions);
   };
 
   const createOrGetTicket = async () => {
@@ -148,7 +143,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       if (existingTickets && existingTickets.length > 0) {
         setTicketId(existingTickets[0].id);
         await loadMessages(existingTickets[0].id);
-        setShowOptions(false);
+        console.log('Found existing ticket, setting showOptions to true');
+        setShowOptions(true);
       } else {
         // Criar novo ticket
         const { data: newTicket, error: createError } = await supabase
@@ -178,6 +174,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
           is_bot: true
         };
         setMessages([welcomeMessage]);
+        console.log('Setting showOptions to true for new ticket');
         setShowOptions(true);
       }
     } catch (error) {
@@ -388,6 +385,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Bot className="w-4 h-4" />
                         <span>Opções rápidas:</span>
+                        <span className="text-xs">({chatOptions.length} opções)</span>
                       </div>
                       {chatOptions.map((option) => (
                         <Button

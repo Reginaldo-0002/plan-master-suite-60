@@ -4,14 +4,16 @@ import { TopicsGallery } from "@/components/topics/TopicsGallery";
 
 interface TopicsRouterProps {
   contentId: string;
+  userPlan: 'free' | 'vip' | 'pro';
+  onBack: () => void;
 }
 
-export const TopicsRouter = ({ contentId }: TopicsRouterProps) => {
+export const TopicsRouter = ({ contentId, userPlan, onBack }: TopicsRouterProps) => {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    console.log('TopicsRouter loaded with contentId:', contentId);
+    console.log('TopicsRouter loaded with:', { contentId, userPlan });
     
     // Simulate loading and then show topics
     const timer = setTimeout(() => {
@@ -19,7 +21,7 @@ export const TopicsRouter = ({ contentId }: TopicsRouterProps) => {
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [contentId]);
+  }, [contentId, userPlan]);
 
   if (isLoading) {
     return (
@@ -29,5 +31,5 @@ export const TopicsRouter = ({ contentId }: TopicsRouterProps) => {
     );
   }
 
-  return <TopicsGallery contentId={contentId} userPlan="free" onBack={() => {}} />;
+  return <TopicsGallery contentId={contentId} userPlan={userPlan} onBack={onBack} />;
 };
