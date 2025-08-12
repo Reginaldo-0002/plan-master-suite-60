@@ -37,11 +37,14 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [chatOptions, setChatOptions] = useState<ChatOption[]>([]);
   const [showOptions, setShowOptions] = useState(true);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [blockReason, setBlockReason] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen && !ticketId) {
+      checkUserChatRestriction();
       createOrGetTicket();
       loadChatOptions();
     }
@@ -53,6 +56,60 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const checkUserChatRestriction = async () => {
+    if (!profile?.user_id) return;
+
+    try {
+      // Verificar bloqueio global
+      const { data: globalSettings, error: globalError } = await supabase
+        .from('admin_settings')
+        .select('chat_blocked_until')
+        .eq('key', 'global_chat_settings')
+        .maybeSingle();
+
+      if (globalError && globalError.code !== 'PGRST116') {
+        console.error('Error checking global chat settings:', globalError);
+      }
+
+      if (globalSettings?.chat_blocked_until) {
+        const blockUntil = new Date(globalSettings.chat_blocked_until);
+        if (blockUntil > new Date()) {
+          setIsBlocked(true);
+          setBlockReason('Chat bloqueado globalmente pelo administrador');
+          return;
+        }
+      }
+
+      // Verificar bloqueio específico do usuário
+      const { data: userRestriction, error: userError } = await supabase
+        .from('user_chat_restrictions')
+        .select('blocked_until, reason')
+        .eq('user_id', profile.user_id)
+        .gt('blocked_until', new Date().toISOString())
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (userError && userError.code !== 'PGRST116') {
+        console.error('Error checking user chat restrictions:', userError);
+      }
+
+      if (userRestriction?.blocked_until) {
+        const blockUntil = new Date(userRestriction.blocked_until);
+        if (blockUntil > new Date()) {
+          setIsBlocked(true);
+          setBlockReason(userRestriction.reason || 'Você foi temporariamente bloqueado do chat');
+          return;
+        }
+      }
+
+      setIsBlocked(false);
+      setBlockReason(null);
+    } catch (error) {
+      console.error('Error checking chat restrictions:', error);
+    }
   };
 
   const loadChatOptions = async () => {
@@ -203,7 +260,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const handleOptionClick = async (option: ChatOption) => {
-    if (!ticketId) return;
+    if (!ticketId || isBlocked) return;
 
     setShowOptions(false);
     setLoading(true);
@@ -247,7 +304,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !ticketId || loading) return;
+    if (!newMessage.trim() || !ticketId || loading || isBlocked) return;
 
     setLoading(true);
     try {
@@ -353,6 +410,12 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
             <CardContent className="flex-1 p-0">
               <ScrollArea className="h-64 p-3">
                 <div className="space-y-3">
+                  {isBlocked && (
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
+                      <p className="text-sm text-destructive font-medium">Chat Bloqueado</p>
+                      <p className="text-xs text-destructive/80 mt-1">{blockReason}</p>
+                    </div>
+                  )}
                   {messages.map((message) => (
                     <div
                       key={message.id}
@@ -380,7 +443,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                       </div>
                     </div>
                   ))}
-                  {showOptions && chatOptions.length > 0 && (
+                  {showOptions && chatOptions.length > 0 && !isBlocked && (
                     <div className="space-y-2 mt-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <Bot className="w-4 h-4" />
@@ -394,7 +457,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                           size="sm"
                           className="w-full text-left justify-start text-wrap h-auto py-2 px-3"
                           onClick={() => handleOptionClick(option)}
-                          disabled={loading}
+                          disabled={loading || isBlocked}
                         >
                           {option.text}
                         </Button>
@@ -407,23 +470,31 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
             </CardContent>
 
             <div className="p-3 border-t">
-              <div className="flex gap-2">
-                <Input
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  onKeyPress={handleKeyPress}
-                  placeholder="Digite sua mensagem..."
-                  className="text-sm"
-                  disabled={loading}
-                />
-                <Button
-                  onClick={sendMessage}
-                  size="sm"
-                  disabled={loading || !newMessage.trim()}
-                >
-                  <Send className="w-4 h-4" />
-                </Button>
-              </div>
+              {isBlocked ? (
+                <div className="text-center py-2">
+                  <p className="text-sm text-muted-foreground">
+                    Chat indisponível no momento
+                  </p>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Digite sua mensagem..."
+                    className="text-sm"
+                    disabled={loading || isBlocked}
+                  />
+                  <Button
+                    onClick={sendMessage}
+                    size="sm"
+                    disabled={loading || !newMessage.trim() || isBlocked}
+                  >
+                    <Send className="w-4 h-4" />
+                  </Button>
+                </div>
+              )}
             </div>
           </>
         )}
