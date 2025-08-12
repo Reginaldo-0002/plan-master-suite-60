@@ -11,6 +11,7 @@ import { Loader2, User } from "lucide-react";
 import { AvatarUpload } from "@/components/media/AvatarUpload";
 import { ReferralSystem } from "./ReferralSystem";
 import { Profile } from "@/types/profile";
+import { useProfileRealtime } from "@/hooks/useProfileRealtime";
 
 interface ProfileSettingsProps {
   profile: Profile;
@@ -24,13 +25,17 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
     pix_key: profile.pix_key || "",
   });
   const { toast } = useToast();
+  const { profile: realtimeProfile } = useProfileRealtime(profile.user_id);
+
+  // Usar o perfil em tempo real se disponível, senão usar o perfil prop
+  const currentProfile = realtimeProfile || profile;
 
   useEffect(() => {
     setFormData({
-      full_name: profile.full_name || "",
-      pix_key: profile.pix_key || "",
+      full_name: currentProfile.full_name || "",
+      pix_key: currentProfile.pix_key || "",
     });
-  }, [profile]);
+  }, [currentProfile]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -42,7 +47,7 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
           pix_key: formData.pix_key.trim() || null,
           updated_at: new Date().toISOString()
         })
-        .eq('user_id', profile.user_id)
+        .eq('user_id', currentProfile.user_id)
         .select()
         .single();
 
@@ -67,7 +72,7 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
   };
 
   const handleAvatarUpdate = (newAvatarUrl: string) => {
-    const updatedProfile = { ...profile, avatar_url: newAvatarUrl };
+    const updatedProfile = { ...currentProfile, avatar_url: newAvatarUrl };
     onProfileUpdate(updatedProfile);
   };
 
@@ -86,10 +91,10 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
         <CardContent className="space-y-6">
           <div className="flex flex-col items-center space-y-4">
             <AvatarUpload
-              currentAvatarUrl={profile.avatar_url || null}
+              currentAvatarUrl={currentProfile.avatar_url || null}
               onAvatarUpdate={handleAvatarUpdate}
-              userId={profile.user_id}
-              userName={profile.full_name}
+              userId={currentProfile.user_id}
+              userName={currentProfile.full_name}
             />
           </div>
 
@@ -133,7 +138,7 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
         </CardContent>
       </Card>
 
-      <ReferralSystem profile={profile} />
+      <ReferralSystem profile={currentProfile} />
     </div>
   );
 };
