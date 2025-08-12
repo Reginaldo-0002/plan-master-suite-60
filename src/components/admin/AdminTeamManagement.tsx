@@ -68,10 +68,8 @@ export const AdminTeamManagement = () => {
 
       console.log('Team members data:', data);
       
-      // Filtrar apenas membros com roles admin ou moderator
-      const teamData = data?.filter((member: any) => 
-        member.role === 'admin' || member.role === 'moderator'
-      ) || [];
+      // Mostrar todos os usuários para permitir gestão de equipe
+      const teamData = data || [];
       
       setTeamMembers(teamData);
     } catch (error) {
