@@ -24,7 +24,8 @@ export const useChatRestrictions = (userId: string | undefined) => {
     try {
       console.log('🔍 Checking chat restrictions for user:', userId);
       const currentTime = new Date();
-      console.log('🕐 Current time:', currentTime.toISOString());
+      console.log('🕐 Current time (local):', currentTime.toISOString());
+      console.log('🕐 Current time (formatted):', currentTime.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
 
       // Verificar bloqueio específico do usuário PRIMEIRO (mais simples e direto)
       const { data: userRestrictions, error: userError } = await supabase
@@ -50,8 +51,11 @@ export const useChatRestrictions = (userId: string | undefined) => {
             const isActive = blockUntil > currentTime;
             console.log(`⏰ Checking restriction ID ${restriction.id}:`);
             console.log(`   - blocked until: ${blockUntil.toISOString()}`);
+            console.log(`   - blocked until (BR): ${blockUntil.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
             console.log(`   - current time: ${currentTime.toISOString()}`);
+            console.log(`   - current time (BR): ${currentTime.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
             console.log(`   - is active? ${isActive}`);
+            console.log(`   - time difference (minutes): ${((blockUntil.getTime() - currentTime.getTime()) / (1000 * 60)).toFixed(2)}`);
             console.log(`   - reason: ${restriction.reason}`);
             
             if (isActive) {
@@ -68,6 +72,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
       if (activeRestriction) {
         const blockUntil = new Date(activeRestriction.blocked_until);
         console.log('🚫 USER IS SPECIFICALLY BLOCKED UNTIL:', blockUntil.toISOString());
+        console.log('🚫 USER IS SPECIFICALLY BLOCKED UNTIL (BR):', blockUntil.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
         setRestriction({
           isBlocked: true,
           reason: activeRestriction.reason || 'Você foi temporariamente bloqueado do chat',

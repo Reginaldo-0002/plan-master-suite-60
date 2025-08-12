@@ -214,14 +214,20 @@ export const AdminChatControl = () => {
   const unblockUser = async (restrictionId: string) => {
     setIsLoading(true);
     try {
-      // Set blocked_until to current time to expire the restriction
+      console.log('🔓 Attempting to unblock user with restriction ID:', restrictionId);
+      
+      // Delete the restriction instead of updating it to avoid field errors
       const { error } = await supabase
         .from('user_chat_restrictions')
-        .update({ blocked_until: new Date().toISOString() })
+        .delete()
         .eq('id', restrictionId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error unblocking user:', error);
+        throw error;
+      }
 
+      console.log('✅ User unblocked successfully');
       toast({
         title: "Sucesso",
         description: "Usuário desbloqueado do chat",
@@ -229,10 +235,10 @@ export const AdminChatControl = () => {
 
       fetchUserRestrictions();
     } catch (error) {
-      console.error('Error unblocking user:', error);
+      console.error('💥 Error unblocking user:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao desbloquear usuário",
+        title: "Erro", 
+        description: `Erro ao desbloquear usuário: ${error.message}`,
         variant: "destructive",
       });
     } finally {

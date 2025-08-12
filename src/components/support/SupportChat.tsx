@@ -378,7 +378,14 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                       <p className="text-xs text-destructive/80 mt-1">{restriction.reason}</p>
                       {restriction.blockedUntil && (
                         <p className="text-xs text-destructive/60 mt-1">
-                          Até: {restriction.blockedUntil.toLocaleString('pt-BR')}
+                          Até: {restriction.blockedUntil.toLocaleString('pt-BR', { 
+                            timeZone: 'America/Sao_Paulo',
+                            day: '2-digit',
+                            month: '2-digit', 
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
                         </p>
                       )}
                     </div>
@@ -450,9 +457,16 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                   <p className="text-xs text-destructive">
                     Motivo: {restriction.reason}
                   </p>
-                  {restriction.blockedUntil && (
+                   {restriction.blockedUntil && (
                     <p className="text-xs text-muted-foreground">
-                      Disponível a partir de: {restriction.blockedUntil.toLocaleString('pt-BR')}
+                      Disponível a partir de: {restriction.blockedUntil.toLocaleString('pt-BR', { 
+                        timeZone: 'America/Sao_Paulo',
+                        day: '2-digit',
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
                     </p>
                   )}
                 </div>
