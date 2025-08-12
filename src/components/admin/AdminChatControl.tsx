@@ -49,21 +49,39 @@ export const AdminChatControl = () => {
 
   const fetchChatSettings = async () => {
     try {
+      console.log('🔍 Buscando configurações do chat...');
       const { data, error } = await supabase
         .from('admin_settings')
         .select('chat_blocked_until')
         .eq('key', 'global_chat_settings')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') throw error;
+      console.log('📊 Configurações obtidas:', data);
+      console.log('❓ Erro na busca:', error);
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('❌ Erro ao buscar configurações:', error);
+        return;
+      }
       
       if (data?.chat_blocked_until) {
         const blockUntil = new Date(data.chat_blocked_until);
-        setGlobalChatBlocked(blockUntil > new Date());
+        const now = new Date();
+        const isBlocked = blockUntil > now;
+        
+        console.log(`⏰ Bloqueio até: ${blockUntil.toISOString()}`);
+        console.log(`⏰ Agora: ${now.toISOString()}`);
+        console.log(`🔒 Está bloqueado? ${isBlocked}`);
+        
+        setGlobalChatBlocked(isBlocked);
         setGlobalBlockUntil(blockUntil.toISOString().slice(0, 16));
+      } else {
+        console.log('✅ Nenhum bloqueio global ativo');
+        setGlobalChatBlocked(false);
+        setGlobalBlockUntil("");
       }
     } catch (error) {
-      console.error('Error fetching chat settings:', error);
+      console.error('💥 Error fetching chat settings:', error);
     }
   };
 
@@ -123,9 +141,9 @@ export const AdminChatControl = () => {
       
       let blockUntil;
       if (globalChatBlocked) {
-        // Desbloqueando: definir como null para desbloquear
+        // Desbloqueando: definir como null para desbloquear COMPLETAMENTE
         blockUntil = null;
-        console.log('🔓 Desbloqueando chat global');
+        console.log('🔓 Desbloqueando chat global - removendo bloqueio completamente');
       } else {
         // Bloqueando: usar data definida ou 24h por padrão
         const currentTime = new Date();
@@ -134,38 +152,54 @@ export const AdminChatControl = () => {
         console.log('🔒 Bloqueando chat global até:', blockUntil.toISOString());
       }
 
-      const { error } = await supabase
-        .from('admin_settings')
-        .upsert({
-          key: 'global_chat_settings',
-          value: {},
-          chat_blocked_until: blockUntil?.toISOString()
-        }, {
-          onConflict: 'key'
-        });
+      // Primeiro, deletar a configuração existente para garantir limpeza
+      if (globalChatBlocked && blockUntil === null) {
+        console.log('🗑️ Removendo configuração de bloqueio global...');
+        const { error: deleteError } = await supabase
+          .from('admin_settings')
+          .delete()
+          .eq('key', 'global_chat_settings');
 
-      if (error) {
-        console.error('❌ Erro ao atualizar configuração:', error);
-        throw error;
+        if (deleteError && deleteError.code !== 'PGRST116') {
+          console.error('❌ Erro ao deletar configuração:', deleteError);
+          throw deleteError;
+        }
+        console.log('✅ Configuração de bloqueio removida com sucesso');
+      } else {
+        // Inserir ou atualizar configuração
+        const { error } = await supabase
+          .from('admin_settings')
+          .upsert({
+            key: 'global_chat_settings',
+            value: {},
+            chat_blocked_until: blockUntil?.toISOString()
+          }, {
+            onConflict: 'key'
+          });
+
+        if (error) {
+          console.error('❌ Erro ao atualizar configuração:', error);
+          throw error;
+        }
+        console.log('✅ Configuração atualizada com sucesso');
       }
 
-      console.log('✅ Configuração global atualizada com sucesso');
-      
       // Atualizar estado local
       setGlobalChatBlocked(!globalChatBlocked);
-      if (!globalChatBlocked && globalBlockUntil) {
+      if (globalChatBlocked) {
         setGlobalBlockUntil(""); // Limpar data quando desbloqueando
       }
-      
-      // Recarregar configurações para garantir sincronia
-      setTimeout(() => {
-        fetchChatSettings();
-      }, 500);
 
       toast({
         title: "Sucesso",
         description: `Chat global ${!globalChatBlocked ? 'bloqueado' : 'desbloqueado'} com sucesso`,
       });
+
+      // Recarregar configurações após um delay
+      setTimeout(() => {
+        fetchChatSettings();
+      }, 1000);
+
     } catch (error) {
       console.error('💥 Error updating global chat:', error);
       toast({
