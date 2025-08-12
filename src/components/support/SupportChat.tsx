@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Send, MessageCircle, X, Minimize2, Bot } from "lucide-react";
 import { Profile } from "@/types/profile";
+import { useChatRestrictions } from "@/hooks/useChatRestrictions";
 
 interface Message {
   id: string;
@@ -37,58 +38,17 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const [ticketId, setTicketId] = useState<string | null>(null);
   const [chatOptions, setChatOptions] = useState<ChatOption[]>([]);
   const [showOptions, setShowOptions] = useState(true);
-  const [isBlocked, setIsBlocked] = useState(false);
-  const [blockReason, setBlockReason] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  
+  // Use custom hook for chat restrictions with real-time updates
+  const { isBlocked, blockReason, blockedUntil, checkBeforeAction } = useChatRestrictions(profile?.user_id);
 
   useEffect(() => {
     if (isOpen && !ticketId) {
-      checkUserChatRestriction();
       createOrGetTicket();
       loadChatOptions();
     }
-  }, [isOpen, profile?.user_id]);
-
-  // Verificar restrições periodicamente enquanto o chat estiver aberto
-  useEffect(() => {
-    if (!isOpen || !profile?.user_id) return;
-
-    const checkRestrictions = () => {
-      checkUserChatRestriction();
-    };
-
-    // Verificar imediatamente e depois a cada 10 segundos
-    checkRestrictions();
-    const interval = setInterval(checkRestrictions, 10000);
-
-    return () => clearInterval(interval);
-  }, [isOpen, profile?.user_id]);
-
-  // Realtime subscription para restrições de chat
-  useEffect(() => {
-    if (!isOpen || !profile?.user_id) return;
-
-    const channel = supabase
-      .channel('user-chat-restrictions')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'user_chat_restrictions',
-          filter: `user_id=eq.${profile.user_id}`
-        },
-        () => {
-          console.log('Restrição de chat alterada, verificando novamente...');
-          checkUserChatRestriction();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [isOpen, profile?.user_id]);
 
   useEffect(() => {
@@ -99,74 +59,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const checkUserChatRestriction = async () => {
-    if (!profile?.user_id) return;
-
-    try {
-      console.log('Verificando restrições de chat para usuário:', profile.user_id);
-      
-      // Verificar bloqueio global
-      const { data: globalSettings, error: globalError } = await supabase
-        .from('admin_settings')
-        .select('chat_blocked_until')
-        .eq('key', 'global_chat_settings')
-        .maybeSingle();
-
-      if (globalError && globalError.code !== 'PGRST116') {
-        console.error('Error checking global chat settings:', globalError);
-      }
-
-      if (globalSettings?.chat_blocked_until) {
-        const blockUntil = new Date(globalSettings.chat_blocked_until);
-        if (blockUntil > new Date()) {
-          console.log('Chat bloqueado globalmente até:', blockUntil);
-          setIsBlocked(true);
-          setBlockReason('Chat bloqueado globalmente pelo administrador');
-          return;
-        }
-      }
-
-      // Verificar bloqueio específico do usuário - buscar o mais recente
-      const { data: userRestriction, error: userError } = await supabase
-        .from('user_chat_restrictions')
-        .select('blocked_until, reason, created_at')
-        .eq('user_id', profile.user_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (userError && userError.code !== 'PGRST116') {
-        console.error('Error checking user chat restrictions:', userError);
-      }
-
-      console.log('Restrição do usuário encontrada:', userRestriction);
-
-      if (userRestriction?.blocked_until) {
-        const blockUntil = new Date(userRestriction.blocked_until);
-        const now = new Date();
-        console.log('Verificando se usuário está bloqueado:', {
-          blockUntil: blockUntil.toISOString(),
-          now: now.toISOString(),
-          isBlocked: blockUntil > now
-        });
-
-        if (blockUntil > now) {
-          console.log('Usuário está bloqueado até:', blockUntil);
-          setIsBlocked(true);
-          setBlockReason(userRestriction.reason || 'Você foi temporariamente bloqueado do chat');
-          return;
-        } else {
-          console.log('Bloqueio expirado');
-        }
-      }
-
-      console.log('Usuário não está bloqueado');
-      setIsBlocked(false);
-      setBlockReason(null);
-    } catch (error) {
-      console.error('Error checking chat restrictions:', error);
-    }
-  };
+  // This function is now handled by the useChatRestrictions hook
 
   const loadChatOptions = async () => {
     try {
@@ -319,16 +212,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     if (!ticketId) return;
     
     // Verificar restrições antes de enviar
-    await checkUserChatRestriction();
-    
-    if (isBlocked) {
-      toast({
-        title: "Chat Bloqueado",
-        description: blockReason || "Você não tem permissão para usar o chat no momento",
-        variant: "destructive",
-      });
-      return;
-    }
+    const canProceed = await checkBeforeAction();
+    if (!canProceed) return;
 
     setShowOptions(false);
     setLoading(true);
@@ -375,16 +260,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     if (!newMessage.trim() || !ticketId || loading) return;
     
     // Verificar restrições antes de enviar
-    await checkUserChatRestriction();
-    
-    if (isBlocked) {
-      toast({
-        title: "Chat Bloqueado",
-        description: blockReason || "Você não tem permissão para usar o chat no momento",
-        variant: "destructive",
-      });
-      return;
-    }
+    const canProceed = await checkBeforeAction();
+    if (!canProceed) return;
 
     setLoading(true);
     try {

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileData } from "@/hooks/useProfileData";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
@@ -18,13 +19,15 @@ import { Profile } from "@/types/profile";
 type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "rules" | "coming-soon" | "carousel" | "profile" | "settings" | "topics";
 
 export default function Dashboard() {
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  
+  // Use the new profile hook for real-time data
+  const { profile, loading: profileLoading, updateProfile } = useProfileData(user?.id);
+  const loading = profileLoading;
 
   // Check authentication
   useEffect(() => {
@@ -35,11 +38,7 @@ export default function Dashboard() {
       navigate('/auth');
       return;
     }
-
-    if (user && !profile) {
-      fetchProfile();
-    }
-  }, [user, isAuthenticated, navigate, profile]);
+  }, [user, isAuthenticated, navigate, loading]);
 
   // Get initial section from URL and handle content parameter
   useEffect(() => {
@@ -98,96 +97,7 @@ export default function Dashboard() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  const fetchProfile = async () => {
-    if (!user) return;
-
-    try {
-      console.log('Fetching profile for user:', user.id);
-      
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching profile:', error);
-        
-        // If profile doesn't exist, create it
-        if (error.code === 'PGRST116') {
-          console.log('Profile not found, creating new profile...');
-          await createProfile();
-          return;
-        }
-        
-        toast({
-          title: "Erro",
-          description: "Erro ao carregar perfil do usuário",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      // Get the actual role from user_roles table
-      const { data: roleData, error: roleError } = await supabase.rpc('get_current_user_role');
-      
-      console.log('Role check result:', { roleData, roleError });
-      
-      if (!roleError && roleData) {
-        data.role = roleData;
-      }
-
-      console.log('Profile loaded:', data);
-      console.log('Profile role:', data.role);
-      setProfile(data);
-    } catch (error) {
-      console.error('Profile fetch error:', error);
-      toast({
-        title: "Erro",
-        description: "Erro inesperado ao carregar perfil",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const createProfile = async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .insert({
-          user_id: user.id,
-          full_name: user.user_metadata?.full_name || null,
-          plan: 'free',
-          role: 'user'
-        })
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error creating profile:', error);
-        toast({
-          title: "Erro",
-          description: "Erro ao criar perfil do usuário",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      console.log('Profile created:', data);
-      setProfile(data);
-    } catch (error) {
-      console.error('Profile creation error:', error);
-      toast({
-        title: "Erro",
-        description: "Erro inesperado ao criar perfil",
-        variant: "destructive",
-      });
-    }
-  };
+  // Profile management is now handled by useProfileData hook
 
   const handleNavigation = (section: ActiveSection) => {
     console.log('Navigating to section:', section);
@@ -210,7 +120,8 @@ export default function Dashboard() {
   };
 
   const handleProfileUpdate = (updatedProfile: Profile) => {
-    setProfile(updatedProfile);
+    // The profile will be updated automatically via real-time subscription
+    console.log('Profile updated via dashboard:', updatedProfile);
   };
 
   if (loading || !user) {

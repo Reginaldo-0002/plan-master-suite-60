@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, Clock, Target, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileData } from "@/hooks/useProfileData";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 import { Profile } from "@/types/profile";
 
@@ -14,18 +15,20 @@ interface DashboardContentProps {
 }
 
 export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => {
-  const [profile, setProfile] = useState<Profile | null>(null);
   const [notifications, setNotifications] = useState([]);
   const [recentContent, setRecentContent] = useState([]);
   const [referralStats, setReferralStats] = useState({ count: 0, earnings: 0 });
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  
+  // Use the profile hook for real-time data
+  const { profile } = useProfileData(user?.id);
 
   useEffect(() => {
     if (user && isAuthenticated) {
-      fetchProfile();
       fetchNotifications();
       fetchRecentContent();
+      setupRealtimeSubscriptions();
     }
   }, [user, isAuthenticated]);
 
@@ -35,25 +38,73 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
     }
   }, [profile]);
 
-  const fetchProfile = async () => {
+  const setupRealtimeSubscriptions = () => {
     if (!user) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+    console.log('Setting up real-time subscriptions for dashboard');
 
-      if (error) throw error;
-      setProfile(data);
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
+    // Subscribe to notifications changes
+    const notificationsChannel = supabase
+      .channel('dashboard-notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        (payload) => {
+          console.log('Notifications real-time update:', payload);
+          fetchNotifications();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to content changes
+    const contentChannel = supabase
+      .channel('dashboard-content')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'content'
+        },
+        (payload) => {
+          console.log('Content real-time update:', payload);
+          fetchRecentContent();
+        }
+      )
+      .subscribe();
+
+    // Subscribe to referral changes
+    const referralsChannel = supabase
+      .channel('dashboard-referrals')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'referrals',
+          filter: `referrer_id=eq.${user.id}`
+        },
+        (payload) => {
+          console.log('Referrals real-time update:', payload);
+          fetchReferralStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(notificationsChannel);
+      supabase.removeChannel(contentChannel);
+      supabase.removeChannel(referralsChannel);
+    };
   };
 
   const fetchNotifications = async () => {
     try {
+      console.log('Fetching notifications with real-time updates');
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -70,6 +121,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
 
   const fetchRecentContent = async () => {
     try {
+      console.log('Fetching recent content with real-time updates');
       const { data, error } = await supabase
         .from('content')
         .select('*')
@@ -88,6 +140,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
     if (!profile) return;
 
     try {
+      console.log('Fetching referral stats with real-time updates for user:', profile.user_id);
       const { data, error } = await supabase
         .from('referrals')
         .select('*')
@@ -98,6 +151,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
       const count = data?.length || 0;
       const earnings = data?.reduce((sum: number, ref: any) => sum + (ref.bonus_amount || 0), 0) || 0;
       
+      console.log('Referral stats updated:', { count, earnings });
       setReferralStats({ count, earnings });
     } catch (error) {
       console.error('Error fetching referral stats:', error);
