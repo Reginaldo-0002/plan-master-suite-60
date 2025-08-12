@@ -20,7 +20,7 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
   const uploadAvatar = async (file: File) => {
     try {
       setUploading(true);
-      console.log('Starting avatar upload for user:', userId);
+      console.log('📸 Starting avatar upload for user:', userId);
 
       // Validate file
       if (!file.type.startsWith('image/')) {
@@ -37,20 +37,20 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       const filePath = `${userId}/${fileName}`;
 
       // Remove old avatar if exists
-      if (currentAvatarUrl) {
+      if (currentAvatarUrl && currentAvatarUrl.includes('supabase.co')) {
         try {
           const oldPath = currentAvatarUrl.split('/').slice(-2).join('/');
-          console.log('Removing old avatar:', oldPath);
+          console.log('🗑️ Removing old avatar:', oldPath);
           await supabase.storage
             .from('avatars')
             .remove([oldPath]);
         } catch (error) {
-          console.log('Could not remove old avatar:', error);
+          console.log('⚠️ Could not remove old avatar:', error);
         }
       }
 
       // Upload to Supabase Storage
-      console.log('Uploading to path:', filePath);
+      console.log('☁️ Uploading to path:', filePath);
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
@@ -59,7 +59,7 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
         });
 
       if (uploadError) {
-        console.error('Upload error:', uploadError);
+        console.error('❌ Upload error:', uploadError);
         throw new Error(`Erro no upload: ${uploadError.message}`);
       }
 
@@ -72,9 +72,10 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
         throw new Error('Erro ao obter URL da imagem');
       }
 
-      console.log('New avatar URL:', publicUrl);
+      console.log('🔗 New avatar URL:', publicUrl);
 
       // Update profile in database
+      console.log('💾 Updating profile in database...');
       const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
         .update({ 
@@ -86,22 +87,27 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
         .single();
 
       if (updateError) {
-        console.error('Database update error:', updateError);
+        console.error('❌ Database update error:', updateError);
         throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
       }
 
-      console.log('Profile updated in database:', updatedProfile);
+      console.log('✅ Profile updated in database:', updatedProfile);
 
       // Force immediate UI update
       onAvatarUpdate(publicUrl);
       
+      // Force page refresh to ensure cache is cleared
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+      
       toast({
         title: "Sucesso",
-        description: "Avatar atualizado com sucesso!",
+        description: "Avatar atualizado com sucesso! A página será recarregada para refletir as mudanças.",
       });
 
     } catch (error: any) {
-      console.error('Error uploading avatar:', error);
+      console.error('💥 Error uploading avatar:', error);
       toast({
         title: "Erro",
         description: error.message || "Erro ao fazer upload do avatar",
@@ -124,8 +130,8 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       <div className="relative">
         <Avatar className="h-24 w-24">
           <AvatarImage 
-            src={currentAvatarUrl ? `${currentAvatarUrl}?t=${Date.now()}` : ""} 
-            key={currentAvatarUrl || 'default'}
+            src={currentAvatarUrl ? `${currentAvatarUrl}?v=${Date.now()}` : ""} 
+            key={currentAvatarUrl ? `${currentAvatarUrl}-${Date.now()}` : 'default'}
           />
           <AvatarFallback className="text-lg">
             {userName ? userName.charAt(0).toUpperCase() : "U"}
