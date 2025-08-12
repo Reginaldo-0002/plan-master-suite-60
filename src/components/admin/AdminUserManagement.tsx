@@ -68,49 +68,25 @@ export const AdminUserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      console.log('Fetching users directly from profiles table...');
+      console.log('Fetching users using RPC function...');
       
-      // Query profiles directly (should work now with admin RLS policy)
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // Use the new RPC function to get all users (bypasses RLS)
+      const { data: usersData, error: usersError } = await supabase
+        .rpc('get_all_users_for_admin');
 
-      if (profilesError) {
-        console.error('Profiles query error:', profilesError);
-        throw profilesError;
+      if (usersError) {
+        console.error('RPC error:', usersError);
+        throw usersError;
       }
 
-      // Query user roles directly 
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) {
-        console.error('Roles query error:', rolesError);
-        throw rolesError;
-      }
-
-      console.log('Profiles data:', profilesData);
-      console.log('Roles data:', rolesData);
-
-      // Ensure proper typing and combination of the data
-      const typedUsers = (profilesData || []).map(user => {
-        const userRole = rolesData?.find(role => role.user_id === user.user_id);
-        return {
-          ...user,
-          role: (userRole?.role || 'user') as 'user' | 'admin' | 'moderator'
-        };
-      });
-      
-      console.log('Final transformed users:', typedUsers);
-      setUsers(typedUsers as User[]);
+      console.log('RPC users data:', usersData);
+      setUsers(usersData as User[]);
       
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
         title: "Erro",
-        description: `Erro ao carregar usuários: ${error.message}`,
+        description: "Erro ao carregar usuários. Verifique suas permissões de administrador.",
         variant: "destructive",
       });
     } finally {
