@@ -88,6 +88,7 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
         }]);
 
       // Navigate to topics page
+      console.log('Carousel navigating to topics with content ID:', content.id);
       window.location.href = `/?section=topics&content=${content.id}`;
       
     } catch (error) {

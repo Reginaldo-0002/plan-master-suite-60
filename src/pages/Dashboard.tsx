@@ -34,6 +34,7 @@ export default function Dashboard() {
       const contentParam = urlParams.get('content');
       
       if (contentParam) {
+        console.log('Dashboard detected content param:', contentParam);
         setSelectedContentId(contentParam);
         setActiveSection('topics');
       } else if (sectionParam) {

@@ -113,6 +113,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
         }]);
 
       // Navigate to topics page
+      console.log('Navigating to topics with content ID:', contentItem.id);
       window.location.href = `/?section=topics&content=${contentItem.id}`;
     } catch (error) {
       console.error('Error accessing content:', error);
