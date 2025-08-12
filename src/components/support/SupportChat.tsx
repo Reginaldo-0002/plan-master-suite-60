@@ -50,6 +50,47 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     }
   }, [isOpen, profile?.user_id]);
 
+  // Verificar restrições periodicamente enquanto o chat estiver aberto
+  useEffect(() => {
+    if (!isOpen || !profile?.user_id) return;
+
+    const checkRestrictions = () => {
+      checkUserChatRestriction();
+    };
+
+    // Verificar imediatamente e depois a cada 10 segundos
+    checkRestrictions();
+    const interval = setInterval(checkRestrictions, 10000);
+
+    return () => clearInterval(interval);
+  }, [isOpen, profile?.user_id]);
+
+  // Realtime subscription para restrições de chat
+  useEffect(() => {
+    if (!isOpen || !profile?.user_id) return;
+
+    const channel = supabase
+      .channel('user-chat-restrictions')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_chat_restrictions',
+          filter: `user_id=eq.${profile.user_id}`
+        },
+        () => {
+          console.log('Restrição de chat alterada, verificando novamente...');
+          checkUserChatRestriction();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, profile?.user_id]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -62,6 +103,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     if (!profile?.user_id) return;
 
     try {
+      console.log('Verificando restrições de chat para usuário:', profile.user_id);
+      
       // Verificar bloqueio global
       const { data: globalSettings, error: globalError } = await supabase
         .from('admin_settings')
@@ -76,18 +119,18 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       if (globalSettings?.chat_blocked_until) {
         const blockUntil = new Date(globalSettings.chat_blocked_until);
         if (blockUntil > new Date()) {
+          console.log('Chat bloqueado globalmente até:', blockUntil);
           setIsBlocked(true);
           setBlockReason('Chat bloqueado globalmente pelo administrador');
           return;
         }
       }
 
-      // Verificar bloqueio específico do usuário
+      // Verificar bloqueio específico do usuário - buscar o mais recente
       const { data: userRestriction, error: userError } = await supabase
         .from('user_chat_restrictions')
-        .select('blocked_until, reason')
+        .select('blocked_until, reason, created_at')
         .eq('user_id', profile.user_id)
-        .gt('blocked_until', new Date().toISOString())
         .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
@@ -96,15 +139,28 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
         console.error('Error checking user chat restrictions:', userError);
       }
 
+      console.log('Restrição do usuário encontrada:', userRestriction);
+
       if (userRestriction?.blocked_until) {
         const blockUntil = new Date(userRestriction.blocked_until);
-        if (blockUntil > new Date()) {
+        const now = new Date();
+        console.log('Verificando se usuário está bloqueado:', {
+          blockUntil: blockUntil.toISOString(),
+          now: now.toISOString(),
+          isBlocked: blockUntil > now
+        });
+
+        if (blockUntil > now) {
+          console.log('Usuário está bloqueado até:', blockUntil);
           setIsBlocked(true);
           setBlockReason(userRestriction.reason || 'Você foi temporariamente bloqueado do chat');
           return;
+        } else {
+          console.log('Bloqueio expirado');
         }
       }
 
+      console.log('Usuário não está bloqueado');
       setIsBlocked(false);
       setBlockReason(null);
     } catch (error) {
@@ -260,7 +316,19 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const handleOptionClick = async (option: ChatOption) => {
-    if (!ticketId || isBlocked) return;
+    if (!ticketId) return;
+    
+    // Verificar restrições antes de enviar
+    await checkUserChatRestriction();
+    
+    if (isBlocked) {
+      toast({
+        title: "Chat Bloqueado",
+        description: blockReason || "Você não tem permissão para usar o chat no momento",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setShowOptions(false);
     setLoading(true);
@@ -304,7 +372,19 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !ticketId || loading || isBlocked) return;
+    if (!newMessage.trim() || !ticketId || loading) return;
+    
+    // Verificar restrições antes de enviar
+    await checkUserChatRestriction();
+    
+    if (isBlocked) {
+      toast({
+        title: "Chat Bloqueado",
+        description: blockReason || "Você não tem permissão para usar o chat no momento",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -411,9 +491,12 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
               <ScrollArea className="h-64 p-3">
                 <div className="space-y-3">
                   {isBlocked && (
-                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
-                      <p className="text-sm text-destructive font-medium">Chat Bloqueado</p>
+                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center mb-3">
+                      <p className="text-sm text-destructive font-medium">🚫 Chat Bloqueado</p>
                       <p className="text-xs text-destructive/80 mt-1">{blockReason}</p>
+                      <p className="text-xs text-muted-foreground mt-2">
+                        Você não pode enviar mensagens no momento
+                      </p>
                     </div>
                   )}
                   {messages.map((message) => (
@@ -472,8 +555,11 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
             <div className="p-3 border-t">
               {isBlocked ? (
                 <div className="text-center py-2">
-                  <p className="text-sm text-muted-foreground">
-                    Chat indisponível no momento
+                  <p className="text-sm text-destructive font-medium">
+                    🚫 Chat indisponível
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Você foi temporariamente bloqueado
                   </p>
                 </div>
               ) : (
