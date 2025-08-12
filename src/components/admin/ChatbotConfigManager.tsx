@@ -61,43 +61,26 @@ export const ChatbotConfigManager = () => {
     try {
       console.log('Saving chatbot config:', newConfig);
       
-      // CORREÇÃO DEFINITIVA: Sempre usar UPDATE pois sabemos que o registro já existe
-      // A tabela admin_settings funciona como chave-valor, não deve haver INSERT duplicado
+      // LÓGICA DEFINITIVA: Usar UPSERT para garantir que funcione sempre
       const { data, error } = await supabase
         .from('admin_settings')
-        .update({
+        .upsert({
+          key: 'chatbot_config',
           value: newConfig as any,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'key'
         })
-        .eq('key', 'chatbot_config')
         .select();
 
-      console.log('Update operation result:', { data, error });
+      console.log('Upsert operation result:', { data, error });
 
       if (error) {
         console.error('Database operation error:', error);
         throw error;
       }
 
-      // Se não atualizou nenhuma linha, significa que não existe o registro
-      if (!data || data.length === 0) {
-        console.log('No record found, creating new one');
-        const { data: insertData, error: insertError } = await supabase
-          .from('admin_settings')
-          .insert({
-            key: 'chatbot_config',
-            value: newConfig as any
-          })
-          .select();
-
-        if (insertError) {
-          console.error('Insert error:', insertError);
-          throw insertError;
-        }
-        console.log('Record created:', insertData);
-      }
-
-      // Atualizar estado local
+      // Atualizar estado local apenas após sucesso no banco
       setConfig(newConfig);
       console.log('Config updated successfully in state');
       
