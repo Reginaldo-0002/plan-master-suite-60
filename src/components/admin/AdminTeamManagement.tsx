@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,7 +41,7 @@ export const AdminTeamManagement = () => {
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
-        table: 'profiles'
+        table: 'user_roles'
       }, () => {
         fetchTeamMembers();
       })
@@ -55,13 +54,24 @@ export const AdminTeamManagement = () => {
 
   const fetchTeamMembers = async () => {
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+      console.log('Fetching team members...');
+      
+      // Usar a função RPC que já existe para buscar usuários com roles
+      const { data, error } = await supabase.rpc('get_all_users_for_admin');
 
-      if (error) throw error;
-      setTeamMembers(data || []);
+      if (error) {
+        console.error('Error fetching team members:', error);
+        throw error;
+      }
+
+      console.log('Team members data:', data);
+      
+      // Filtrar apenas membros com roles admin ou moderator
+      const teamData = data?.filter((member: any) => 
+        member.role === 'admin' || member.role === 'moderator'
+      ) || [];
+      
+      setTeamMembers(teamData);
     } catch (error) {
       console.error('Error fetching team members:', error);
       toast({
@@ -78,12 +88,24 @@ export const AdminTeamManagement = () => {
     if (!selectedMember || !newRole) return;
 
     try {
+      console.log('Updating member role:', { userId: selectedMember.user_id, newRole });
+      
+      // Usar upsert na tabela user_roles (não profiles)
       const { error } = await supabase
-        .from('profiles')
-        .update({ role: newRole })
-        .eq('user_id', selectedMember.user_id);
+        .from('user_roles')
+        .upsert({ 
+          user_id: selectedMember.user_id,
+          role: newRole
+        }, {
+          onConflict: 'user_id'
+        });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating role:', error);
+        throw error;
+      }
+
+      console.log('Role updated successfully');
 
       toast({
         title: "Sucesso",
@@ -93,7 +115,12 @@ export const AdminTeamManagement = () => {
       setIsEditDialogOpen(false);
       setSelectedMember(null);
       setNewRole("");
-      fetchTeamMembers();
+      
+      // Aguardar um pouco e recarregar os dados
+      setTimeout(() => {
+        fetchTeamMembers();
+      }, 500);
+      
     } catch (error) {
       console.error('Error updating member role:', error);
       toast({
@@ -110,12 +137,22 @@ export const AdminTeamManagement = () => {
     }
 
     try {
+      console.log('Removing member from team:', userId);
+      
+      // Remover da tabela user_roles ou definir como 'user'
       const { error } = await supabase
-        .from('profiles')
-        .update({ role: 'user' })
-        .eq('user_id', userId);
+        .from('user_roles')
+        .upsert({ 
+          user_id: userId,
+          role: 'user'
+        }, {
+          onConflict: 'user_id'
+        });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error removing member:', error);
+        throw error;
+      }
 
       toast({
         title: "Sucesso",
@@ -134,6 +171,7 @@ export const AdminTeamManagement = () => {
   };
 
   const openEditDialog = (member: TeamMember) => {
+    console.log('Opening edit dialog for member:', member);
     setSelectedMember(member);
     setNewRole(member.role);
     setIsEditDialogOpen(true);
@@ -173,6 +211,14 @@ export const AdminTeamManagement = () => {
   const adminCount = teamMembers.filter(m => m.role === 'admin').length;
   const moderatorCount = teamMembers.filter(m => m.role === 'moderator').length;
   const totalMembers = teamMembers.length;
+
+  if (loading) {
+    return (
+      <div className="flex-1 space-y-8 p-8">
+        <div className="text-center">Carregando membros da equipe...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 space-y-8 p-8">
