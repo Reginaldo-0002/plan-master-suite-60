@@ -42,6 +42,7 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
         .select('id, title, description, content_type, hero_image_url, video_url, required_plan, status, show_in_carousel, carousel_order')
         .eq('is_active', true)
         .eq('show_in_carousel', true)
+        .eq('status', 'published')
         .order('carousel_order', { ascending: true });
 
       if (error) throw error;
