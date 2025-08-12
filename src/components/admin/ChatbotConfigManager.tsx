@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { MessageSquare, Plus, Trash2, Edit } from "lucide-react";
+import { MessageSquare, Plus, Trash2, Edit, Save } from "lucide-react";
 
 interface MenuOption {
   id: string;
@@ -19,50 +19,46 @@ interface ChatbotConfig {
   menu_options: MenuOption[];
 }
 
+const CHATBOT_CONFIG_KEY = 'chatbot_config';
+const RECORD_ID = '58b4980a-cb38-4468-a7d3-d741baff4c14'; // ID fixo do registro existente
+
 export const ChatbotConfigManager = () => {
   const [config, setConfig] = useState<ChatbotConfig>({ menu_options: [] });
   const [newOption, setNewOption] = useState({ title: "", response: "" });
   const [editingOption, setEditingOption] = useState<MenuOption | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [settingId, setSettingId] = useState<string | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchChatbotConfig();
+    loadChatbotConfig();
   }, []);
 
-  const fetchChatbotConfig = async () => {
+  // Função para carregar a configuração
+  const loadChatbotConfig = async () => {
     try {
-      console.log('Fetching chatbot config...');
+      console.log('🔄 Carregando configuração do chatbot...');
+      
       const { data, error } = await supabase
         .from('admin_settings')
-        .select('id, value')
-        .eq('key', 'chatbot_config')
-        .maybeSingle();
+        .select('value')
+        .eq('id', RECORD_ID)
+        .single();
 
-      console.log('Fetch result:', { data, error });
-
-      if (error) throw error;
-      
-      if (data) {
-        // Capturar o ID do registro para usar nas operações UPDATE
-        setSettingId(data.id);
-        console.log('Setting ID captured:', data.id);
-        
-        if (data.value) {
-          const configValue = data.value as any;
-          if (configValue && typeof configValue === 'object' && configValue.menu_options) {
-            setConfig(configValue as ChatbotConfig);
-            console.log('Config loaded:', configValue);
-          }
-        }
-      } else {
-        // Se não existe o registro, criar um inicial
-        console.log('No config found, creating initial record...');
-        await createInitialConfig();
+      if (error) {
+        console.error('❌ Erro ao carregar:', error);
+        throw error;
       }
-    } catch (error) {
-      console.error('Error fetching chatbot config:', error);
+
+      if (data?.value) {
+        const configValue = data.value as any;
+        if (configValue && typeof configValue === 'object' && configValue.menu_options) {
+          setConfig(configValue as ChatbotConfig);
+          console.log('✅ Configuração carregada:', configValue);
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ Erro na loadChatbotConfig:', error);
       toast({
         title: "Erro",
         description: "Falha ao carregar configuração do chatbot",
@@ -71,71 +67,125 @@ export const ChatbotConfigManager = () => {
     }
   };
 
-  const createInitialConfig = async () => {
+  // Função para salvar DIRETAMENTE no banco usando UPDATE
+  const saveConfigToDatabase = async (configToSave: ChatbotConfig) => {
     try {
-      const initialConfig = { menu_options: [] };
+      console.log('💾 Salvando no banco:', configToSave);
+      
       const { data, error } = await supabase
         .from('admin_settings')
-        .insert({
-          key: 'chatbot_config',
-          value: initialConfig as any
+        .update({ 
+          value: configToSave as any,
+          updated_at: new Date().toISOString()
         })
-        .select('id')
-        .single();
+        .eq('id', RECORD_ID)
+        .select();
 
-      if (error) throw error;
-      
-      setSettingId(data.id);
-      setConfig(initialConfig);
-      console.log('Initial config created with ID:', data.id);
+      if (error) {
+        console.error('❌ Erro no UPDATE:', error);
+        throw error;
+      }
+
+      console.log('✅ Salvo com sucesso:', data);
+      return data;
     } catch (error) {
-      console.error('Error creating initial config:', error);
+      console.error('❌ Erro em saveConfigToDatabase:', error);
       throw error;
     }
   };
 
-  const saveConfig = async (newConfig: ChatbotConfig) => {
+  // Adicionar nova opção
+  const addOption = () => {
+    if (!newOption.title.trim() || !newOption.response.trim()) {
+      toast({
+        title: "Erro",
+        description: "Título e resposta são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const option: MenuOption = {
+      id: `option_${Date.now()}`,
+      title: newOption.title.trim(),
+      response: newOption.response.trim(),
+    };
+
+    const newConfig = {
+      ...config,
+      menu_options: [...config.menu_options, option]
+    };
+
+    setConfig(newConfig);
+    setNewOption({ title: "", response: "" });
+    setHasChanges(true);
+    
+    console.log('➕ Opção adicionada localmente:', option);
+    toast({
+      title: "Sucesso",
+      description: "Opção adicionada. Clique em 'Salvar Todas as Mudanças' para confirmar.",
+    });
+  };
+
+  // Remover opção
+  const removeOption = (optionId: string) => {
+    const newConfig = {
+      ...config,
+      menu_options: config.menu_options.filter(opt => opt.id !== optionId)
+    };
+
+    setConfig(newConfig);
+    setHasChanges(true);
+    
+    console.log('🗑️ Opção removida localmente:', optionId);
+    toast({
+      title: "Sucesso", 
+      description: "Opção removida. Clique em 'Salvar Todas as Mudanças' para confirmar.",
+    });
+  };
+
+  // Atualizar opção
+  const updateOption = () => {
+    if (!editingOption || !editingOption.title.trim() || !editingOption.response.trim()) {
+      toast({
+        title: "Erro",
+        description: "Título e resposta são obrigatórios",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const newConfig = {
+      ...config,
+      menu_options: config.menu_options.map(opt => 
+        opt.id === editingOption.id ? editingOption : opt
+      )
+    };
+
+    setConfig(newConfig);
+    setEditingOption(null);
+    setHasChanges(true);
+    
+    console.log('✏️ Opção editada localmente:', editingOption);
+    toast({
+      title: "Sucesso",
+      description: "Opção editada. Clique em 'Salvar Todas as Mudanças' para confirmar.",
+    });
+  };
+
+  // Salvar todas as mudanças no banco
+  const saveAllChanges = async () => {
     setIsLoading(true);
     try {
-      console.log('Saving chatbot config:', newConfig);
-      console.log('Using setting ID:', settingId);
-      
-      if (!settingId) {
-        throw new Error('Setting ID not found. Please refresh the page.');
-      }
-
-      // CORREÇÃO DEFINITIVA: Sempre usar UPDATE com o ID específico do registro
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .update({
-          value: newConfig as any,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', settingId)
-        .select();
-
-      console.log('Update operation result:', { data, error });
-
-      if (error) {
-        console.error('Database operation error:', error);
-        throw error;
-      }
-
-      if (!data || data.length === 0) {
-        throw new Error('No record was updated. Record may not exist.');
-      }
-
-      // Atualizar estado local apenas após sucesso no banco
-      setConfig(newConfig);
-      console.log('Config updated successfully in state');
+      await saveConfigToDatabase(config);
+      setHasChanges(false);
       
       toast({
         title: "Sucesso",
-        description: "Configuração do chatbot salva com sucesso",
+        description: "Todas as configurações foram salvas no banco de dados!",
       });
-      
     } catch (error: any) {
-      console.error('Error saving chatbot config:', error);
+      console.error('❌ Erro ao salvar:', error);
       toast({
         title: "Erro",
         description: `Falha ao salvar: ${error?.message || 'Erro desconhecido'}`,
@@ -146,106 +196,17 @@ export const ChatbotConfigManager = () => {
     }
   };
 
-  const addOption = async () => {
-    if (!newOption.title.trim() || !newOption.response.trim()) {
-      toast({
-        title: "Erro",
-        description: "Título e resposta são obrigatórios",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      console.log('Adding chatbot option:', newOption);
-      
-      const option: MenuOption = {
-        id: Date.now().toString(),
-        title: newOption.title.trim(),
-        response: newOption.response.trim(),
-      };
-
-      const newConfig = {
-        ...config,
-        menu_options: [...config.menu_options, option]
-      };
-
-      console.log('New config to save:', newConfig);
-      await saveConfig(newConfig);
-      setNewOption({ title: "", response: "" });
-      
-      console.log('Chatbot option added successfully');
-    } catch (error) {
-      console.error('Error adding chatbot option:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao adicionar opção do chatbot",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const updateOption = async () => {
-    if (!editingOption || !editingOption.title.trim() || !editingOption.response.trim()) {
-      toast({
-        title: "Erro",
-        description: "Título e resposta são obrigatórios",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      console.log('Updating chatbot option:', editingOption);
-      
-      const newConfig = {
-        ...config,
-        menu_options: config.menu_options.map(opt => 
-          opt.id === editingOption.id ? editingOption : opt
-        )
-      };
-
-      console.log('Updated config to save:', newConfig);
-      await saveConfig(newConfig);
-      setEditingOption(null);
-      
-      console.log('Chatbot option updated successfully');
-    } catch (error) {
-      console.error('Error updating chatbot option:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao atualizar opção do chatbot",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const removeOption = async (optionId: string) => {
-    try {
-      console.log('Removing chatbot option with ID:', optionId);
-      console.log('Current config:', config);
-      
-      const newConfig = {
-        ...config,
-        menu_options: config.menu_options.filter(opt => opt.id !== optionId)
-      };
-
-      console.log('New config after removal:', newConfig);
-      await saveConfig(newConfig);
-      
-      console.log('Chatbot option removed successfully');
-      toast({
-        title: "Sucesso",
-        description: "Opção removida com sucesso",
-      });
-    } catch (error) {
-      console.error('Error removing chatbot option:', error);
-      toast({
-        title: "Erro",
-        description: "Falha ao remover opção do chatbot",
-        variant: "destructive",
-      });
-    }
+  // Descartar mudanças
+  const discardChanges = () => {
+    loadChatbotConfig();
+    setHasChanges(false);
+    setEditingOption(null);
+    setNewOption({ title: "", response: "" });
+    
+    toast({
+      title: "Mudanças descartadas",
+      description: "Configuração revertida para a última versão salva.",
+    });
   };
 
   return (
@@ -258,7 +219,37 @@ export const ChatbotConfigManager = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Add New Option */}
+          
+          {/* Barra de Ações */}
+          {hasChanges && (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-yellow-800">
+                  Você tem mudanças não salvas. Salve para aplicar no banco de dados.
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={saveAllChanges} 
+                    disabled={isLoading}
+                    className="bg-green-600 hover:bg-green-700"
+                    size="sm"
+                  >
+                    <Save className="w-4 h-4 mr-2" />
+                    Salvar Todas as Mudanças
+                  </Button>
+                  <Button 
+                    onClick={discardChanges} 
+                    variant="outline" 
+                    size="sm"
+                  >
+                    Descartar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Adicionar Nova Opção */}
           <div className="space-y-4 p-4 border rounded-lg">
             <h3 className="font-medium">Adicionar Nova Opção</h3>
             <div className="grid grid-cols-1 gap-4">
@@ -281,14 +272,14 @@ export const ChatbotConfigManager = () => {
                   rows={3}
                 />
               </div>
-              <Button onClick={addOption} disabled={isLoading} className="w-full">
+              <Button onClick={addOption} className="w-full">
                 <Plus className="w-4 h-4 mr-2" />
-                Adicionar Opção
+                Adicionar Opção (Local)
               </Button>
             </div>
           </div>
 
-          {/* Current Options */}
+          {/* Opções Configuradas */}
           <div className="space-y-4">
             <h3 className="font-medium">Opções Configuradas ({config.menu_options.length})</h3>
             {config.menu_options.length === 0 ? (
@@ -313,8 +304,8 @@ export const ChatbotConfigManager = () => {
                           rows={3}
                         />
                         <div className="flex gap-2">
-                          <Button onClick={updateOption} size="sm" disabled={isLoading}>
-                            Salvar
+                          <Button onClick={updateOption} size="sm">
+                            Confirmar Edição
                           </Button>
                           <Button onClick={() => setEditingOption(null)} variant="outline" size="sm">
                             Cancelar
@@ -337,7 +328,6 @@ export const ChatbotConfigManager = () => {
                               onClick={() => removeOption(option.id)}
                               variant="destructive"
                               size="sm"
-                              disabled={isLoading}
                             >
                               <Trash2 className="w-4 h-4" />
                             </Button>
