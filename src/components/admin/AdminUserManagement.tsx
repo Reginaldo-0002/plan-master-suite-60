@@ -68,31 +68,44 @@ export const AdminUserManagement = () => {
 
   const fetchUsers = async () => {
     try {
+      console.log('Fetching users from profiles table...');
+      
       // First get all profiles
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (profilesError) throw profilesError;
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        throw profilesError;
+      }
 
-      // Get all user roles
+      // Then get all user roles
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
-      if (rolesError) throw rolesError;
+      if (rolesError) {
+        console.error('Error fetching roles:', rolesError);
+        throw rolesError;
+      }
+
+      console.log('Profiles data:', profilesData);
+      console.log('Roles data:', rolesData);
 
       // Combine the data
-      const usersWithRoles = (profilesData || []).map(user => {
+      const transformedUsers = (profilesData || []).map(user => {
         const userRole = rolesData?.find(role => role.user_id === user.user_id);
         return {
           ...user,
-          role: userRole?.role || 'user'
+          role: (userRole?.role || 'user') as 'user' | 'admin' | 'moderator'
         };
       });
+
+      console.log('Transformed users:', transformedUsers);
+      setUsers(transformedUsers as User[]);
       
-      setUsers(usersWithRoles as User[]);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({

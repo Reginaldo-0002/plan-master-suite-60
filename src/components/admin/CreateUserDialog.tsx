@@ -64,14 +64,15 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
       const sanitizedFullName = sanitizeInput(formData.full_name);
       const sanitizedEmail = sanitizeInput(formData.email);
 
-      // Use the service role key for admin user creation
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      // Create user with regular signup (will be confirmed automatically)
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: sanitizedEmail,
         password: formData.password,
-        user_metadata: {
-          full_name: sanitizedFullName
-        },
-        email_confirm: true
+        options: {
+          data: {
+            full_name: sanitizedFullName
+          }
+        }
       });
 
       if (authError) {
@@ -82,7 +83,7 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
         throw new Error("Erro ao criar usuário");
       }
 
-      // Create profile (without role - will be handled by user_roles table)
+      // Create profile
       const { error: profileError } = await supabase
         .from('profiles')
         .insert({
@@ -92,19 +93,21 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
         });
 
       if (profileError) {
+        console.error('Profile creation error:', profileError);
         throw profileError;
       }
 
       // Assign role using the secure user_roles table
+      const currentUser = await supabase.auth.getUser();
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
           user_id: authData.user.id,
-          role: formData.role,
-          assigned_by: (await supabase.auth.getUser()).data.user?.id
+          role: formData.role
         });
 
       if (roleError) {
+        console.error('Role assignment error:', roleError);
         throw roleError;
       }
 
