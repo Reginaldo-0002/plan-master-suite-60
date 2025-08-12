@@ -18,52 +18,51 @@ export const useRoleCheck = (): RoleCheckResult => {
   const { handleAsyncError } = useErrorHandler();
 
   useEffect(() => {
-    // Aguardar a autenticação estar pronta antes de verificar role
-    const checkWhenReady = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        checkUserRole();
-      } else {
+    const checkUserRoleDirectly = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          console.log('useRoleCheck - No user found');
+          setRole(null);
+          setLoading(false);
+          return;
+        }
+
+        console.log('useRoleCheck - User found, checking role:', user.id);
+
+        // Buscar role diretamente da tabela user_roles
+        const { data: userRoles, error } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        console.log('useRoleCheck - Direct role check:', { userRoles, error });
+
+        if (error) {
+          console.error('Error fetching user role directly:', error);
+          setRole('user');
+        } else if (userRoles && userRoles.length > 0) {
+          const userRole = userRoles[0].role as UserRole;
+          console.log('useRoleCheck - Setting role to:', userRole);
+          setRole(userRole);
+        } else {
+          console.log('useRoleCheck - No role found, defaulting to user');
+          setRole('user');
+        }
+      } catch (error) {
+        console.error('Error in role check:', error);
+        setRole('user');
+      } finally {
         setLoading(false);
       }
     };
-    
-    checkWhenReady();
+
+    checkUserRoleDirectly();
   }, []);
 
-  const checkUserRole = async () => {
-    await handleAsyncError(async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      console.log('useRoleCheck - Checking role for user:', user?.id);
-      
-      if (!user) {
-        console.log('useRoleCheck - No user found');
-        setRole(null);
-        return;
-      }
-
-      // Use the secure function to get user role
-      const { data, error } = await supabase.rpc('get_current_user_role');
-      
-      console.log('useRoleCheck - RPC response:', { data, error });
-      
-      if (error) {
-        console.error('Error fetching user role:', error);
-        setRole('user'); // Default to user role
-        return;
-      }
-
-      const userRole = data as UserRole || 'user';
-      console.log('useRoleCheck - Setting role to:', userRole);
-      setRole(userRole);
-    }, {
-      title: "Erro ao verificar permissões",
-      showToast: false
-    });
-    
-    setLoading(false);
-  };
+  // Remover a função checkUserRole antiga
 
   const hasRole = (requiredRole: UserRole): boolean => {
     if (!role) return false;
