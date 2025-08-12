@@ -25,7 +25,7 @@ interface ChatOption {
 }
 
 interface SupportChatProps {
-  profile: Profile;
+  profile?: Profile;
 }
 
 export const SupportChat = ({ profile }: SupportChatProps) => {
@@ -45,7 +45,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       createOrGetTicket();
       loadChatOptions();
     }
-  }, [isOpen, profile.user_id]);
+  }, [isOpen, profile?.user_id]);
 
   useEffect(() => {
     scrollToBottom();
@@ -133,7 +133,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       const { data: existingTickets, error: fetchError } = await supabase
         .from('support_tickets')
         .select('id')
-        .eq('user_id', profile.user_id)
+        .eq('user_id', profile?.user_id)
         .eq('status', 'open')
         .order('created_at', { ascending: false })
         .limit(1);
@@ -151,7 +151,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
           .from('support_tickets')
           .insert([
             {
-              user_id: profile.user_id,
+              user_id: profile?.user_id,
               subject: 'Chat de Suporte',
               description: 'Conversa iniciada pelo chat',
               status: 'open',

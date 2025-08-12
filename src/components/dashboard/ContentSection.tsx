@@ -22,11 +22,14 @@ interface Content {
 }
 
 interface ContentSectionProps {
-  type: 'products' | 'tools' | 'courses' | 'tutorials' | 'rules' | 'coming-soon' | 'carousel';
+  contentType: string;
+  title: string;
+  description: string;
   userPlan: 'free' | 'vip' | 'pro';
+  onContentSelect?: (contentId: string) => void;
 }
 
-export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
+export const ContentSection = ({ contentType, title, description, userPlan, onContentSelect }: ContentSectionProps) => {
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -35,7 +38,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
 
   useEffect(() => {
     fetchContent();
-  }, [type]);
+  }, [contentType]);
 
   const getContentTypeForQuery = (type: string): 'product' | 'tool' | 'course' | 'tutorial' | null => {
     switch (type) {
@@ -58,10 +61,10 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
         .eq('is_active', true)
         .order('created_at', { ascending: false });
 
-      const contentType = getContentTypeForQuery(type);
+      const contentTypeQuery = getContentTypeForQuery(contentType);
       
-      if (contentType) {
-        query = query.eq('content_type', contentType);
+      if (contentTypeQuery) {
+        query = query.eq('content_type', contentTypeQuery);
       }
 
       const { data, error } = await query;
@@ -166,23 +169,11 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
   };
 
   const getSectionTitle = () => {
-    switch (type) {
-      case 'products': return 'Produtos';
-      case 'tools': return 'Ferramentas';
-      case 'courses': return 'Cursos';
-      case 'tutorials': return 'Tutoriais';
-      case 'rules': return 'Regras';
-      case 'coming-soon': return 'Em Breve';
-      case 'carousel': return 'Carrossel';
-      default: return 'Conteúdo';
-    }
+    return title;
   };
 
   const getSectionIcon = () => {
-    switch (type) {
-      case 'rules': return <FileText className="w-6 h-6" />;
-      default: return null;
-    }
+    return <FileText className="w-6 h-6" />;
   };
 
   const canAccess = (contentPlan: string) => {

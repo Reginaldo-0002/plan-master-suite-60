@@ -17,7 +17,11 @@ interface UpcomingRelease {
   countdown_enabled: boolean;
 }
 
-export const ComingSoonSection = () => {
+interface ComingSoonSectionProps {
+  userPlan?: 'free' | 'vip' | 'pro';
+}
+
+export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
   const [releases, setReleases] = useState<UpcomingRelease[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();

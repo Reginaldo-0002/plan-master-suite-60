@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
-import { Profile } from "@/types/profile";
+import { useAuth } from "@/hooks/useAuth";
 import {
   LayoutDashboard,
   Package,
@@ -25,14 +25,16 @@ import {
 type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings" | "topics";
 
 interface SidebarProps {
-  profile: Profile | null;
   activeSection: ActiveSection;
-  onSectionChange: (section: ActiveSection) => void;
+  onNavigate: (section: ActiveSection) => void;
+  userPlan: 'free' | 'vip' | 'pro';
+  userRole: string;
 }
 
-export const Sidebar = memo(({ profile, activeSection, onSectionChange }: SidebarProps) => {
+export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: SidebarProps) => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -86,18 +88,18 @@ export const Sidebar = memo(({ profile, activeSection, onSectionChange }: Sideba
       <div className="p-6 border-b border-border bg-gradient-to-b from-card/90 to-card backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <Avatar className="w-10 h-10">
-            <AvatarImage src={profile?.avatar_url || ""} />
+            <AvatarImage src="" />
             <AvatarFallback className="gradient-primary text-primary-foreground">
-              {profile?.full_name?.charAt(0) || 'U'}
+              {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-foreground truncate">
-              {profile?.full_name || 'Usuário'}
+              {user?.user_metadata?.full_name || user?.email || 'Usuário'}
             </p>
-            <Badge className={`text-xs ${getPlanColor(profile?.plan || 'free')}`}>
-              {getPlanIcon(profile?.plan || 'free')}
-              <span className="ml-1 uppercase">{profile?.plan || 'free'}</span>
+            <Badge className={`text-xs ${getPlanColor(userPlan)}`}>
+              {getPlanIcon(userPlan)}
+              <span className="ml-1 uppercase">{userPlan}</span>
             </Badge>
           </div>
         </div>
@@ -115,7 +117,7 @@ export const Sidebar = memo(({ profile, activeSection, onSectionChange }: Sideba
                 ? 'gradient-primary text-primary-foreground shadow-lg animate-glow' 
                 : 'text-foreground hover:bg-accent hover:text-accent-foreground border border-transparent hover:border-primary/20'
             }`}
-            onClick={() => onSectionChange(item.id as ActiveSection)}
+            onClick={() => onNavigate(item.id as ActiveSection)}
           >
             <item.icon className="w-4 h-4 mr-3" />
             {item.label}
@@ -129,7 +131,7 @@ export const Sidebar = memo(({ profile, activeSection, onSectionChange }: Sideba
           variant="ghost"
           size="sm"
           className="w-full justify-start text-foreground hover:bg-accent hover:text-accent-foreground border border-transparent hover:border-primary/20 transition-all duration-300"
-          onClick={() => onSectionChange('settings')}
+          onClick={() => onNavigate('settings')}
         >
           <Settings className="w-4 h-4 mr-3" />
           Configurações

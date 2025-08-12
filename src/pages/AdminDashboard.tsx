@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { User } from '@supabase/supabase-js';
+import { useAuth } from "@/hooks/useAuth";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminDashboardContent } from "@/components/admin/AdminDashboardContent";
 import { AdminUserManagement } from "@/components/admin/AdminUserManagement";
@@ -58,7 +59,6 @@ interface Profile {
 }
 
 const AdminDashboard = () => {
-  const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ActiveAdminSection>('overview');
@@ -66,27 +66,25 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { handleAsyncError } = useErrorHandler();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     checkAuth();
   }, []);
 
   const checkAuth = async () => {
-    const result = await handleAsyncError(async () => {
-      const { data: { session }, error } = await supabase.auth.getSession();
-      
-      if (error || !session) {
-        navigate("/auth");
-        return null;
-      }
+    if (!isAuthenticated || !user) {
+      navigate("/auth");
+      return;
+    }
 
-      setUser(session.user);
+    const result = await handleAsyncError(async () => {
       
       // Get profile data
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select('*')
-        .eq('user_id', session.user.id)
+        .eq('user_id', user.id)
         .single();
 
       if (profileError) {

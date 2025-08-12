@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
@@ -24,16 +24,32 @@ export default function Dashboard() {
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+
+  // Check authentication
+  useEffect(() => {
+    console.log('Dashboard useEffect - Auth state:', { user: !!user, isAuthenticated });
+    
+    if (!isAuthenticated && !loading) {
+      console.log('Not authenticated, redirecting to auth');
+      navigate('/auth');
+      return;
+    }
+
+    if (user && !profile) {
+      fetchProfile();
+    }
+  }, [user, isAuthenticated, navigate, profile]);
 
   // Get initial section from URL and handle content parameter
   useEffect(() => {
-    const handlePopState = () => {
+    const handleInitialRoute = () => {
       const path = window.location.pathname;
       const urlParams = new URLSearchParams(window.location.search);
       const sectionParam = urlParams.get('section');
       const contentParam = urlParams.get('content');
       
-      console.log('URL changed - section:', sectionParam, 'content:', contentParam);
+      console.log('Initial route check - section:', sectionParam, 'content:', contentParam, 'path:', path);
       
       if (contentParam) {
         console.log('Dashboard detected content param:', contentParam);
@@ -68,75 +84,57 @@ export default function Dashboard() {
           default:
             setActiveSection('dashboard');
         }
-        setSelectedContentId(null);
       }
     };
 
-    // Initial load
-    handlePopState();
+    handleInitialRoute();
 
-    // Listen for popstate events and custom events
-    window.addEventListener('popstate', handlePopState);
-    
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
+    // Listen for URL changes
+    const handlePopState = () => {
+      handleInitialRoute();
     };
-  }, []);
 
-  useEffect(() => {
-    fetchProfile();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   const fetchProfile = async () => {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        window.location.href = '/auth';
-        return;
-      }
+    if (!user) return;
 
-      const { data: profileData, error } = await supabase
+    try {
+      console.log('Fetching profile for user:', user.id);
+      
+      const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', user.id)
         .single();
 
       if (error) {
+        console.error('Error fetching profile:', error);
+        
+        // If profile doesn't exist, create it
         if (error.code === 'PGRST116') {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([
-              {
-                user_id: user.id,
-                plan: 'free',
-                role: 'user',
-                full_name: null,
-                avatar_url: null,
-                pix_key: null,
-                total_session_time: 0,
-                areas_accessed: 0,
-                referral_earnings: 0,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            ])
-            .select()
-            .single();
-
-          if (createError) throw createError;
-          setProfile(newProfile);
-        } else {
-          throw error;
+          console.log('Profile not found, creating new profile...');
+          await createProfile();
+          return;
         }
-      } else {
-        setProfile(profileData);
+        
+        toast({
+          title: "Erro",
+          description: "Erro ao carregar perfil do usuário",
+          variant: "destructive",
+        });
+        return;
       }
+
+      console.log('Profile loaded:', data);
+      setProfile(data);
     } catch (error) {
-      console.error('Error fetching profile:', error);
+      console.error('Profile fetch error:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar perfil do usuário",
+        description: "Erro inesperado ao carregar perfil",
         variant: "destructive",
       });
     } finally {
@@ -144,99 +142,176 @@ export default function Dashboard() {
     }
   };
 
+  const createProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert({
+          user_id: user.id,
+          full_name: user.user_metadata?.full_name || null,
+          plan: 'free',
+          role: 'user'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating profile:', error);
+        toast({
+          title: "Erro",
+          description: "Erro ao criar perfil do usuário",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      console.log('Profile created:', data);
+      setProfile(data);
+    } catch (error) {
+      console.error('Profile creation error:', error);
+      toast({
+        title: "Erro",
+        description: "Erro inesperado ao criar perfil",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleNavigation = (section: ActiveSection) => {
+    console.log('Navigating to section:', section);
+    setActiveSection(section);
+    setSelectedContentId(null);
+    
+    // Update URL without triggering a full page reload
+    const newUrl = section === 'dashboard' ? '/dashboard' : `/dashboard?section=${section}`;
+    window.history.pushState({}, '', newUrl);
+  };
+
+  const handleContentSelection = (contentId: string) => {
+    console.log('Content selected:', contentId);
+    setSelectedContentId(contentId);
+    setActiveSection('topics');
+    
+    // Update URL to include content parameter
+    const newUrl = `/dashboard?section=topics&content=${contentId}`;
+    window.history.pushState({}, '', newUrl);
+  };
+
   const handleProfileUpdate = (updatedProfile: Profile) => {
     setProfile(updatedProfile);
   };
 
-  const handleSectionChange = (section: ActiveSection) => {
-    setActiveSection(section);
-  };
-
-  if (loading) {
+  if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold mb-2">Erro ao carregar perfil</h2>
-          <p className="text-muted-foreground">Tente recarregar a página</p>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex items-center gap-2">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+          <span className="text-lg">Carregando dashboard...</span>
         </div>
       </div>
     );
   }
 
-  const renderContent = () => {
+  if (!isAuthenticated) {
+    return null; // Will redirect
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
+          <p className="text-muted-foreground">Carregando perfil...</p>
+        </div>
+      </div>
+    );
+  }
+
+  const renderActiveSection = () => {
+    if (activeSection === 'topics' && selectedContentId) {
+      return (
+        <TopicsRouter 
+          contentId={selectedContentId} 
+          userPlan={profile.plan}
+          onBack={() => {
+            setActiveSection('dashboard');
+            setSelectedContentId(null);
+            window.history.pushState({}, '', '/dashboard');
+          }}
+        />
+      );
+    }
+
     switch (activeSection) {
-      case "dashboard":
-        return <DashboardContent profile={profile} />;
-      case "products":
-        return <ContentSection type="products" userPlan={profile.plan} />;
-      case "tools":
-        return <ContentSection type="tools" userPlan={profile.plan} />;
-      case "courses":
-        return <ContentSection type="courses" userPlan={profile.plan} />;
-      case "tutorials":
-        return <ContentSection type="tutorials" userPlan={profile.plan} />;
-      case "rules":
-        return <RulesSection />;
-      case "coming-soon":
-        return <ComingSoonSection />;
-      case "carousel":
-        return <CarouselSection userPlan={profile.plan} />;
-      case "topics":
-        return selectedContentId ? (
-          <TopicsRouter 
-            contentId={selectedContentId}
+      case 'dashboard':
+        return <DashboardContent onContentSelect={handleContentSelection} />;
+      case 'products':
+        return (
+          <ContentSection 
+            contentType="produto" 
+            title="Produtos" 
+            description="Acesse nossos produtos exclusivos"
             userPlan={profile.plan}
-            onBack={() => {
-              setActiveSection("dashboard");
-              setSelectedContentId(null);
-              window.history.pushState(null, '', '/');
-            }}
-          />
-        ) : <DashboardContent profile={profile} />;
-      case "profile":
-        return (
-          <ProfileSettings
-            profile={profile} 
-            onProfileUpdate={handleProfileUpdate} 
+            onContentSelect={handleContentSelection}
           />
         );
-      case "settings":
+      case 'tools':
         return (
-          <ProfileSettings 
-            profile={profile} 
-            onProfileUpdate={handleProfileUpdate} 
+          <ContentSection 
+            contentType="ferramenta" 
+            title="Ferramentas" 
+            description="Ferramentas poderosas para acelerar seus resultados"
+            userPlan={profile.plan}
+            onContentSelect={handleContentSelection}
           />
         );
+      case 'courses':
+        return (
+          <ContentSection 
+            contentType="curso" 
+            title="Cursos" 
+            description="Aprenda com nossos cursos exclusivos"
+            userPlan={profile.plan}
+            onContentSelect={handleContentSelection}
+          />
+        );
+      case 'tutorials':
+        return (
+          <ContentSection 
+            contentType="tutorial" 
+            title="Tutoriais" 
+            description="Tutoriais passo a passo para dominar as técnicas"
+            userPlan={profile.plan}
+            onContentSelect={handleContentSelection}
+          />
+        );
+      case 'rules':
+        return <RulesSection />;
+      case 'coming-soon':
+        return <ComingSoonSection userPlan={profile.plan} />;
+      case 'carousel':
+        return <CarouselSection userPlan={profile.plan} />;
+      case 'profile':
+      case 'settings':
+        return <ProfileSettings profile={profile} onProfileUpdate={handleProfileUpdate} />;
       default:
-        return <DashboardContent profile={profile} />;
+        return <DashboardContent onContentSelect={handleContentSelection} />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex min-h-screen bg-background">
       <Sidebar 
-        profile={profile}
         activeSection={activeSection} 
-        onSectionChange={(section) => {
-          setActiveSection(section);
-          setSelectedContentId(null);
-          // Update URL without causing navigation issues
-          window.history.pushState(null, '', `/?section=${section}`);
-        }}
+        onNavigate={handleNavigation}
+        userPlan={profile.plan}
+        userRole={profile.role}
       />
-      
-      <main className="flex-1 overflow-y-auto p-6">
-        {renderContent()}
+      <main className="flex-1 overflow-auto">
+        {renderActiveSection()}
       </main>
-
       <SupportChat profile={profile} />
     </div>
   );

@@ -5,26 +5,52 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Users, Clock, Target, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 import { Profile } from "@/types/profile";
 
 interface DashboardContentProps {
-  profile: Profile | null;
+  onContentSelect?: (contentId: string) => void;
 }
 
-export const DashboardContent = ({ profile }: DashboardContentProps) => {
+export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => {
+  const [profile, setProfile] = useState<Profile | null>(null);
   const [notifications, setNotifications] = useState([]);
   const [recentContent, setRecentContent] = useState([]);
   const [referralStats, setReferralStats] = useState({ count: 0, earnings: 0 });
   const { toast } = useToast();
+  const { user, isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (user && isAuthenticated) {
+      fetchProfile();
+      fetchNotifications();
+      fetchRecentContent();
+    }
+  }, [user, isAuthenticated]);
 
   useEffect(() => {
     if (profile) {
-      fetchNotifications();
-      fetchRecentContent();
       fetchReferralStats();
     }
   }, [profile]);
+
+  const fetchProfile = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setProfile(data);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    }
+  };
 
   const fetchNotifications = async () => {
     try {
@@ -214,7 +240,8 @@ export const DashboardContent = ({ profile }: DashboardContentProps) => {
             </CardHeader>
             <CardContent className="space-y-4">
               {recentContent.slice(0, 3).map((content: any) => (
-                <div key={content.id} className="flex items-center justify-between p-3 border border-futuristic-primary/20 rounded-lg bg-background/20 hover:bg-background/40 transition-colors">
+                <div key={content.id} className="flex items-center justify-between p-3 border border-futuristic-primary/20 rounded-lg bg-background/20 hover:bg-background/40 transition-colors cursor-pointer"
+                     onClick={() => onContentSelect?.(content.id)}>
                   <div>
                     <p className="font-medium">{content.title}</p>
                     <p className="text-sm text-muted-foreground capitalize">
