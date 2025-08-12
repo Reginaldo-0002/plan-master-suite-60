@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Send, MessageCircle, X, Minimize2, Bot } from "lucide-react";
 import { Profile } from "@/types/profile";
 import { useChatRestrictions } from "@/hooks/useChatRestrictions";
+import { ChatBlockCountdown } from "./ChatBlockCountdown";
 
 interface Message {
   id: string;
@@ -372,25 +373,12 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
             <CardContent className="flex-1 p-0">
               <ScrollArea className="h-64 p-3">
                 <div className="space-y-3">
-                  {restriction.isBlocked && (
-                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
-                      <p className="text-sm text-destructive font-medium">🚫 Chat Bloqueado</p>
-                      <p className="text-xs text-destructive/80 mt-1">{restriction.reason}</p>
-                      {restriction.blockedUntil && (
-                        <p className="text-xs text-destructive/60 mt-1">
-                          Até: {restriction.blockedUntil.toLocaleString('pt-BR', { 
-                            timeZone: 'America/Sao_Paulo',
-                            day: '2-digit',
-                            month: '2-digit', 
-                            year: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                  {!restriction.isBlocked && (
+                  {restriction.isBlocked ? (
+                    <ChatBlockCountdown 
+                      blockedUntil={restriction.blockedUntil!} 
+                      reason={restriction.reason}
+                    />
+                  ) : (
                     <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
                       <p className="text-xs text-green-600">✅ Chat Liberado</p>
                     </div>
@@ -451,24 +439,10 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
             <div className="p-3 border-t">
               {restriction.isBlocked ? (
                 <div className="text-center py-2">
-                  <p className="text-sm text-muted-foreground">
-                    🚫 Chat indisponível no momento
-                  </p>
-                  <p className="text-xs text-destructive">
-                    Motivo: {restriction.reason}
-                  </p>
-                   {restriction.blockedUntil && (
-                    <p className="text-xs text-muted-foreground">
-                      Disponível a partir de: {restriction.blockedUntil.toLocaleString('pt-BR', { 
-                        timeZone: 'America/Sao_Paulo',
-                        day: '2-digit',
-                        month: '2-digit', 
-                        year: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  )}
+                  <ChatBlockCountdown 
+                    blockedUntil={restriction.blockedUntil!} 
+                    reason={restriction.reason}
+                  />
                 </div>
               ) : (
                 <div className="flex gap-2">

@@ -17,6 +17,12 @@ export const useChatRestrictions = (userId: string | undefined) => {
 
   const checkRestrictions = useCallback(async () => {
     if (!userId) {
+      console.log('🚫 No userId provided');
+      setRestriction({
+        isBlocked: false,
+        reason: null,
+        blockedUntil: null
+      });
       setLoading(false);
       return;
     }
@@ -24,65 +30,72 @@ export const useChatRestrictions = (userId: string | undefined) => {
     try {
       console.log('🔍 Checking chat restrictions for user:', userId);
       const currentTime = new Date();
-      console.log('🕐 Current time (local):', currentTime.toISOString());
-      console.log('🕐 Current time (formatted):', currentTime.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
+      const currentTimeISO = currentTime.toISOString();
+      console.log('🕐 Current time (UTC):', currentTimeISO);
+      console.log('🕐 Current time (BR):', currentTime.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
 
-      // Verificar bloqueio específico do usuário PRIMEIRO (mais simples e direto)
+      // ======= VERIFICAR BLOQUEIO ESPECÍFICO DO USUÁRIO PRIMEIRO =======
+      console.log('👤 Checking user-specific restrictions...');
       const { data: userRestrictions, error: userError } = await supabase
         .from('user_chat_restrictions')
         .select('id, blocked_until, reason, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      console.log('📋 All user restrictions found:', userRestrictions);
+      console.log('📋 User restrictions found:', userRestrictions?.length || 0);
+      console.log('📋 User restrictions data:', userRestrictions);
       console.log('❓ User error:', userError);
 
       if (userError) {
         console.error('❌ Error checking user restrictions:', userError);
       }
 
-      // Verificar se há alguma restrição ativa (simples verificação)
-      let activeRestriction = null;
+      // Verificar se há alguma restrição ativa
+      let activeUserRestriction = null;
       if (userRestrictions && userRestrictions.length > 0) {
-        console.log(`📊 Total restrictions found: ${userRestrictions.length}`);
+        console.log(`📊 Analyzing ${userRestrictions.length} user restrictions...`);
+        
         for (const restriction of userRestrictions) {
           if (restriction.blocked_until) {
             const blockUntil = new Date(restriction.blocked_until);
             const isActive = blockUntil > currentTime;
-            console.log(`⏰ Checking restriction ID ${restriction.id}:`);
-            console.log(`   - blocked until: ${blockUntil.toISOString()}`);
+            
+            console.log(`⏰ Restriction ID ${restriction.id}:`);
+            console.log(`   - blocked until (UTC): ${blockUntil.toISOString()}`);
             console.log(`   - blocked until (BR): ${blockUntil.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
-            console.log(`   - current time: ${currentTime.toISOString()}`);
-            console.log(`   - current time (BR): ${currentTime.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`);
+            console.log(`   - current time (UTC): ${currentTimeISO}`);
             console.log(`   - is active? ${isActive}`);
             console.log(`   - time difference (minutes): ${((blockUntil.getTime() - currentTime.getTime()) / (1000 * 60)).toFixed(2)}`);
             console.log(`   - reason: ${restriction.reason}`);
             
             if (isActive) {
-              activeRestriction = restriction;
-              console.log('🚫 FOUND ACTIVE RESTRICTION:', activeRestriction);
+              activeUserRestriction = restriction;
+              console.log('🚫 FOUND ACTIVE USER RESTRICTION:', activeUserRestriction);
               break;
             } else {
-              console.log('⏰ Restriction expired, skipping');
+              console.log('⏰ User restriction expired, skipping');
             }
+          } else {
+            console.log('❓ Restriction without blocked_until date, skipping');
           }
         }
       }
 
-      if (activeRestriction) {
-        const blockUntil = new Date(activeRestriction.blocked_until);
+      if (activeUserRestriction) {
+        const blockUntil = new Date(activeUserRestriction.blocked_until);
         console.log('🚫 USER IS SPECIFICALLY BLOCKED UNTIL:', blockUntil.toISOString());
         console.log('🚫 USER IS SPECIFICALLY BLOCKED UNTIL (BR):', blockUntil.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
         setRestriction({
           isBlocked: true,
-          reason: activeRestriction.reason || 'Você foi temporariamente bloqueado do chat',
+          reason: activeUserRestriction.reason || 'Você foi temporariamente bloqueado do chat',
           blockedUntil: blockUntil
         });
         setLoading(false);
         return;
       }
 
-      // Verificar bloqueio global apenas se não há bloqueio específico
+      // ======= VERIFICAR BLOQUEIO GLOBAL APENAS SE NÃO HÁ BLOQUEIO ESPECÍFICO =======
+      console.log('🌐 Checking global restrictions...');
       const { data: globalSettings, error: globalError } = await supabase
         .from('admin_settings')
         .select('chat_blocked_until')
@@ -94,10 +107,12 @@ export const useChatRestrictions = (userId: string | undefined) => {
 
       if (globalSettings?.chat_blocked_until) {
         const blockUntil = new Date(globalSettings.chat_blocked_until);
-        console.log(`🌍 Global block until: ${blockUntil.toISOString()}, current time: ${currentTime.toISOString()}`);
-        console.log(`🌍 Is globally active? ${blockUntil > currentTime}`);
+        const isGloballyBlocked = blockUntil > currentTime;
         
-        if (blockUntil > currentTime) {
+        console.log(`🌍 Global block until: ${blockUntil.toISOString()}`);
+        console.log(`🌍 Is globally active? ${isGloballyBlocked}`);
+        
+        if (isGloballyBlocked) {
           console.log('🌍 CHAT GLOBALLY BLOCKED UNTIL:', blockUntil.toISOString());
           setRestriction({
             isBlocked: true,
