@@ -53,7 +53,14 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
 
       if (error) throw error;
 
+      // Atualizar ambos os estados para garantir sincronização
       onProfileUpdate(data);
+      
+      // Forçar atualização do formulário com os novos dados
+      setFormData({
+        full_name: data.full_name || "",
+        pix_key: data.pix_key || "",
+      });
       
       toast({
         title: "Sucesso",

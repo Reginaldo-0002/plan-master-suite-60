@@ -22,16 +22,26 @@ export const useChatRestrictions = (userId: string | undefined) => {
     }
 
     try {
+      console.log('Checking chat restrictions for user:', userId);
+
       // Verificar bloqueio global
-      const { data: globalSettings } = await supabase
+      const { data: globalSettings, error: globalError } = await supabase
         .from('admin_settings')
         .select('chat_blocked_until')
         .eq('key', 'global_chat_settings')
         .maybeSingle();
 
+      if (globalError) {
+        console.error('Error checking global settings:', globalError);
+      } else {
+        console.log('Global settings:', globalSettings);
+      }
+
       if (globalSettings?.chat_blocked_until) {
         const blockUntil = new Date(globalSettings.chat_blocked_until);
+        console.log('Global block until:', blockUntil, 'Current time:', new Date());
         if (blockUntil > new Date()) {
+          console.log('User is globally blocked');
           setRestriction({
             isBlocked: true,
             reason: 'Chat bloqueado globalmente pelo administrador',
@@ -43,7 +53,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
       }
 
       // Verificar bloqueio específico do usuário
-      const { data: userRestriction } = await supabase
+      const { data: userRestriction, error: userError } = await supabase
         .from('user_chat_restrictions')
         .select('blocked_until, reason')
         .eq('user_id', userId)
@@ -52,9 +62,17 @@ export const useChatRestrictions = (userId: string | undefined) => {
         .limit(1)
         .maybeSingle();
 
+      if (userError) {
+        console.error('Error checking user restrictions:', userError);
+      } else {
+        console.log('User restriction:', userRestriction);
+      }
+
       if (userRestriction?.blocked_until) {
         const blockUntil = new Date(userRestriction.blocked_until);
+        console.log('User block until:', blockUntil, 'Current time:', new Date());
         if (blockUntil > new Date()) {
+          console.log('User is specifically blocked');
           setRestriction({
             isBlocked: true,
             reason: userRestriction.reason || 'Você foi temporariamente bloqueado do chat',
@@ -65,6 +83,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
         }
       }
 
+      console.log('User is not blocked');
       setRestriction({
         isBlocked: false,
         reason: null,
@@ -80,9 +99,11 @@ export const useChatRestrictions = (userId: string | undefined) => {
   useEffect(() => {
     checkRestrictions();
 
+    if (!userId) return;
+
     // Configurar real-time para admin_settings
     const adminChannel = supabase
-      .channel('admin-settings-changes')
+      .channel(`admin-settings-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -91,7 +112,8 @@ export const useChatRestrictions = (userId: string | undefined) => {
           table: 'admin_settings',
           filter: 'key=eq.global_chat_settings'
         },
-        () => {
+        (payload) => {
+          console.log('Admin settings change detected:', payload);
           checkRestrictions();
         }
       )
@@ -99,23 +121,27 @@ export const useChatRestrictions = (userId: string | undefined) => {
 
     // Configurar real-time para user_chat_restrictions
     const restrictionsChannel = supabase
-      .channel('user-restrictions-changes')
+      .channel(`user-restrictions-${userId}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'user_chat_restrictions',
-          filter: userId ? `user_id=eq.${userId}` : undefined
+          filter: `user_id=eq.${userId}`
         },
-        () => {
+        (payload) => {
+          console.log('User restrictions change detected:', payload);
           checkRestrictions();
         }
       )
       .subscribe();
 
-    // Verificar restrições a cada minuto para expiração automática
-    const interval = setInterval(checkRestrictions, 60000);
+    // Verificar restrições a cada 30 segundos para detecção mais rápida
+    const interval = setInterval(() => {
+      console.log('Periodic check for chat restrictions');
+      checkRestrictions();
+    }, 30000);
 
     return () => {
       supabase.removeChannel(adminChannel);

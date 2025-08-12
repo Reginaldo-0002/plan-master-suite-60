@@ -20,6 +20,7 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
   const uploadAvatar = async (file: File) => {
     try {
       setUploading(true);
+      console.log('Starting avatar upload for user:', userId);
 
       // Validate file
       if (!file.type.startsWith('image/')) {
@@ -39,6 +40,7 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       if (currentAvatarUrl) {
         try {
           const oldPath = currentAvatarUrl.split('/').slice(-2).join('/');
+          console.log('Removing old avatar:', oldPath);
           await supabase.storage
             .from('avatars')
             .remove([oldPath]);
@@ -48,6 +50,7 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       }
 
       // Upload to Supabase Storage
+      console.log('Uploading to path:', filePath);
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(filePath, file, {
@@ -69,18 +72,29 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
         throw new Error('Erro ao obter URL da imagem');
       }
 
+      console.log('New avatar URL:', publicUrl);
+
       // Update profile in database
-      const { error: updateError } = await supabase
+      const { data: updatedProfile, error: updateError } = await supabase
         .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('user_id', userId);
+        .update({ 
+          avatar_url: publicUrl,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select()
+        .single();
 
       if (updateError) {
         console.error('Database update error:', updateError);
         throw new Error(`Erro ao atualizar perfil: ${updateError.message}`);
       }
 
+      console.log('Profile updated in database:', updatedProfile);
+
+      // Force immediate UI update
       onAvatarUpdate(publicUrl);
+      
       toast({
         title: "Sucesso",
         description: "Avatar atualizado com sucesso!",

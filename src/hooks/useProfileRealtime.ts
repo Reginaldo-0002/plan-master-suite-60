@@ -13,13 +13,19 @@ export const useProfileRealtime = (userId: string | undefined) => {
     }
 
     try {
+      console.log('Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('user_id', userId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching profile:', error);
+        throw error;
+      }
+      
+      console.log('Profile fetched:', data);
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -35,7 +41,7 @@ export const useProfileRealtime = (userId: string | undefined) => {
 
     // Configurar real-time updates para o perfil
     const channel = supabase
-      .channel('profile-changes')
+      .channel(`profile-changes-${userId}`)
       .on(
         'postgres_changes',
         {
@@ -47,13 +53,17 @@ export const useProfileRealtime = (userId: string | undefined) => {
         (payload) => {
           console.log('Profile update received:', payload);
           if (payload.eventType === 'UPDATE' && payload.new) {
+            console.log('Updating profile with new data:', payload.new);
             setProfile(payload.new as Profile);
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Profile channel subscription status:', status);
+      });
 
     return () => {
+      console.log('Removing profile channel');
       supabase.removeChannel(channel);
     };
   }, [userId]);
