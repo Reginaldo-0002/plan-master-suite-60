@@ -13,6 +13,7 @@ import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { CarouselSection } from "@/components/dashboard/CarouselSection";
 import { TopicsRouter } from "@/components/navigation/TopicsRouter";
 import { SupportChat } from "@/components/support/SupportChat";
+import { DebugPanel } from "@/components/debug/DebugPanel";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 
@@ -329,6 +330,7 @@ export default function Dashboard() {
         {renderActiveSection()}
       </main>
       <SupportChat profile={currentProfile} />
+      <DebugPanel userId={currentProfile.user_id} />
     </div>
   );
 }
