@@ -225,8 +225,11 @@ export const AdminChatControl = () => {
     setIsLoading(true);
     try {
       const duration = parseInt(blockDuration);
-      let milliseconds = 0;
+      if (isNaN(duration) || duration <= 0) {
+        throw new Error("Duração deve ser um número positivo");
+      }
 
+      let milliseconds = 0;
       switch (blockUnit) {
         case 'minutes':
           milliseconds = duration * 60 * 1000;
@@ -237,35 +240,56 @@ export const AdminChatControl = () => {
         case 'days':
           milliseconds = duration * 24 * 60 * 60 * 1000;
           break;
+        default:
+          throw new Error("Unidade de tempo inválida");
       }
 
-      const blockedUntil = new Date(Date.now() + milliseconds);
+      // Usar horário de São Paulo
+      const currentTime = new Date();
+      const blockedUntil = new Date(currentTime.getTime() + milliseconds);
+      
+      console.log('🔒 Blocking user:', selectedUserId);
+      console.log('🔒 Duration:', duration, blockUnit);
+      console.log('🔒 Current time:', currentTime.toISOString());
+      console.log('🔒 Blocked until:', blockedUntil.toISOString());
+      console.log('🔒 Blocked until (BR):', blockedUntil.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }));
 
       const { error } = await supabase
         .from('user_chat_restrictions')
         .insert({
           user_id: selectedUserId,
           blocked_until: blockedUntil.toISOString(),
-          reason: blockReason || 'Bloqueio temporário',
+          reason: blockReason || 'Bloqueio temporário aplicado pelo administrador',
           created_by: (await supabase.auth.getUser()).data.user?.id
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Error inserting user restriction:', error);
+        throw error;
+      }
 
+      console.log('✅ User successfully blocked');
+      
+      const selectedUser = users.find(u => u.user_id === selectedUserId);
       toast({
         title: "Sucesso",
-        description: "Usuário bloqueado do chat com sucesso",
+        description: `${selectedUser?.full_name || 'Usuário'} bloqueado do chat por ${duration} ${blockUnit}`,
       });
 
+      // Limpar formulário
       setSelectedUserId("");
       setBlockDuration("");
       setBlockReason("");
-      fetchUserRestrictions();
+      
+      // Recarregar lista de restrições
+      setTimeout(() => {
+        fetchUserRestrictions();
+      }, 500);
     } catch (error) {
-      console.error('Error blocking user:', error);
+      console.error('💥 Error blocking user:', error);
       toast({
         title: "Erro",
-        description: "Erro ao bloquear usuário",
+        description: `Erro ao bloquear usuário: ${error.message}`,
         variant: "destructive",
       });
     } finally {
