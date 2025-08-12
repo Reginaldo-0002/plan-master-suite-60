@@ -68,32 +68,49 @@ export const AdminUserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      console.log('Fetching users using RPC function...');
+      console.log('Fetching users directly from profiles table...');
       
-      // Use the new RPC function to get all users (bypasses RLS)
-      const { data: usersData, error: usersError } = await supabase
-        .rpc('get_all_users_for_admin');
+      // Query profiles directly (should work now with admin RLS policy)
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (usersError) {
-        console.error('RPC error:', usersError);
-        throw usersError;
+      if (profilesError) {
+        console.error('Profiles query error:', profilesError);
+        throw profilesError;
       }
 
-      console.log('RPC users data:', usersData);
+      // Query user roles directly 
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('user_id, role');
+
+      if (rolesError) {
+        console.error('Roles query error:', rolesError);
+        throw rolesError;
+      }
+
+      console.log('Profiles data:', profilesData);
+      console.log('Roles data:', rolesData);
+
+      // Ensure proper typing and combination of the data
+      const typedUsers = (profilesData || []).map(user => {
+        const userRole = rolesData?.find(role => role.user_id === user.user_id);
+        return {
+          ...user,
+          role: (userRole?.role || 'user') as 'user' | 'admin' | 'moderator'
+        };
+      });
       
-      // Ensure proper typing of the users data
-      const typedUsers = (usersData || []).map(user => ({
-        ...user,
-        role: user.role as 'user' | 'admin' | 'moderator'
-      }));
-      
+      console.log('Final transformed users:', typedUsers);
       setUsers(typedUsers as User[]);
       
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar usuários. Verifique suas permissões de administrador.",
+        description: `Erro ao carregar usuários: ${error.message}`,
         variant: "destructive",
       });
     } finally {
