@@ -29,7 +29,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
       // Verificar bloqueio específico do usuário PRIMEIRO (mais simples e direto)
       const { data: userRestrictions, error: userError } = await supabase
         .from('user_chat_restrictions')
-        .select('blocked_until, reason, created_at')
+        .select('id, blocked_until, reason, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
@@ -43,16 +43,23 @@ export const useChatRestrictions = (userId: string | undefined) => {
       // Verificar se há alguma restrição ativa (simples verificação)
       let activeRestriction = null;
       if (userRestrictions && userRestrictions.length > 0) {
+        console.log(`📊 Total restrictions found: ${userRestrictions.length}`);
         for (const restriction of userRestrictions) {
           if (restriction.blocked_until) {
             const blockUntil = new Date(restriction.blocked_until);
-            console.log(`⏰ Checking restriction: blocked until ${blockUntil.toISOString()}, current time: ${currentTime.toISOString()}`);
-            console.log(`⏰ Is active? ${blockUntil > currentTime}`);
+            const isActive = blockUntil > currentTime;
+            console.log(`⏰ Checking restriction ID ${restriction.id}:`);
+            console.log(`   - blocked until: ${blockUntil.toISOString()}`);
+            console.log(`   - current time: ${currentTime.toISOString()}`);
+            console.log(`   - is active? ${isActive}`);
+            console.log(`   - reason: ${restriction.reason}`);
             
-            if (blockUntil > currentTime) {
+            if (isActive) {
               activeRestriction = restriction;
               console.log('🚫 FOUND ACTIVE RESTRICTION:', activeRestriction);
               break;
+            } else {
+              console.log('⏰ Restriction expired, skipping');
             }
           }
         }

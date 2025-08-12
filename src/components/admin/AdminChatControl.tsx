@@ -214,6 +214,7 @@ export const AdminChatControl = () => {
   const unblockUser = async (restrictionId: string) => {
     setIsLoading(true);
     try {
+      // Set blocked_until to current time to expire the restriction
       const { error } = await supabase
         .from('user_chat_restrictions')
         .update({ blocked_until: new Date().toISOString() })
