@@ -309,10 +309,11 @@ export const AdminSupportManagement = () => {
 
       const { error } = await supabase
         .from('admin_settings')
-        .upsert({ 
-          key: 'chatbot_config',
-          value: configValue as any
-        });
+        .update({ 
+          value: configValue as any,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', '58b4980a-cb38-4468-a7d3-d741baff4c14');
 
       if (error) throw error;
 
@@ -348,10 +349,11 @@ export const AdminSupportManagement = () => {
 
       const { error } = await supabase
         .from('admin_settings')
-        .upsert({ 
-          key: 'chatbot_config',
-          value: configValue as any
-        });
+        .update({ 
+          value: configValue as any,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', '58b4980a-cb38-4468-a7d3-d741baff4c14');
 
       if (error) throw error;
 
