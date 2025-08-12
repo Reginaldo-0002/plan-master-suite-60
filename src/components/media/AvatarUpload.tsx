@@ -123,7 +123,10 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
     <div className="flex flex-col items-center gap-4">
       <div className="relative">
         <Avatar className="h-24 w-24">
-          <AvatarImage src={currentAvatarUrl || ""} />
+          <AvatarImage 
+            src={currentAvatarUrl ? `${currentAvatarUrl}?t=${Date.now()}` : ""} 
+            key={currentAvatarUrl || 'default'}
+          />
           <AvatarFallback className="text-lg">
             {userName ? userName.charAt(0).toUpperCase() : "U"}
           </AvatarFallback>

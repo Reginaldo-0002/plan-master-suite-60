@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Users, Clock, Target, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileRealtime } from "@/hooks/useProfileRealtime";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 import { Profile } from "@/types/profile";
 
@@ -20,20 +21,26 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   const [referralStats, setReferralStats] = useState({ count: 0, earnings: 0 });
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const { profile: realtimeProfile } = useProfileRealtime(user?.id);
+
+  // Usar o perfil em tempo real se disponível, senão usar o perfil local
+  const currentProfile = realtimeProfile || profile;
 
   useEffect(() => {
     if (user && isAuthenticated) {
-      fetchProfile();
+      if (!realtimeProfile) {
+        fetchProfile();
+      }
       fetchNotifications();
       fetchRecentContent();
     }
-  }, [user, isAuthenticated]);
+  }, [user, isAuthenticated, realtimeProfile]);
 
   useEffect(() => {
-    if (profile) {
+    if (currentProfile) {
       fetchReferralStats();
     }
-  }, [profile]);
+  }, [currentProfile]);
 
   const fetchProfile = async () => {
     if (!user) return;
@@ -85,13 +92,13 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   };
 
   const fetchReferralStats = async () => {
-    if (!profile) return;
+    if (!currentProfile) return;
 
     try {
       const { data, error } = await supabase
         .from('referrals')
         .select('*')
-        .eq('referrer_id', profile.user_id);
+        .eq('referrer_id', currentProfile.user_id);
 
       if (error) throw error;
       
@@ -105,8 +112,8 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   };
 
   const copyReferralCode = () => {
-    if (profile?.referral_code) {
-      navigator.clipboard.writeText(profile.referral_code);
+    if (currentProfile?.referral_code) {
+      navigator.clipboard.writeText(currentProfile.referral_code);
       toast({
         title: "Código copiado!",
         description: "Seu código de indicação foi copiado para a área de transferência",
@@ -129,7 +136,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
     return `${hours}h ${mins}m`;
   };
 
-  if (!profile) {
+  if (!currentProfile) {
     return (
       <>
         <MagneticBackground />
@@ -149,14 +156,14 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-bold tracking-tight text-foreground bg-gradient-to-r from-futuristic-primary to-futuristic-secondary bg-clip-text text-transparent">
-              Bem-vindo, {profile.full_name || 'Usuário'}!
+              Bem-vindo, {currentProfile.full_name || 'Usuário'}!
             </h2>
             <p className="text-muted-foreground">
               Aqui está um resumo da sua atividade na plataforma
             </p>
           </div>
-          <Badge className={getPlanBadgeColor(profile.plan)}>
-            Plano {profile.plan.toUpperCase()}
+          <Badge className={getPlanBadgeColor(currentProfile.plan)}>
+            Plano {currentProfile.plan.toUpperCase()}
           </Badge>
         </div>
 
@@ -168,7 +175,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
               <Clock className="h-4 w-4 text-futuristic-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-futuristic-electric">{formatTime(profile.total_session_time || 0)}</div>
+              <div className="text-2xl font-bold text-futuristic-electric">{formatTime(currentProfile.total_session_time || 0)}</div>
               <p className="text-xs text-muted-foreground">
                 na plataforma
               </p>
@@ -181,7 +188,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
               <Target className="h-4 w-4 text-futuristic-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-futuristic-accent">{profile.areas_accessed || 0}</div>
+              <div className="text-2xl font-bold text-futuristic-accent">{currentProfile.areas_accessed || 0}</div>
               <p className="text-xs text-muted-foreground">
                 diferentes seções
               </p>
@@ -217,7 +224,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
             <div className="flex items-center justify-between p-4 border border-futuristic-primary/30 rounded-lg bg-background/30 backdrop-blur-xs">
               <div>
                 <p className="font-medium">Seu código de indicação:</p>
-                <p className="text-lg font-mono font-bold text-futuristic-primary">{profile.referral_code}</p>
+                <p className="text-lg font-mono font-bold text-futuristic-primary">{currentProfile.referral_code}</p>
                 <p className="text-sm text-muted-foreground">
                   Ganhos totais: R$ {referralStats.earnings.toFixed(2)}
                 </p>

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileRealtime } from "@/hooks/useProfileRealtime";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
@@ -25,6 +26,10 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const { profile: realtimeProfile } = useProfileRealtime(user?.id);
+
+  // Usar o perfil em tempo real se disponível, senão usar o perfil local
+  const currentProfile = realtimeProfile || profile;
 
   // Check authentication
   useEffect(() => {
@@ -36,10 +41,10 @@ export default function Dashboard() {
       return;
     }
 
-    if (user && !profile) {
+    if (user && !profile && !realtimeProfile) {
       fetchProfile();
     }
-  }, [user, isAuthenticated, navigate, profile]);
+  }, [user, isAuthenticated, navigate, profile, realtimeProfile]);
 
   // Get initial section from URL and handle content parameter
   useEffect(() => {
@@ -210,6 +215,7 @@ export default function Dashboard() {
   };
 
   const handleProfileUpdate = (updatedProfile: Profile) => {
+    console.log('Dashboard - handleProfileUpdate called with:', updatedProfile);
     setProfile(updatedProfile);
   };
 
@@ -228,7 +234,7 @@ export default function Dashboard() {
     return null; // Will redirect
   }
 
-  if (!profile) {
+  if (!currentProfile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
@@ -244,7 +250,7 @@ export default function Dashboard() {
       return (
         <TopicsRouter 
           contentId={selectedContentId} 
-          userPlan={profile.plan}
+          userPlan={currentProfile.plan}
           onBack={() => {
             setActiveSection('dashboard');
             setSelectedContentId(null);
@@ -263,7 +269,7 @@ export default function Dashboard() {
             contentType="products" 
             title="Produtos" 
             description="Acesse nossos produtos exclusivos"
-            userPlan={profile.plan}
+            userPlan={currentProfile.plan}
             onContentSelect={handleContentSelection}
           />
         );
@@ -273,7 +279,7 @@ export default function Dashboard() {
             contentType="tools" 
             title="Ferramentas" 
             description="Ferramentas poderosas para acelerar seus resultados"
-            userPlan={profile.plan}
+            userPlan={currentProfile.plan}
             onContentSelect={handleContentSelection}
           />
         );
@@ -283,7 +289,7 @@ export default function Dashboard() {
             contentType="courses" 
             title="Cursos" 
             description="Aprenda com nossos cursos exclusivos"
-            userPlan={profile.plan}
+            userPlan={currentProfile.plan}
             onContentSelect={handleContentSelection}
           />
         );
@@ -293,19 +299,19 @@ export default function Dashboard() {
             contentType="tutorials" 
             title="Tutoriais" 
             description="Tutoriais passo a passo para dominar as técnicas"
-            userPlan={profile.plan}
+            userPlan={currentProfile.plan}
             onContentSelect={handleContentSelection}
           />
         );
       case 'rules':
         return <RulesSection />;
       case 'coming-soon':
-        return <ComingSoonSection userPlan={profile.plan} />;
+        return <ComingSoonSection userPlan={currentProfile.plan} />;
       case 'carousel':
-        return <CarouselSection userPlan={profile.plan} />;
+        return <CarouselSection userPlan={currentProfile.plan} />;
       case 'profile':
       case 'settings':
-        return <ProfileSettings profile={profile} onProfileUpdate={handleProfileUpdate} />;
+        return <ProfileSettings profile={currentProfile} onProfileUpdate={handleProfileUpdate} />;
       default:
         return <DashboardContent onContentSelect={handleContentSelection} />;
     }
@@ -316,13 +322,13 @@ export default function Dashboard() {
       <Sidebar 
         activeSection={activeSection} 
         onNavigate={handleNavigation}
-        userPlan={profile.plan}
-        userRole={profile.role}
+        userPlan={currentProfile.plan}
+        userRole={currentProfile.role}
       />
       <main className="flex-1 overflow-auto">
         {renderActiveSection()}
       </main>
-      <SupportChat profile={profile} />
+      <SupportChat profile={currentProfile} />
     </div>
   );
 }
