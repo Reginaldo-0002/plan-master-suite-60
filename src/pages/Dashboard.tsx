@@ -128,7 +128,17 @@ export default function Dashboard() {
         return;
       }
 
+      // Get the actual role from user_roles table
+      const { data: roleData, error: roleError } = await supabase.rpc('get_current_user_role');
+      
+      console.log('Role check result:', { roleData, roleError });
+      
+      if (!roleError && roleData) {
+        data.role = roleData;
+      }
+
       console.log('Profile loaded:', data);
+      console.log('Profile role:', data.role);
       setProfile(data);
     } catch (error) {
       console.error('Profile fetch error:', error);

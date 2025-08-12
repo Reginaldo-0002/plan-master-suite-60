@@ -1441,6 +1441,10 @@ export type Database = {
         Args: { referrer_user_id: string; referred_plan: string }
         Returns: number
       }
+      check_user_role: {
+        Args: { target_role: string }
+        Returns: boolean
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string

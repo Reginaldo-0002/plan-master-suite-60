@@ -25,7 +25,10 @@ export const useRoleCheck = (): RoleCheckResult => {
     await handleAsyncError(async () => {
       const { data: { user } } = await supabase.auth.getUser();
       
+      console.log('useRoleCheck - Checking role for user:', user?.id);
+      
       if (!user) {
+        console.log('useRoleCheck - No user found');
         setRole(null);
         return;
       }
@@ -33,13 +36,17 @@ export const useRoleCheck = (): RoleCheckResult => {
       // Use the secure function to get user role
       const { data, error } = await supabase.rpc('get_current_user_role');
       
+      console.log('useRoleCheck - RPC response:', { data, error });
+      
       if (error) {
         console.error('Error fetching user role:', error);
         setRole('user'); // Default to user role
         return;
       }
 
-      setRole(data as UserRole || 'user');
+      const userRole = data as UserRole || 'user';
+      console.log('useRoleCheck - Setting role to:', userRole);
+      setRole(userRole);
     }, {
       title: "Erro ao verificar permissões",
       showToast: false

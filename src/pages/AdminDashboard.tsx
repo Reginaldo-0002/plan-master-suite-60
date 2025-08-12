@@ -73,7 +73,10 @@ const AdminDashboard = () => {
   }, []);
 
   const checkAuth = async () => {
+    console.log('AdminDashboard - checkAuth started, authenticated:', isAuthenticated, 'user:', user?.id);
+    
     if (!isAuthenticated || !user) {
+      console.log('AdminDashboard - Not authenticated, redirecting to auth');
       navigate("/auth");
       return;
     }
@@ -86,6 +89,8 @@ const AdminDashboard = () => {
         .select('*')
         .eq('user_id', user.id)
         .single();
+
+      console.log('AdminDashboard - Profile fetch result:', { profileData, profileError });
 
       if (profileError) {
         console.error('Error fetching profile:', profileError);
@@ -107,6 +112,8 @@ const AdminDashboard = () => {
       // Check user role securely using the new role system
       const { data: userRole, error: roleError } = await supabase.rpc('get_current_user_role');
       
+      console.log('AdminDashboard - Role check result:', { userRole, roleError });
+      
       if (roleError) {
         console.error('Error fetching user role:', roleError);
         navigate("/dashboard");
@@ -114,6 +121,7 @@ const AdminDashboard = () => {
       }
 
       if (!userRole || (userRole !== 'admin' && userRole !== 'moderator')) {
+        console.log('AdminDashboard - Access denied for role:', userRole);
         toast({
           title: "Acesso Negado",
           description: "Você não tem permissão para acessar o painel administrativo",
@@ -123,6 +131,7 @@ const AdminDashboard = () => {
         return null;
       }
 
+      console.log('AdminDashboard - Access granted for role:', userRole);
       // Update profile with the secure role
       profileData.role = userRole;
       setProfile(profileData as Profile);
@@ -133,6 +142,7 @@ const AdminDashboard = () => {
     });
 
     if (!result) {
+      console.log('AdminDashboard - Auth failed, redirecting to auth');
       navigate("/auth");
     }
     
