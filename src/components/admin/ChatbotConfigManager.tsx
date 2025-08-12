@@ -59,16 +59,25 @@ export const ChatbotConfigManager = () => {
   const saveConfig = async (newConfig: ChatbotConfig) => {
     setIsLoading(true);
     try {
+      console.log('Saving chatbot config:', newConfig);
+      
       // Primeiro, tentar buscar se já existe
-      const { data: existingData } = await supabase
+      const { data: existingData, error: selectError } = await supabase
         .from('admin_settings')
-        .select('id')
+        .select('id, key')
         .eq('key', 'chatbot_config')
         .maybeSingle();
+
+      console.log('Existing data check:', { existingData, selectError });
+
+      if (selectError && selectError.code !== 'PGRST116') {
+        throw selectError;
+      }
 
       let result;
       if (existingData) {
         // Se existe, fazer update
+        console.log('Updating existing record');
         result = await supabase
           .from('admin_settings')
           .update({
@@ -78,6 +87,7 @@ export const ChatbotConfigManager = () => {
           .eq('key', 'chatbot_config');
       } else {
         // Se não existe, fazer insert
+        console.log('Creating new record');
         result = await supabase
           .from('admin_settings')
           .insert({
@@ -86,9 +96,16 @@ export const ChatbotConfigManager = () => {
           });
       }
 
-      if (result.error) throw result.error;
+      console.log('Database operation result:', result);
+
+      if (result.error) {
+        console.error('Database error:', result.error);
+        throw result.error;
+      }
 
       setConfig(newConfig);
+      console.log('Config updated successfully in state');
+      
       toast({
         title: "Sucesso",
         description: "Configuração do chatbot salva com sucesso",
@@ -97,7 +114,7 @@ export const ChatbotConfigManager = () => {
       console.error('Error saving chatbot config:', error);
       toast({
         title: "Erro",
-        description: "Falha ao salvar configuração do chatbot",
+        description: `Falha ao salvar configuração: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive",
       });
     } finally {
@@ -115,19 +132,33 @@ export const ChatbotConfigManager = () => {
       return;
     }
 
-    const option: MenuOption = {
-      id: Date.now().toString(),
-      title: newOption.title.trim(),
-      response: newOption.response.trim(),
-    };
+    try {
+      console.log('Adding chatbot option:', newOption);
+      
+      const option: MenuOption = {
+        id: Date.now().toString(),
+        title: newOption.title.trim(),
+        response: newOption.response.trim(),
+      };
 
-    const newConfig = {
-      ...config,
-      menu_options: [...config.menu_options, option]
-    };
+      const newConfig = {
+        ...config,
+        menu_options: [...config.menu_options, option]
+      };
 
-    await saveConfig(newConfig);
-    setNewOption({ title: "", response: "" });
+      console.log('New config to save:', newConfig);
+      await saveConfig(newConfig);
+      setNewOption({ title: "", response: "" });
+      
+      console.log('Chatbot option added successfully');
+    } catch (error) {
+      console.error('Error adding chatbot option:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao adicionar opção do chatbot",
+        variant: "destructive",
+      });
+    }
   };
 
   const updateOption = async () => {
@@ -140,24 +171,57 @@ export const ChatbotConfigManager = () => {
       return;
     }
 
-    const newConfig = {
-      ...config,
-      menu_options: config.menu_options.map(opt => 
-        opt.id === editingOption.id ? editingOption : opt
-      )
-    };
+    try {
+      console.log('Updating chatbot option:', editingOption);
+      
+      const newConfig = {
+        ...config,
+        menu_options: config.menu_options.map(opt => 
+          opt.id === editingOption.id ? editingOption : opt
+        )
+      };
 
-    await saveConfig(newConfig);
-    setEditingOption(null);
+      console.log('Updated config to save:', newConfig);
+      await saveConfig(newConfig);
+      setEditingOption(null);
+      
+      console.log('Chatbot option updated successfully');
+    } catch (error) {
+      console.error('Error updating chatbot option:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao atualizar opção do chatbot",
+        variant: "destructive",
+      });
+    }
   };
 
   const removeOption = async (optionId: string) => {
-    const newConfig = {
-      ...config,
-      menu_options: config.menu_options.filter(opt => opt.id !== optionId)
-    };
+    try {
+      console.log('Removing chatbot option with ID:', optionId);
+      console.log('Current config:', config);
+      
+      const newConfig = {
+        ...config,
+        menu_options: config.menu_options.filter(opt => opt.id !== optionId)
+      };
 
-    await saveConfig(newConfig);
+      console.log('New config after removal:', newConfig);
+      await saveConfig(newConfig);
+      
+      console.log('Chatbot option removed successfully');
+      toast({
+        title: "Sucesso",
+        description: "Opção removida com sucesso",
+      });
+    } catch (error) {
+      console.error('Error removing chatbot option:', error);
+      toast({
+        title: "Erro",
+        description: "Falha ao remover opção do chatbot",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
