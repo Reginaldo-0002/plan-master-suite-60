@@ -12,7 +12,10 @@ interface RequireRoleProps {
 export const RequireRole = ({ children, role, fallback }: RequireRoleProps) => {
   const { hasRole, loading } = useRoleCheck();
 
+  console.log('RequireRole - role check:', { hasRole: hasRole(role), loading, requiredRole: role });
+
   if (loading) {
+    console.log('RequireRole - Still loading, showing spinner');
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

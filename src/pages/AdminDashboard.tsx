@@ -66,14 +66,22 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { handleAsyncError } = useErrorHandler();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    checkAuth();
-  }, []);
+    if (!loading) {
+      checkAuth();
+    }
+  }, [isAuthenticated, user, loading]);
 
   const checkAuth = async () => {
-    console.log('AdminDashboard - checkAuth started, authenticated:', isAuthenticated, 'user:', user?.id);
+    console.log('AdminDashboard - checkAuth started, loading:', loading, 'authenticated:', isAuthenticated, 'user:', user?.id);
+    
+    // Não fazer nada se ainda está carregando
+    if (loading) {
+      console.log('AdminDashboard - Still loading, waiting...');
+      return;
+    }
     
     if (!isAuthenticated || !user) {
       console.log('AdminDashboard - Not authenticated, redirecting to auth');
@@ -173,7 +181,7 @@ const AdminDashboard = () => {
     setActiveSection('content');
   };
 
-  if (loading) {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />

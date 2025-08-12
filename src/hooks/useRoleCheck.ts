@@ -18,7 +18,17 @@ export const useRoleCheck = (): RoleCheckResult => {
   const { handleAsyncError } = useErrorHandler();
 
   useEffect(() => {
-    checkUserRole();
+    // Aguardar a autenticação estar pronta antes de verificar role
+    const checkWhenReady = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        checkUserRole();
+      } else {
+        setLoading(false);
+      }
+    };
+    
+    checkWhenReady();
   }, []);
 
   const checkUserRole = async () => {
