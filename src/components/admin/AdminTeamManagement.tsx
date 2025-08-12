@@ -24,12 +24,14 @@ interface TeamMember {
   areas_accessed: number;
 }
 
+type UserRole = 'admin' | 'moderator' | 'user';
+
 export const AdminTeamManagement = () => {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMember, setSelectedMember] = useState<TeamMember | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [newRole, setNewRole] = useState("");
+  const [newRole, setNewRole] = useState<UserRole>("user");
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
@@ -90,12 +92,12 @@ export const AdminTeamManagement = () => {
     try {
       console.log('Updating member role:', { userId: selectedMember.user_id, newRole });
       
-      // Usar upsert na tabela user_roles (não profiles)
+      // Usar upsert na tabela user_roles com type assertion
       const { error } = await supabase
         .from('user_roles')
         .upsert({ 
           user_id: selectedMember.user_id,
-          role: newRole
+          role: newRole as UserRole
         }, {
           onConflict: 'user_id'
         });
@@ -114,7 +116,7 @@ export const AdminTeamManagement = () => {
       
       setIsEditDialogOpen(false);
       setSelectedMember(null);
-      setNewRole("");
+      setNewRole("user");
       
       // Aguardar um pouco e recarregar os dados
       setTimeout(() => {
@@ -144,7 +146,7 @@ export const AdminTeamManagement = () => {
         .from('user_roles')
         .upsert({ 
           user_id: userId,
-          role: 'user'
+          role: 'user' as UserRole
         }, {
           onConflict: 'user_id'
         });
@@ -173,7 +175,7 @@ export const AdminTeamManagement = () => {
   const openEditDialog = (member: TeamMember) => {
     console.log('Opening edit dialog for member:', member);
     setSelectedMember(member);
-    setNewRole(member.role);
+    setNewRole(member.role as UserRole);
     setIsEditDialogOpen(true);
   };
 
@@ -373,7 +375,7 @@ export const AdminTeamManagement = () => {
               
               <div>
                 <Label htmlFor="role">Novo Cargo</Label>
-                <Select value={newRole} onValueChange={setNewRole}>
+                <Select value={newRole} onValueChange={(value: UserRole) => setNewRole(value)}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
