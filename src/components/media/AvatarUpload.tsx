@@ -96,14 +96,9 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       // Force immediate UI update
       onAvatarUpdate(publicUrl);
       
-      // Force page refresh to ensure cache is cleared
-      setTimeout(() => {
-        window.location.reload();
-      }, 1000);
-      
       toast({
         title: "Sucesso",
-        description: "Avatar atualizado com sucesso! A página será recarregada para refletir as mudanças.",
+        description: "Avatar atualizado com sucesso!",
       });
 
     } catch (error: any) {
@@ -130,8 +125,10 @@ export const AvatarUpload = ({ currentAvatarUrl, onAvatarUpdate, userId, userNam
       <div className="relative">
         <Avatar className="h-24 w-24">
           <AvatarImage 
-            src={currentAvatarUrl ? `${currentAvatarUrl}?v=${Date.now()}` : ""} 
-            key={currentAvatarUrl ? `${currentAvatarUrl}-${Date.now()}` : 'default'}
+            src={currentAvatarUrl || ""} 
+            key={`avatar-${currentAvatarUrl}-${Date.now()}`}
+            onLoad={() => console.log('Avatar loaded:', currentAvatarUrl)}
+            onError={() => console.log('Avatar load error:', currentAvatarUrl)}
           />
           <AvatarFallback className="text-lg">
             {userName ? userName.charAt(0).toUpperCase() : "U"}

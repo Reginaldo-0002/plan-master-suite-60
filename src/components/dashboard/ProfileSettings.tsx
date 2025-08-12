@@ -79,8 +79,14 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
   };
 
   const handleAvatarUpdate = (newAvatarUrl: string) => {
-    const updatedProfile = { ...currentProfile, avatar_url: newAvatarUrl };
+    console.log('🖼️ Avatar updated, new URL:', newAvatarUrl);
+    const updatedProfile = { ...currentProfile, avatar_url: newAvatarUrl, updated_at: new Date().toISOString() };
     onProfileUpdate(updatedProfile);
+    
+    // Force component re-render
+    setTimeout(() => {
+      window.location.reload();
+    }, 1000);
   };
 
   return (

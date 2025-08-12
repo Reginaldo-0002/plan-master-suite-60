@@ -54,7 +54,11 @@ export const useProfileRealtime = (userId: string | undefined) => {
           console.log('🔄 Profile update received:', payload);
           if (payload.eventType === 'UPDATE' && payload.new) {
             console.log('✨ Updating profile with new data:', payload.new);
-            setProfile(payload.new as Profile);
+            const newProfile = payload.new as Profile;
+            setProfile(prevProfile => {
+              // Force re-render by creating a new object
+              return { ...newProfile, updated_at: new Date().toISOString() };
+            });
           } else {
             // Se não recebeu os dados corretos, refetch
             console.log('🔄 Refetching profile data...');
