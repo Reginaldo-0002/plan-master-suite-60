@@ -33,6 +33,8 @@ export default function Dashboard() {
       const sectionParam = urlParams.get('section');
       const contentParam = urlParams.get('content');
       
+      console.log('URL changed - section:', sectionParam, 'content:', contentParam);
+      
       if (contentParam) {
         console.log('Dashboard detected content param:', contentParam);
         setSelectedContentId(contentParam);
@@ -73,7 +75,7 @@ export default function Dashboard() {
     // Initial load
     handlePopState();
 
-    // Listen for popstate events
+    // Listen for popstate events and custom events
     window.addEventListener('popstate', handlePopState);
     
     return () => {

@@ -112,9 +112,13 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
           metadata: { content_type: contentItem.content_type }
         }]);
 
-      // Navigate to topics page
+      // Use React Router navigation instead of window.location.href
       console.log('Navigating to topics with content ID:', contentItem.id);
-      window.location.href = `/?section=topics&content=${contentItem.id}`;
+      const newUrl = `/?section=topics&content=${contentItem.id}`;
+      window.history.pushState(null, '', newUrl);
+      
+      // Dispatch a custom event to trigger re-render
+      window.dispatchEvent(new PopStateEvent('popstate'));
     } catch (error) {
       console.error('Error accessing content:', error);
       toast({
