@@ -254,6 +254,33 @@ export const AdminSupportManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      // Primeiro verificar se o usuário está bloqueado
+      const { data: restrictions, error: restrictionError } = await supabase
+        .from('user_chat_restrictions')
+        .select('*')
+        .eq('user_id', selectedTicket.user_id)
+        .order('created_at', { ascending: false });
+
+      if (restrictionError) {
+        console.error('Error checking restrictions:', restrictionError);
+      }
+
+      // Verificar se há bloqueio ativo
+      const now = new Date();
+      const activeRestriction = restrictions?.find(r => {
+        if (!r.blocked_until) return false;
+        return new Date(r.blocked_until) > now;
+      });
+
+      if (activeRestriction) {
+        toast({
+          title: "Usuário Bloqueado",
+          description: `Este usuário está bloqueado até ${new Date(activeRestriction.blocked_until).toLocaleString('pt-BR')}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
       const { error } = await supabase
         .from('support_messages')
         .insert({

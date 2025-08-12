@@ -44,18 +44,40 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const { restriction, loading: restrictionLoading } = useChatRestrictions(profile?.user_id);
 
   useEffect(() => {
-    console.log('🎯 [SUPPORT CHAT] useEffect triggered - Chat opened:', isOpen, 'Ticket ID:', ticketId);
-    console.log('🎯 [SUPPORT CHAT] Profile received:', profile);
-    console.log('🎯 [SUPPORT CHAT] Profile user_id:', profile?.user_id);
-    console.log('🎯 [SUPPORT CHAT] Current restriction state:', restriction);
-    console.log('🎯 [SUPPORT CHAT] Restriction loading state:', restrictionLoading);
-    console.log('🎯 [SUPPORT CHAT] Is blocked?:', restriction.isBlocked);
-    
     if (isOpen && !ticketId) {
       createOrGetTicket();
       loadChatOptions();
     }
-  }, [isOpen, profile?.user_id, restriction]);
+  }, [isOpen, profile?.user_id]);
+
+  // Set up real-time subscription for new messages from admin
+  useEffect(() => {
+    if (!ticketId || !profile?.user_id) return;
+
+    const channel = supabase
+      .channel(`ticket-messages-${ticketId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'support_messages',
+          filter: `ticket_id=eq.${ticketId}`
+        },
+        (payload) => {
+          console.log('New message received:', payload);
+          // Atualizar mensagens se não for do próprio usuário
+          if (payload.new.sender_id !== profile.user_id) {
+            setMessages(prev => [...prev, payload.new as Message]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [ticketId, profile?.user_id]);
 
   useEffect(() => {
     scrollToBottom();
@@ -275,6 +297,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
     setLoading(true);
     try {
+      // Primeiro salvar a mensagem no ticket
       const { data: messageData, error } = await supabase
         .from('support_messages')
         .insert([
@@ -294,7 +317,33 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       setNewMessage("");
       setShowOptions(false);
 
-      // Simular resposta automática após 1 segundo
+      // Forward message to admin via edge function
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const response = await fetch('https://srnwogrjwhqjjyodxalx.supabase.co/functions/v1/admin-chat-handler', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session?.access_token || ''}`
+          },
+          body: JSON.stringify({
+            action: 'forward_to_admin',
+            userId: profile.user_id,
+            message: newMessage.trim()
+          })
+        });
+
+        if (!response.ok) {
+          console.log('Failed to forward to admin, but message was saved');
+        } else {
+          console.log('Message forwarded to admin successfully');
+        }
+      } catch (forwardError) {
+        console.error('Error forwarding to admin:', forwardError);
+        // Não bloquear o usuário se houver erro no forwarding
+      }
+
+      // Resposta automática
       setTimeout(() => {
         const autoReply = {
           id: `auto-${Date.now()}`,
