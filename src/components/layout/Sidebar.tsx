@@ -19,7 +19,8 @@ import {
   Star,
   FileText,
   Calendar,
-  Images
+  Images,
+  Shield
 } from "lucide-react";
 
 type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings" | "topics";
@@ -127,6 +128,17 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
 
       {/* Footer */}
       <div className="p-4 border-t border-border space-y-2 bg-card/50 backdrop-blur-sm">
+        {userRole === 'admin' && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-orange-600 hover:bg-orange-50 hover:text-orange-700 border border-transparent hover:border-orange-200 transition-all duration-300"
+            onClick={() => navigate('/admin')}
+          >
+            <Shield className="w-4 h-4 mr-3" />
+            Painel Admin
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="sm"
