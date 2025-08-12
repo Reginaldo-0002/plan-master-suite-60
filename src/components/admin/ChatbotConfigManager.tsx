@@ -64,8 +64,6 @@ export const ChatbotConfigManager = () => {
         .upsert({
           key: 'chatbot_config',
           value: newConfig as any
-        }, {
-          onConflict: 'key'
         });
 
       if (error) throw error;

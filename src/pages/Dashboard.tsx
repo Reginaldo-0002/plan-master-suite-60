@@ -250,7 +250,7 @@ export default function Dashboard() {
       case 'products':
         return (
           <ContentSection 
-            contentType="produto" 
+            contentType="products" 
             title="Produtos" 
             description="Acesse nossos produtos exclusivos"
             userPlan={profile.plan}
@@ -260,7 +260,7 @@ export default function Dashboard() {
       case 'tools':
         return (
           <ContentSection 
-            contentType="ferramenta" 
+            contentType="tools" 
             title="Ferramentas" 
             description="Ferramentas poderosas para acelerar seus resultados"
             userPlan={profile.plan}
@@ -270,7 +270,7 @@ export default function Dashboard() {
       case 'courses':
         return (
           <ContentSection 
-            contentType="curso" 
+            contentType="courses" 
             title="Cursos" 
             description="Aprenda com nossos cursos exclusivos"
             userPlan={profile.plan}
@@ -280,7 +280,7 @@ export default function Dashboard() {
       case 'tutorials':
         return (
           <ContentSection 
-            contentType="tutorial" 
+            contentType="tutorials" 
             title="Tutoriais" 
             description="Tutoriais passo a passo para dominar as técnicas"
             userPlan={profile.plan}

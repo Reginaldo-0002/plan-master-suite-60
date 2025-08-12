@@ -115,11 +115,11 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
           metadata: { content_type: contentItem.content_type }
         }]);
 
-      // Use React Router navigation instead of window.location.href
+      // Use callback function passed from parent instead of redirecting
       console.log('Navigating to topics with content ID:', contentItem.id);
-      
-      // Force a page reload to ensure proper navigation
-      window.location.href = `/?section=topics&content=${contentItem.id}`;
+      if (onContentSelect) {
+        onContentSelect(contentItem.id);
+      }
     } catch (error) {
       console.error('Error accessing content:', error);
       toast({
