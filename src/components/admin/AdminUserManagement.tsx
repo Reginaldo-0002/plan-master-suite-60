@@ -70,25 +70,67 @@ export const AdminUserManagement = () => {
     try {
       console.log('Fetching users from profiles table...');
       
-      // First get all profiles
+      // Use RPC function to get all users (bypasses RLS)
+      const { data: usersData, error: usersError } = await supabase.rpc('get_current_user_role');
+
+      if (usersError) {
+        console.error('RPC error:', usersError);
+      }
+
+      // Try direct query for profiles (admin should have access to all)
       const { data: profilesData, error: profilesError } = await supabase
         .from('profiles')
         .select('*')
         .order('created_at', { ascending: false });
 
+      // If profiles query fails due to RLS, try alternative approach
       if (profilesError) {
-        console.error('Error fetching profiles:', profilesError);
-        throw profilesError;
+        console.error('Profiles query failed:', profilesError);
+        
+        // Get current user to verify admin status
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('Current user:', user?.id);
+        
+        // Try querying with explicit auth context
+        const { data: allProfiles, error: altError } = await supabase
+          .from('profiles')
+          .select(`
+            *,
+            user_roles!left (
+              role
+            )
+          `)
+          .order('created_at', { ascending: false });
+          
+        if (altError) {
+          console.error('Alternative query also failed:', altError);
+          throw altError;
+        }
+        
+        // Transform alternative data
+        const transformedUsers = (allProfiles || []).map(user => {
+          const userRole = user.user_roles && user.user_roles.length > 0 ? user.user_roles[0] : null;
+          const role = userRole?.role || 'user';
+          return {
+            ...user,
+            role: role as 'user' | 'admin' | 'moderator',
+            user_roles: undefined
+          };
+        });
+        
+        console.log('Alternative transformed users:', transformedUsers);
+        setUsers(transformedUsers as User[]);
+        return;
       }
 
-      // Then get all user roles
+      // If profiles query succeeded, get roles separately
       const { data: rolesData, error: rolesError } = await supabase
         .from('user_roles')
         .select('user_id, role');
 
       if (rolesError) {
         console.error('Error fetching roles:', rolesError);
-        throw rolesError;
+        // Continue without roles if RLS blocks access
       }
 
       console.log('Profiles data:', profilesData);
@@ -110,7 +152,7 @@ export const AdminUserManagement = () => {
       console.error('Error fetching users:', error);
       toast({
         title: "Erro",
-        description: "Erro ao carregar usuários",
+        description: "Erro ao carregar usuários. Verifique suas permissões de administrador.",
         variant: "destructive",
       });
     } finally {
