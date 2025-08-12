@@ -61,48 +61,54 @@ export const ChatbotConfigManager = () => {
     try {
       console.log('Saving chatbot config:', newConfig);
       
-      // Primeiro, tentar buscar se já existe
-      const { data: existingData, error: selectError } = await supabase
+      // Buscar o registro existente usando maybeSingle para evitar erro se não existir
+      const { data: existingRecord, error: selectError } = await supabase
         .from('admin_settings')
-        .select('id, key')
+        .select('id, key, value')
         .eq('key', 'chatbot_config')
         .maybeSingle();
 
-      console.log('Existing data check:', { existingData, selectError });
+      console.log('Existing record check:', { existingRecord, selectError });
 
+      // Se houve erro na busca (exceto "no rows"), lance o erro
       if (selectError && selectError.code !== 'PGRST116') {
+        console.error('Error selecting existing record:', selectError);
         throw selectError;
       }
 
       let result;
-      if (existingData) {
-        // Se existe, fazer update
-        console.log('Updating existing record');
+      
+      if (existingRecord && existingRecord.id) {
+        // Se existe, fazer UPDATE usando o ID específico
+        console.log('Updating existing record with ID:', existingRecord.id);
         result = await supabase
           .from('admin_settings')
           .update({
             value: newConfig as any,
             updated_at: new Date().toISOString()
           })
-          .eq('key', 'chatbot_config');
+          .eq('id', existingRecord.id)
+          .select();
       } else {
-        // Se não existe, fazer insert
-        console.log('Creating new record');
+        // Se não existe, fazer INSERT
+        console.log('Creating new record for chatbot_config');
         result = await supabase
           .from('admin_settings')
           .insert({
             key: 'chatbot_config',
             value: newConfig as any
-          });
+          })
+          .select();
       }
 
       console.log('Database operation result:', result);
 
       if (result.error) {
-        console.error('Database error:', result.error);
+        console.error('Database operation error:', result.error);
         throw result.error;
       }
 
+      // Atualizar estado local
       setConfig(newConfig);
       console.log('Config updated successfully in state');
       
@@ -110,11 +116,12 @@ export const ChatbotConfigManager = () => {
         title: "Sucesso",
         description: "Configuração do chatbot salva com sucesso",
       });
-    } catch (error) {
+      
+    } catch (error: any) {
       console.error('Error saving chatbot config:', error);
       toast({
         title: "Erro",
-        description: `Falha ao salvar configuração: ${error.message || 'Erro desconhecido'}`,
+        description: `Falha ao salvar: ${error?.message || 'Erro desconhecido'}`,
         variant: "destructive",
       });
     } finally {
