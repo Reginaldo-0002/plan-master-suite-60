@@ -134,8 +134,8 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
             size="sm"
             className="w-full justify-start text-orange-600 hover:bg-orange-50 hover:text-orange-700 border border-transparent hover:border-orange-200 transition-all duration-300"
             onClick={() => {
-              console.log('Sidebar - Admin button clicked, navigating to /admin');
-              navigate('/admin');
+              console.log('Sidebar - Admin Panel button clicked, navigating to /admin');
+              window.location.href = '/admin';
             }}
           >
             <Shield className="w-4 h-4 mr-3" />
