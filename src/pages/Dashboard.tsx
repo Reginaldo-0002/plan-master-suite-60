@@ -10,54 +10,74 @@ import { ContentSection } from "@/components/dashboard/ContentSection";
 import { RulesSection } from "@/components/dashboard/RulesSection";
 import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { CarouselSection } from "@/components/dashboard/CarouselSection";
+import { TopicsGallery } from "@/components/topics/TopicsGallery";
 import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 
-type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "rules" | "coming-soon" | "carousel" | "profile" | "settings";
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "rules" | "coming-soon" | "carousel" | "profile" | "settings" | "topics";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeSection, setActiveSection] = useState<ActiveSection>("dashboard");
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Get initial section from URL
+  // Get initial section from URL and handle content parameter
   useEffect(() => {
-    const path = window.location.pathname;
-    const urlParams = new URLSearchParams(window.location.search);
-    const sectionParam = urlParams.get('section');
-    
-    if (sectionParam) {
-      setActiveSection(sectionParam as ActiveSection);
-    } else {
-      switch (path) {
-        case '/rules':
-          setActiveSection('rules');
-          break;
-        case '/em-breve':
-          setActiveSection('coming-soon');
-          break;
-        case '/carousel':
-          setActiveSection('carousel');
-          break;
-        case '/produtos':
-          setActiveSection('products');
-          break;
-        case '/cursos':
-          setActiveSection('courses');
-          break;
-        case '/ferramentas':
-          setActiveSection('tools');
-          break;
-        case '/tutoriais':
-          setActiveSection('tutorials');
-          break;
-        default:
-          setActiveSection('dashboard');
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const urlParams = new URLSearchParams(window.location.search);
+      const sectionParam = urlParams.get('section');
+      const contentParam = urlParams.get('content');
+      
+      if (contentParam) {
+        setSelectedContentId(contentParam);
+        setActiveSection('topics');
+      } else if (sectionParam) {
+        setActiveSection(sectionParam as ActiveSection);
+        setSelectedContentId(null);
+      } else {
+        switch (path) {
+          case '/rules':
+            setActiveSection('rules');
+            break;
+          case '/em-breve':
+            setActiveSection('coming-soon');
+            break;
+          case '/carousel':
+            setActiveSection('carousel');
+            break;
+          case '/produtos':
+            setActiveSection('products');
+            break;
+          case '/cursos':
+            setActiveSection('courses');
+            break;
+          case '/ferramentas':
+            setActiveSection('tools');
+            break;
+          case '/tutoriais':
+            setActiveSection('tutorials');
+            break;
+          default:
+            setActiveSection('dashboard');
+        }
+        setSelectedContentId(null);
       }
-    }
+    };
+
+    // Initial load
+    handlePopState();
+
+    // Listen for popstate events
+    window.addEventListener('popstate', handlePopState);
+    
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
   }, []);
 
   useEffect(() => {
@@ -166,6 +186,18 @@ export default function Dashboard() {
         return <ComingSoonSection />;
       case "carousel":
         return <CarouselSection userPlan={profile.plan} />;
+      case "topics":
+        return selectedContentId ? (
+          <TopicsGallery 
+            contentId={selectedContentId}
+            userPlan={profile.plan}
+            onBack={() => {
+              setActiveSection("dashboard");
+              setSelectedContentId(null);
+              window.history.pushState(null, '', '/');
+            }}
+          />
+        ) : <DashboardContent profile={profile} />;
       case "profile":
         return (
           <ProfileSettings
@@ -191,7 +223,8 @@ export default function Dashboard() {
         profile={profile}
         activeSection={activeSection} 
         onSectionChange={(section) => {
-          setActiveSection(section as ActiveSection);
+          setActiveSection(section);
+          setSelectedContentId(null);
           // Update URL without causing navigation issues
           window.history.pushState(null, '', `/?section=${section}`);
         }}

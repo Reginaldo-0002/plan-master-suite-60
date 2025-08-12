@@ -98,12 +98,31 @@ Estas regras podem ser alteradas a qualquer momento. Os usuários serão notific
   const saveRules = async () => {
     setSaving(true);
     try {
-      const { error } = await supabase
+      // Check if record exists
+      const { data: existing } = await supabase
         .from('admin_settings')
-        .upsert({ 
-          key: 'site_rules',
-          value: { content: rulesContent }
-        });
+        .select('id')
+        .eq('key', 'site_rules')
+        .single();
+
+      let error;
+      if (existing) {
+        // Update existing record
+        const result = await supabase
+          .from('admin_settings')
+          .update({ value: { content: rulesContent } })
+          .eq('key', 'site_rules');
+        error = result.error;
+      } else {
+        // Insert new record
+        const result = await supabase
+          .from('admin_settings')
+          .insert({ 
+            key: 'site_rules',
+            value: { content: rulesContent }
+          });
+        error = result.error;
+      }
 
       if (error) throw error;
 

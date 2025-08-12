@@ -121,8 +121,14 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
         .limit(1);
 
       if (topics && topics.length > 0) {
-        // Navigate to topics gallery
-        window.location.href = `/carousel?content=${contentItem.id}`;
+        // Show topics gallery - we'll handle this via parent component
+        if (window.location.pathname === '/') {
+          // Update URL parameter for dashboard routing
+          const url = new URL(window.location.href);
+          url.searchParams.set('content', contentItem.id);
+          window.history.pushState({}, '', url.toString());
+          window.dispatchEvent(new PopStateEvent('popstate'));
+        }
         return;
       }
 

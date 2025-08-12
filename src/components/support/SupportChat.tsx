@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, MessageCircle, X, Minimize2 } from "lucide-react";
+import { Send, MessageCircle, X, Minimize2, Bot } from "lucide-react";
 import { Profile } from "@/types/profile";
 
 interface Message {
@@ -16,6 +16,12 @@ interface Message {
   sender_id: string;
   created_at: string;
   is_bot: boolean;
+}
+
+interface ChatOption {
+  id: string;
+  text: string;
+  response: string;
 }
 
 interface SupportChatProps {
@@ -29,12 +35,15 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [ticketId, setTicketId] = useState<string | null>(null);
+  const [chatOptions, setChatOptions] = useState<ChatOption[]>([]);
+  const [showOptions, setShowOptions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen && !ticketId) {
       createOrGetTicket();
+      loadChatOptions();
     }
   }, [isOpen, profile.user_id]);
 
@@ -44,6 +53,51 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const loadChatOptions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('value')
+        .eq('key', 'chatbot_config')
+        .single();
+
+      if (error && error.code !== 'PGRST116') {
+        console.error('Error loading chat options:', error);
+        return;
+      }
+
+      if (data?.value && typeof data.value === 'object' && 'options' in data.value) {
+        setChatOptions((data.value.options as unknown) as ChatOption[]);
+      } else {
+        // Default chat options
+        setChatOptions([
+          {
+            id: '1',
+            text: 'Como funciona o programa de afiliados?',
+            response: 'Nosso programa de afiliados permite que você ganhe comissões indicando novos usuários. A cada venda realizada por seus indicados, você recebe uma porcentagem. É fácil e rentável!'
+          },
+          {
+            id: '2', 
+            text: 'Como posso fazer upgrade do meu plano?',
+            response: 'Para fazer upgrade, acesse as configurações do seu perfil e selecione o plano desejado. O upgrade é imediato e você terá acesso a todos os recursos premium.'
+          },
+          {
+            id: '3',
+            text: 'Preciso de ajuda técnica',
+            response: 'Nossa equipe de suporte técnico está aqui para ajudar! Descreva seu problema que um especialista responderá em breve.'
+          },
+          {
+            id: '4',
+            text: 'Informações sobre pagamento',
+            response: 'Aceitamos diversos métodos de pagamento incluindo cartão de crédito, PIX e boleto. Todos os pagamentos são seguros e processados imediatamente.'
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading chat options:', error);
+    }
   };
 
   const createOrGetTicket = async () => {
@@ -62,6 +116,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       if (existingTickets && existingTickets.length > 0) {
         setTicketId(existingTickets[0].id);
         await loadMessages(existingTickets[0].id);
+        setShowOptions(false);
       } else {
         // Criar novo ticket
         const { data: newTicket, error: createError } = await supabase
@@ -85,12 +140,13 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
         // Adicionar mensagem de boas-vindas
         const welcomeMessage = {
           id: 'welcome',
-          message: 'Olá! Como posso ajudá-lo hoje?',
+          message: 'Olá! Como posso ajudá-lo hoje? Escolha uma das opções abaixo ou digite sua pergunta:',
           sender_id: 'bot',
           created_at: new Date().toISOString(),
           is_bot: true
         };
         setMessages([welcomeMessage]);
+        setShowOptions(true);
       }
     } catch (error) {
       console.error('Error creating/getting ticket:', error);
@@ -117,6 +173,50 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     }
   };
 
+  const handleOptionClick = async (option: ChatOption) => {
+    if (!ticketId) return;
+
+    setShowOptions(false);
+    setLoading(true);
+
+    try {
+      // Add user's option selection as a message
+      const { data: userMessage, error: userError } = await supabase
+        .from('support_messages')
+        .insert([
+          {
+            ticket_id: ticketId,
+            sender_id: profile.user_id,
+            message: option.text,
+            is_bot: false
+          }
+        ])
+        .select()
+        .single();
+
+      if (userError) throw userError;
+
+      setMessages(prev => [...prev, userMessage]);
+
+      // Add bot response
+      setTimeout(async () => {
+        const botResponse = {
+          id: `bot-${Date.now()}`,
+          message: option.response,
+          sender_id: 'bot',
+          created_at: new Date().toISOString(),
+          is_bot: true
+        };
+        setMessages(prev => [...prev, botResponse]);
+        setLoading(false);
+      }, 1000);
+
+    } catch (error) {
+      console.error('Error handling option click:', error);
+      setLoading(false);
+    }
+  };
+
   const sendMessage = async () => {
     if (!newMessage.trim() || !ticketId || loading) return;
 
@@ -139,6 +239,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
       setMessages(prev => [...prev, messageData]);
       setNewMessage("");
+      setShowOptions(false);
 
       // Simular resposta automática após 1 segundo
       setTimeout(() => {
@@ -250,6 +351,26 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                       </div>
                     </div>
                   ))}
+                  {showOptions && chatOptions.length > 0 && (
+                    <div className="space-y-2 mt-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Bot className="w-4 h-4" />
+                        <span>Opções rápidas:</span>
+                      </div>
+                      {chatOptions.map((option) => (
+                        <Button
+                          key={option.id}
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-left justify-start text-wrap h-auto py-2 px-3"
+                          onClick={() => handleOptionClick(option)}
+                          disabled={loading}
+                        >
+                          {option.text}
+                        </Button>
+                      ))}
+                    </div>
+                  )}
                   <div ref={messagesEndRef} />
                 </div>
               </ScrollArea>
