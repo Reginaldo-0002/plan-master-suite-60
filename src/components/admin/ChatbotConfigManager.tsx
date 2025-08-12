@@ -61,51 +61,40 @@ export const ChatbotConfigManager = () => {
     try {
       console.log('Saving chatbot config:', newConfig);
       
-      // Buscar o registro existente usando maybeSingle para evitar erro se não existir
-      const { data: existingRecord, error: selectError } = await supabase
+      // CORREÇÃO DEFINITIVA: Sempre usar UPDATE pois sabemos que o registro já existe
+      // A tabela admin_settings funciona como chave-valor, não deve haver INSERT duplicado
+      const { data, error } = await supabase
         .from('admin_settings')
-        .select('id, key, value')
+        .update({
+          value: newConfig as any,
+          updated_at: new Date().toISOString()
+        })
         .eq('key', 'chatbot_config')
-        .maybeSingle();
+        .select();
 
-      console.log('Existing record check:', { existingRecord, selectError });
+      console.log('Update operation result:', { data, error });
 
-      // Se houve erro na busca (exceto "no rows"), lance o erro
-      if (selectError && selectError.code !== 'PGRST116') {
-        console.error('Error selecting existing record:', selectError);
-        throw selectError;
+      if (error) {
+        console.error('Database operation error:', error);
+        throw error;
       }
 
-      let result;
-      
-      if (existingRecord && existingRecord.id) {
-        // Se existe, fazer UPDATE usando o ID específico
-        console.log('Updating existing record with ID:', existingRecord.id);
-        result = await supabase
-          .from('admin_settings')
-          .update({
-            value: newConfig as any,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingRecord.id)
-          .select();
-      } else {
-        // Se não existe, fazer INSERT
-        console.log('Creating new record for chatbot_config');
-        result = await supabase
+      // Se não atualizou nenhuma linha, significa que não existe o registro
+      if (!data || data.length === 0) {
+        console.log('No record found, creating new one');
+        const { data: insertData, error: insertError } = await supabase
           .from('admin_settings')
           .insert({
             key: 'chatbot_config',
             value: newConfig as any
           })
           .select();
-      }
 
-      console.log('Database operation result:', result);
-
-      if (result.error) {
-        console.error('Database operation error:', result.error);
-        throw result.error;
+        if (insertError) {
+          console.error('Insert error:', insertError);
+          throw insertError;
+        }
+        console.log('Record created:', insertData);
       }
 
       // Atualizar estado local
