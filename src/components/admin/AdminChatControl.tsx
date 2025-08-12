@@ -119,7 +119,20 @@ export const AdminChatControl = () => {
   const toggleGlobalChatBlock = async () => {
     setIsLoading(true);
     try {
-      const blockUntil = globalChatBlocked ? null : (globalBlockUntil ? new Date(globalBlockUntil) : new Date(Date.now() + 24 * 60 * 60 * 1000));
+      console.log('🔄 Toggling global chat block. Current state:', globalChatBlocked);
+      
+      let blockUntil;
+      if (globalChatBlocked) {
+        // Desbloqueando: definir como null para desbloquear
+        blockUntil = null;
+        console.log('🔓 Desbloqueando chat global');
+      } else {
+        // Bloqueando: usar data definida ou 24h por padrão
+        const currentTime = new Date();
+        const saoPauloTime = new Date(currentTime.toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+        blockUntil = globalBlockUntil ? new Date(globalBlockUntil) : new Date(saoPauloTime.getTime() + 24 * 60 * 60 * 1000);
+        console.log('🔒 Bloqueando chat global até:', blockUntil.toISOString());
+      }
 
       const { error } = await supabase
         .from('admin_settings')
@@ -131,15 +144,30 @@ export const AdminChatControl = () => {
           onConflict: 'key'
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Erro ao atualizar configuração:', error);
+        throw error;
+      }
 
+      console.log('✅ Configuração global atualizada com sucesso');
+      
+      // Atualizar estado local
       setGlobalChatBlocked(!globalChatBlocked);
+      if (!globalChatBlocked && globalBlockUntil) {
+        setGlobalBlockUntil(""); // Limpar data quando desbloqueando
+      }
+      
+      // Recarregar configurações para garantir sincronia
+      setTimeout(() => {
+        fetchChatSettings();
+      }, 500);
+
       toast({
         title: "Sucesso",
         description: `Chat global ${!globalChatBlocked ? 'bloqueado' : 'desbloqueado'} com sucesso`,
       });
     } catch (error) {
-      console.error('Error updating global chat:', error);
+      console.error('💥 Error updating global chat:', error);
       toast({
         title: "Erro",
         description: "Erro ao atualizar configuração do chat",
