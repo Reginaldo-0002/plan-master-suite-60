@@ -55,6 +55,8 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
   const fetchContent = async () => {
     try {
+      console.log('🔍 Fetching content for type:', contentType, 'user plan:', userPlan);
+      
       let query = supabase
         .from('content')
         .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')
@@ -69,8 +71,10 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
       const { data, error } = await query;
 
+      console.log('📝 Content query result for', contentType, ':', { data, error, count: data?.length });
+      
       if (error) {
-        console.error('Error fetching content:', error);
+        console.error('❌ Error fetching content:', error);
         toast({
           title: "Erro",
           description: "Falha ao carregar conteúdo",
@@ -85,6 +89,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
         release_date: item.scheduled_publish_at
       }));
 
+      console.log('✅ Content mapped for', contentType, ':', mappedData.length, 'items');
       setContent(mappedData);
     } catch (error) {
       console.error('Error:', error);
