@@ -127,6 +127,8 @@ export const AdminChatControl = () => {
           key: 'global_chat_settings',
           value: {},
           chat_blocked_until: blockUntil?.toISOString()
+        }, {
+          onConflict: 'key'
         });
 
       if (error) throw error;

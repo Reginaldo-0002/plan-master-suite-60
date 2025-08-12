@@ -266,7 +266,10 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
             {!resourcesLoading && resources.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-muted-foreground">
-                  Nenhum recurso disponível neste tópico
+                  Nenhum recurso disponível neste tópico no momento.
+                </p>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Os recursos (vídeos, PDFs, links) aparecerão aqui quando forem adicionados pelos administradores.
                 </p>
               </div>
             )}

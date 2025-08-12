@@ -61,9 +61,9 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
         .from('admin_settings')
         .select('value')
         .eq('key', 'chatbot_config')
-        .single();
+        .maybeSingle();
 
-      if (error && error.code !== 'PGRST116') {
+      if (error) {
         console.error('Error loading chat options:', error);
         return;
       }
