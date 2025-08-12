@@ -80,7 +80,14 @@ export const AdminUserManagement = () => {
       }
 
       console.log('RPC users data:', usersData);
-      setUsers(usersData as User[]);
+      
+      // Ensure proper typing of the users data
+      const typedUsers = (usersData || []).map(user => ({
+        ...user,
+        role: user.role as 'user' | 'admin' | 'moderator'
+      }));
+      
+      setUsers(typedUsers as User[]);
       
     } catch (error) {
       console.error('Error fetching users:', error);
