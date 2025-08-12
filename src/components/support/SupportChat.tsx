@@ -44,10 +44,12 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const { restriction, loading: restrictionLoading } = useChatRestrictions(profile?.user_id);
 
   useEffect(() => {
-    console.log('🎯 [SUPPORT CHAT] useEffect triggered - Chat opened:', isOpen, 'Ticket ID:', ticketId, 'User ID:', profile?.user_id);
-    console.log('🎯 [SUPPORT CHAT] Profile object:', profile);
+    console.log('🎯 [SUPPORT CHAT] useEffect triggered - Chat opened:', isOpen, 'Ticket ID:', ticketId);
+    console.log('🎯 [SUPPORT CHAT] Profile received:', profile);
+    console.log('🎯 [SUPPORT CHAT] Profile user_id:', profile?.user_id);
     console.log('🎯 [SUPPORT CHAT] Current restriction state:', restriction);
     console.log('🎯 [SUPPORT CHAT] Restriction loading state:', restrictionLoading);
+    console.log('🎯 [SUPPORT CHAT] Is blocked?:', restriction.isBlocked);
     
     if (isOpen && !ticketId) {
       createOrGetTicket();

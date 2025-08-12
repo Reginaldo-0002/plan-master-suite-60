@@ -18,7 +18,6 @@ import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagemen
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { RequireRole } from "@/components/auth/RequireRole";
-import { ChatRestrictionTest } from "@/components/test/ChatRestrictionTest";
 
 type ActiveAdminSection = 
   | 'overview' 
@@ -133,11 +132,6 @@ const AdminDashboard = () => {
             <ErrorBoundary>
               {renderActiveSection()}
             </ErrorBoundary>
-            
-            {/* Componente de teste temporário */}
-            <div className="fixed top-4 left-4 z-50">
-              <ChatRestrictionTest />
-            </div>
           </main>
         </div>
       </ErrorBoundary>
