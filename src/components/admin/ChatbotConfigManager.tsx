@@ -59,14 +59,34 @@ export const ChatbotConfigManager = () => {
   const saveConfig = async (newConfig: ChatbotConfig) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase
+      // Primeiro, tentar buscar se já existe
+      const { data: existingData } = await supabase
         .from('admin_settings')
-        .upsert({
-          key: 'chatbot_config',
-          value: newConfig as any
-        });
+        .select('id')
+        .eq('key', 'chatbot_config')
+        .maybeSingle();
 
-      if (error) throw error;
+      let result;
+      if (existingData) {
+        // Se existe, fazer update
+        result = await supabase
+          .from('admin_settings')
+          .update({
+            value: newConfig as any,
+            updated_at: new Date().toISOString()
+          })
+          .eq('key', 'chatbot_config');
+      } else {
+        // Se não existe, fazer insert
+        result = await supabase
+          .from('admin_settings')
+          .insert({
+            key: 'chatbot_config',
+            value: newConfig as any
+          });
+      }
+
+      if (result.error) throw result.error;
 
       setConfig(newConfig);
       toast({
