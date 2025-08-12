@@ -1409,6 +1409,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_create_user: {
+        Args: {
+          user_email: string
+          user_password: string
+          user_full_name: string
+          user_plan?: Database["public"]["Enums"]["user_plan"]
+          user_role?: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
+      admin_create_user_safe: {
+        Args: {
+          user_email: string
+          user_password: string
+          user_full_name: string
+          user_plan?: Database["public"]["Enums"]["user_plan"]
+          user_role?: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: Json
+      }
       award_loyalty_points: {
         Args: {
           user_uuid: string
