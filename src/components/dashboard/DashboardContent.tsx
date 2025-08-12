@@ -54,7 +54,6 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
 
   const fetchNotifications = async () => {
     try {
-      console.log('🔍 Fetching notifications for user:', user?.id);
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -62,17 +61,15 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
         .order('created_at', { ascending: false })
         .limit(5);
 
-      console.log('📢 Notifications query result:', { data, error });
       if (error) throw error;
       setNotifications(data || []);
     } catch (error) {
-      console.error('❌ Error fetching notifications:', error);
+      console.error('Error fetching notifications:', error);
     }
   };
 
   const fetchRecentContent = async () => {
     try {
-      console.log('🔍 Fetching recent content for user:', user?.id);
       const { data, error } = await supabase
         .from('content')
         .select('*')
@@ -80,11 +77,10 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
         .order('created_at', { ascending: false })
         .limit(6);
 
-      console.log('📝 Content query result:', { data, error, count: data?.length });
       if (error) throw error;
       setRecentContent(data || []);
     } catch (error) {
-      console.error('❌ Error fetching recent content:', error);
+      console.error('Error fetching recent content:', error);
     }
   };
 
