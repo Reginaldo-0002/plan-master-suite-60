@@ -68,85 +68,19 @@ export const AdminUserManagement = () => {
 
   const fetchUsers = async () => {
     try {
-      console.log('Fetching users from profiles table...');
+      console.log('Fetching users using RPC function...');
       
-      // Use RPC function to get all users (bypasses RLS)
-      const { data: usersData, error: usersError } = await supabase.rpc('get_current_user_role');
+      // Use the new RPC function to get all users (bypasses RLS)
+      const { data: usersData, error: usersError } = await supabase
+        .rpc('get_all_users_for_admin');
 
       if (usersError) {
         console.error('RPC error:', usersError);
+        throw usersError;
       }
 
-      // Try direct query for profiles (admin should have access to all)
-      const { data: profilesData, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // If profiles query fails due to RLS, try alternative approach
-      if (profilesError) {
-        console.error('Profiles query failed:', profilesError);
-        
-        // Get current user to verify admin status
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log('Current user:', user?.id);
-        
-        // Try querying with explicit auth context
-        const { data: allProfiles, error: altError } = await supabase
-          .from('profiles')
-          .select(`
-            *,
-            user_roles!left (
-              role
-            )
-          `)
-          .order('created_at', { ascending: false });
-          
-        if (altError) {
-          console.error('Alternative query also failed:', altError);
-          throw altError;
-        }
-        
-        // Transform alternative data
-        const transformedUsers = (allProfiles || []).map(user => {
-          const userRole = user.user_roles && user.user_roles.length > 0 ? user.user_roles[0] : null;
-          const role = userRole?.role || 'user';
-          return {
-            ...user,
-            role: role as 'user' | 'admin' | 'moderator',
-            user_roles: undefined
-          };
-        });
-        
-        console.log('Alternative transformed users:', transformedUsers);
-        setUsers(transformedUsers as User[]);
-        return;
-      }
-
-      // If profiles query succeeded, get roles separately
-      const { data: rolesData, error: rolesError } = await supabase
-        .from('user_roles')
-        .select('user_id, role');
-
-      if (rolesError) {
-        console.error('Error fetching roles:', rolesError);
-        // Continue without roles if RLS blocks access
-      }
-
-      console.log('Profiles data:', profilesData);
-      console.log('Roles data:', rolesData);
-
-      // Combine the data
-      const transformedUsers = (profilesData || []).map(user => {
-        const userRole = rolesData?.find(role => role.user_id === user.user_id);
-        return {
-          ...user,
-          role: (userRole?.role || 'user') as 'user' | 'admin' | 'moderator'
-        };
-      });
-
-      console.log('Transformed users:', transformedUsers);
-      setUsers(transformedUsers as User[]);
+      console.log('RPC users data:', usersData);
+      setUsers(usersData as User[]);
       
     } catch (error) {
       console.error('Error fetching users:', error);

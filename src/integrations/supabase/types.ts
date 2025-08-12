@@ -1445,6 +1445,24 @@ export type Database = {
         Args: { target_role: string }
         Returns: boolean
       }
+      get_all_users_for_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          user_id: string
+          full_name: string
+          avatar_url: string
+          plan: Database["public"]["Enums"]["user_plan"]
+          pix_key: string
+          total_session_time: number
+          areas_accessed: number
+          referral_code: string
+          referral_earnings: number
+          created_at: string
+          updated_at: string
+          role: Database["public"]["Enums"]["app_role"]
+        }[]
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
