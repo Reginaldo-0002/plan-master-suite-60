@@ -64,15 +64,14 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
       const sanitizedFullName = sanitizeInput(formData.full_name);
       const sanitizedEmail = sanitizeInput(formData.email);
 
-      // Create user in Supabase Auth using service role
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Create user in Supabase Auth using admin privileges
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
         email: sanitizedEmail,
         password: formData.password,
-        options: {
-          data: {
-            full_name: sanitizedFullName
-          }
-        }
+        user_metadata: {
+          full_name: sanitizedFullName
+        },
+        email_confirm: true
       });
 
       if (authError) {

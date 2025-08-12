@@ -68,8 +68,36 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
         return;
       }
 
-      if (data?.value && typeof data.value === 'object' && 'options' in data.value) {
-        setChatOptions((data.value.options as unknown) as ChatOption[]);
+      if (data?.value && typeof data.value === 'object') {
+        // Parse the chatbot config properly
+        const config = data.value as any;
+        if (config.menu_options && Array.isArray(config.menu_options)) {
+          setChatOptions(config.menu_options);
+        } else {
+        // Default chat options
+        setChatOptions([
+          {
+            id: '1',
+            text: 'Como funciona o programa de afiliados?',
+            response: 'Nosso programa de afiliados permite que você ganhe comissões indicando novos usuários. A cada venda realizada por seus indicados, você recebe uma porcentagem. É fácil e rentável!'
+          },
+          {
+            id: '2', 
+            text: 'Como posso fazer upgrade do meu plano?',
+            response: 'Para fazer upgrade, acesse as configurações do seu perfil e selecione o plano desejado. O upgrade é imediato e você terá acesso a todos os recursos premium.'
+          },
+          {
+            id: '3',
+            text: 'Preciso de ajuda técnica',
+            response: 'Nossa equipe de suporte técnico está aqui para ajudar! Descreva seu problema que um especialista responderá em breve.'
+          },
+          {
+            id: '4',
+            text: 'Informações sobre pagamento',
+            response: 'Aceitamos diversos métodos de pagamento incluindo cartão de crédito, PIX e boleto. Todos os pagamentos são seguros e processados imediatamente.'
+          }
+        ]);
+        }
       } else {
         // Default chat options
         setChatOptions([

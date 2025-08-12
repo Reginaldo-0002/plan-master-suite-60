@@ -112,35 +112,14 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
           metadata: { content_type: contentItem.content_type }
         }]);
 
-      // Check if content has topics/gallery
-      const { data: topics } = await supabase
-        .from('content_topics')
-        .select('id')
-        .eq('content_id', contentItem.id)
-        .eq('is_active', true)
-        .limit(1);
-
-      if (topics && topics.length > 0) {
-        // Show topics gallery - we'll handle this via parent component
-        if (window.location.pathname === '/') {
-          // Update URL parameter for dashboard routing
-          const url = new URL(window.location.href);
-          url.searchParams.set('content', contentItem.id);
-          window.history.pushState({}, '', url.toString());
-          window.dispatchEvent(new PopStateEvent('popstate'));
-        }
-        return;
-      }
-
-      // Open video or external link
-      if (contentItem.video_url) {
-        window.open(contentItem.video_url, '_blank');
-      } else {
-        toast({
-          title: "Conteúdo acessado",
-          description: `Acessando: ${contentItem.title}`,
-        });
-      }
+      // Navigate to topics always
+      const url = new URL(window.location.href);
+      url.searchParams.set('content', contentItem.id);
+      url.searchParams.set('section', 'topics');
+      window.history.pushState(null, '', url.toString());
+      
+      // Trigger navigation to topics
+      window.dispatchEvent(new PopStateEvent('popstate'));
     } catch (error) {
       console.error('Error accessing content:', error);
       toast({

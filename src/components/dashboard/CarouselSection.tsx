@@ -15,7 +15,7 @@ interface CarouselContent {
   hero_image_url: string | null;
   video_url: string | null;
   required_plan: 'free' | 'vip' | 'pro';
-  status: 'active' | 'maintenance' | 'blocked';
+  status: 'active' | 'maintenance' | 'blocked' | 'published' | 'draft';
   show_in_carousel: boolean;
   carousel_order: number;
 }
@@ -48,7 +48,7 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
 
       const mappedData: CarouselContent[] = (data || []).map(item => ({
         ...item,
-        status: (item.status as 'active' | 'maintenance' | 'blocked') || 'active'
+        status: (item.status as 'active' | 'maintenance' | 'blocked' | 'published' | 'draft') || 'published'
       }));
 
       setCarouselContent(mappedData);
@@ -65,11 +65,13 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
   };
 
   const canAccess = (contentPlan: string) => {
-    return planHierarchy[userPlan] >= planHierarchy[contentPlan as keyof typeof planHierarchy];
+    const userLevel = planHierarchy[userPlan] || 0;
+    const requiredLevel = planHierarchy[contentPlan as keyof typeof planHierarchy] || 0;
+    return userLevel >= requiredLevel;
   };
 
   const handleContentAccess = async (content: CarouselContent) => {
-    if (!canAccess(content.required_plan) || content.status !== 'active') {
+    if (!canAccess(content.required_plan) || (content.status !== 'active' && content.status !== 'published')) {
       return;
     }
 
@@ -85,15 +87,15 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
           metadata: { content_type: content.content_type }
         }]);
 
-      // Open content
-      if (content.video_url) {
-        window.open(content.video_url, '_blank');
-      } else {
-        toast({
-          title: "Conteúdo acessado",
-          description: `Acessando: ${content.title}`,
-        });
-      }
+      // Navigate to topics instead of opening video directly
+      const url = new URL(window.location.href);
+      url.searchParams.set('content', content.id);
+      url.searchParams.set('section', 'topics');
+      window.history.pushState(null, '', url.toString());
+      
+      // Trigger navigation to topics
+      window.dispatchEvent(new PopStateEvent('popstate'));
+      
     } catch (error) {
       console.error('Error accessing content:', error);
       toast({
@@ -122,9 +124,11 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-success text-white';
+      case 'active':
+      case 'published': return 'bg-success text-white';
       case 'maintenance': return 'bg-warning text-white';
       case 'blocked': return 'bg-destructive text-white';
+      case 'draft': return 'bg-muted text-muted-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -177,7 +181,9 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
                           </Badge>
                           <Badge className={getStatusColor(content.status)}>
                             {content.status === 'active' ? 'Ativo' : 
-                             content.status === 'maintenance' ? 'Manutenção' : 'Bloqueado'}
+                             content.status === 'published' ? 'Publicado' :
+                             content.status === 'maintenance' ? 'Manutenção' : 
+                             content.status === 'draft' ? 'Rascunho' : 'Bloqueado'}
                           </Badge>
                         </div>
                       </div>
@@ -193,22 +199,13 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
                     </CardHeader>
 
                     <CardContent>
-                      {canAccess(content.required_plan) && content.status === 'active' ? (
+                      {canAccess(content.required_plan) && (content.status === 'active' || content.status === 'published') ? (
                         <Button 
                           className="w-full" 
                           onClick={() => handleContentAccess(content)}
                         >
-                          {content.video_url ? (
-                            <>
-                              <Play className="w-4 h-4 mr-2" />
-                              Assistir
-                            </>
-                          ) : (
-                            <>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Visualizar
-                            </>
-                          )}
+                          <Eye className="w-4 h-4 mr-2" />
+                          Acessar
                         </Button>
                       ) : !canAccess(content.required_plan) ? (
                         <Button variant="outline" className="w-full" disabled>
@@ -217,7 +214,8 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
                         </Button>
                       ) : (
                         <Button variant="outline" className="w-full" disabled>
-                          {content.status === 'maintenance' ? 'Em Manutenção' : 'Indisponível'}
+                          {content.status === 'maintenance' ? 'Em Manutenção' : 
+                           content.status === 'draft' ? 'Rascunho' : 'Indisponível'}
                         </Button>
                       )}
                     </CardContent>
@@ -250,13 +248,13 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
                 </CardHeader>
 
                 <CardContent className="pt-0">
-                  {canAccess(content.required_plan) && content.status === 'active' ? (
+                  {canAccess(content.required_plan) && (content.status === 'active' || content.status === 'published') ? (
                     <Button 
                       size="sm"
                       className="w-full" 
                       onClick={() => handleContentAccess(content)}
                     >
-                      {content.video_url ? 'Assistir' : 'Ver'}
+                      Acessar
                     </Button>
                   ) : (
                     <Button size="sm" variant="outline" className="w-full" disabled>
