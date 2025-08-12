@@ -43,11 +43,14 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const { restriction, loading: restrictionLoading } = useChatRestrictions(profile?.user_id);
 
   useEffect(() => {
+    console.log('🎯 SupportChat useEffect - Chat opened:', isOpen, 'Ticket ID:', ticketId, 'User ID:', profile?.user_id);
+    console.log('🎯 Current restriction state:', restriction);
+    
     if (isOpen && !ticketId) {
       createOrGetTicket();
       loadChatOptions();
     }
-  }, [isOpen, profile?.user_id]);
+  }, [isOpen, profile?.user_id, restriction]);
 
   useEffect(() => {
     scrollToBottom();
@@ -206,7 +209,11 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const handleOptionClick = async (option: ChatOption) => {
-    if (!ticketId || restriction.isBlocked) return;
+    console.log('🎯 handleOptionClick called - isBlocked:', restriction.isBlocked, 'ticketId:', ticketId);
+    if (!ticketId || restriction.isBlocked) {
+      console.log('🚫 Option click blocked - ticketId:', ticketId, 'isBlocked:', restriction.isBlocked);
+      return;
+    }
 
     setShowOptions(false);
     setLoading(true);
@@ -250,7 +257,16 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const sendMessage = async () => {
-    if (!newMessage.trim() || !ticketId || loading || restriction.isBlocked) return;
+    console.log('🎯 sendMessage called - isBlocked:', restriction.isBlocked, 'message:', newMessage.trim());
+    if (!newMessage.trim() || !ticketId || loading || restriction.isBlocked) {
+      console.log('🚫 Send message blocked - conditions:', {
+        hasMessage: !!newMessage.trim(),
+        hasTicket: !!ticketId,
+        isLoading: loading,
+        isBlocked: restriction.isBlocked
+      });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -358,13 +374,18 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                 <div className="space-y-3">
                   {restriction.isBlocked && (
                     <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
-                      <p className="text-sm text-destructive font-medium">Chat Bloqueado</p>
+                      <p className="text-sm text-destructive font-medium">🚫 Chat Bloqueado</p>
                       <p className="text-xs text-destructive/80 mt-1">{restriction.reason}</p>
                       {restriction.blockedUntil && (
                         <p className="text-xs text-destructive/60 mt-1">
                           Até: {restriction.blockedUntil.toLocaleString('pt-BR')}
                         </p>
                       )}
+                    </div>
+                  )}
+                  {!restriction.isBlocked && (
+                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
+                      <p className="text-xs text-green-600">✅ Chat Liberado</p>
                     </div>
                   )}
                   {messages.map((message) => (
@@ -424,7 +445,10 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
               {restriction.isBlocked ? (
                 <div className="text-center py-2">
                   <p className="text-sm text-muted-foreground">
-                    Chat indisponível no momento
+                    🚫 Chat indisponível no momento
+                  </p>
+                  <p className="text-xs text-destructive">
+                    Motivo: {restriction.reason}
                   </p>
                   {restriction.blockedUntil && (
                     <p className="text-xs text-muted-foreground">
