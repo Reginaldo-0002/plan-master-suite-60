@@ -10,9 +10,7 @@ interface RequireRoleProps {
 }
 
 export const RequireRole = ({ children, role, fallback }: RequireRoleProps) => {
-  const { hasRole, loading, role: userRole } = useRoleCheck();
-
-  console.log('RequireRole - Checking access for role:', role, 'User role:', userRole, 'Loading:', loading);
+  const { hasRole, loading } = useRoleCheck();
 
   if (loading) {
     return (
@@ -22,10 +20,7 @@ export const RequireRole = ({ children, role, fallback }: RequireRoleProps) => {
     );
   }
 
-  const hasRequiredRole = hasRole(role);
-  console.log('RequireRole - Has required role:', hasRequiredRole);
-
-  if (!hasRequiredRole) {
+  if (!hasRole(role)) {
     return fallback || (
       <div className="min-h-screen bg-background flex items-center justify-center p-8">
         <Card className="max-w-md">

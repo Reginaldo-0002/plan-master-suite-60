@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useErrorHandler } from './useErrorHandler';
-import { useAuth } from './useAuth';
 
 export type UserRole = 'admin' | 'moderator' | 'user';
 
@@ -17,53 +16,36 @@ export const useRoleCheck = (): RoleCheckResult => {
   const [role, setRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const { handleAsyncError } = useErrorHandler();
-  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
-    if (!authLoading) {
-      checkUserRole();
-    }
-  }, [user, authLoading]);
+    checkUserRole();
+  }, []);
 
   const checkUserRole = async () => {
-    if (!user) {
-      console.log('useRoleCheck - No authenticated user');
-      setRole(null);
-      setLoading(false);
-      return;
-    }
-
     await handleAsyncError(async () => {
-      console.log('useRoleCheck - Checking role for user:', user.id);
+      const { data: { user } } = await supabase.auth.getUser();
       
-      // Try the RPC function first
-      const { data: rpcData, error: rpcError } = await supabase.rpc('get_current_user_role');
+      console.log('useRoleCheck - Checking role for user:', user?.id);
       
-      console.log('useRoleCheck - RPC response:', { data: rpcData, error: rpcError });
-      
-      if (!rpcError && rpcData) {
-        const userRole = rpcData as UserRole;
-        console.log('useRoleCheck - Setting role from RPC to:', userRole);
-        setRole(userRole);
+      if (!user) {
+        console.log('useRoleCheck - No user found');
+        setRole(null);
         return;
       }
 
-      // Fallback: query user_roles table directly
-      console.log('useRoleCheck - RPC failed, trying direct query');
-      const { data: roleData, error: roleError } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (roleError) {
-        console.error('Error fetching user role from table:', roleError);
-        setRole('user');
+      // Use the secure function to get user role
+      const { data, error } = await supabase.rpc('get_current_user_role');
+      
+      console.log('useRoleCheck - RPC response:', { data, error });
+      
+      if (error) {
+        console.error('Error fetching user role:', error);
+        setRole('user'); // Default to user role
         return;
       }
 
-      const userRole = (roleData?.role as UserRole) || 'user';
-      console.log('useRoleCheck - Setting role from direct query to:', userRole);
+      const userRole = data as UserRole || 'user';
+      console.log('useRoleCheck - Setting role to:', userRole);
       setRole(userRole);
     }, {
       title: "Erro ao verificar permissões",
