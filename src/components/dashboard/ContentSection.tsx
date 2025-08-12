@@ -12,7 +12,7 @@ interface Content {
   title: string;
   description: string | null;
   content_type: string;
-  status: 'active' | 'maintenance' | 'blocked';
+  status: 'active' | 'maintenance' | 'blocked' | 'published' | 'draft';
   required_plan: 'free' | 'vip' | 'pro';
   hero_image_url: string | null;
   video_url: string | null;
@@ -78,7 +78,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
 
       const mappedData: Content[] = (data || []).map(item => ({
         ...item,
-        status: (item.status as 'active' | 'maintenance' | 'blocked') || 'active',
+        status: (item.status as 'active' | 'maintenance' | 'blocked' | 'published' | 'draft') || 'published',
         release_date: item.scheduled_publish_at
       }));
 
@@ -96,7 +96,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
   };
 
   const handleAccessContent = async (contentItem: Content) => {
-    if (!canAccess(contentItem.required_plan) || contentItem.status !== 'active') {
+    if (!canAccess(contentItem.required_plan) || (contentItem.status !== 'active' && contentItem.status !== 'published')) {
       return;
     }
 
@@ -169,9 +169,11 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-success text-white';
+      case 'active':
+      case 'published': return 'bg-success text-white';
       case 'maintenance': return 'bg-warning text-white';
       case 'blocked': return 'bg-destructive text-white';
+      case 'draft': return 'bg-muted text-muted-foreground';
       default: return 'bg-muted text-muted-foreground';
     }
   };
@@ -179,8 +181,10 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'active': return 'Ativo';
+      case 'published': return 'Publicado';
       case 'maintenance': return 'Manutenção';
       case 'blocked': return 'Bloqueado';
+      case 'draft': return 'Rascunho';
       default: return status;
     }
   };
@@ -206,7 +210,9 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
   };
 
   const canAccess = (contentPlan: string) => {
-    return planHierarchy[userPlan] >= planHierarchy[contentPlan as keyof typeof planHierarchy];
+    const userLevel = planHierarchy[userPlan] || 0;
+    const requiredLevel = planHierarchy[contentPlan as keyof typeof planHierarchy] || 0;
+    return userLevel >= requiredLevel;
   };
 
   const getActionIcon = (contentItem: Content) => {
@@ -271,7 +277,7 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
                 )}
               </CardHeader>
               <CardContent>
-                {item.status !== 'active' ? (
+                {(item.status !== 'active' && item.status !== 'published') ? (
                   <Button variant="outline" className="w-full" disabled>
                     {getStatusText(item.status)}
                   </Button>
