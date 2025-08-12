@@ -271,13 +271,9 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
                 )}
               </CardHeader>
               <CardContent>
-                {canAccess(item.required_plan) && item.status === 'active' ? (
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleAccessContent(item)}
-                  >
-                    {getActionIcon(item)}
-                    Acessar
+                {item.status !== 'active' ? (
+                  <Button variant="outline" className="w-full" disabled>
+                    {getStatusText(item.status)}
                   </Button>
                 ) : !canAccess(item.required_plan) ? (
                   <Button variant="outline" className="w-full" disabled>
@@ -285,8 +281,12 @@ export const ContentSection = ({ type, userPlan }: ContentSectionProps) => {
                     Upgrade Necessário
                   </Button>
                 ) : (
-                  <Button variant="outline" className="w-full" disabled>
-                    {getStatusText(item.status)}
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleAccessContent(item)}
+                  >
+                    {getActionIcon(item)}
+                    Acessar
                   </Button>
                 )}
               </CardContent>
