@@ -96,18 +96,27 @@ export const AdminUserManagement = () => {
 
   const updateUserPlan = async (userId: string, newPlan: 'free' | 'vip' | 'pro') => {
     try {
-      const { error } = await supabase
+      console.log('Updating user plan:', { userId, newPlan });
+      
+      const { data, error } = await supabase
         .from('profiles')
         .update({ plan: newPlan })
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating plan:', error);
+        throw error;
+      }
+
+      console.log('Plan update successful:', data);
 
       toast({
         title: "Sucesso",
         description: `Plano atualizado para ${newPlan.toUpperCase()}`,
       });
       
+      // Recarregar dados imediatamente
       fetchUsers();
     } catch (error) {
       console.error('Error updating user plan:', error);
