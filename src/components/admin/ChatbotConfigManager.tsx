@@ -24,6 +24,7 @@ export const ChatbotConfigManager = () => {
   const [newOption, setNewOption] = useState({ title: "", response: "" });
   const [editingOption, setEditingOption] = useState<MenuOption | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [settingId, setSettingId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -32,19 +33,33 @@ export const ChatbotConfigManager = () => {
 
   const fetchChatbotConfig = async () => {
     try {
+      console.log('Fetching chatbot config...');
       const { data, error } = await supabase
         .from('admin_settings')
-        .select('value')
+        .select('id, value')
         .eq('key', 'chatbot_config')
         .maybeSingle();
 
+      console.log('Fetch result:', { data, error });
+
       if (error) throw error;
       
-      if (data?.value) {
-        const configValue = data.value as any;
-        if (configValue && typeof configValue === 'object' && configValue.menu_options) {
-          setConfig(configValue as ChatbotConfig);
+      if (data) {
+        // Capturar o ID do registro para usar nas operações UPDATE
+        setSettingId(data.id);
+        console.log('Setting ID captured:', data.id);
+        
+        if (data.value) {
+          const configValue = data.value as any;
+          if (configValue && typeof configValue === 'object' && configValue.menu_options) {
+            setConfig(configValue as ChatbotConfig);
+            console.log('Config loaded:', configValue);
+          }
         }
+      } else {
+        // Se não existe o registro, criar um inicial
+        console.log('No config found, creating initial record...');
+        await createInitialConfig();
       }
     } catch (error) {
       console.error('Error fetching chatbot config:', error);
@@ -56,28 +71,58 @@ export const ChatbotConfigManager = () => {
     }
   };
 
+  const createInitialConfig = async () => {
+    try {
+      const initialConfig = { menu_options: [] };
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .insert({
+          key: 'chatbot_config',
+          value: initialConfig as any
+        })
+        .select('id')
+        .single();
+
+      if (error) throw error;
+      
+      setSettingId(data.id);
+      setConfig(initialConfig);
+      console.log('Initial config created with ID:', data.id);
+    } catch (error) {
+      console.error('Error creating initial config:', error);
+      throw error;
+    }
+  };
+
   const saveConfig = async (newConfig: ChatbotConfig) => {
     setIsLoading(true);
     try {
       console.log('Saving chatbot config:', newConfig);
+      console.log('Using setting ID:', settingId);
       
-      // LÓGICA DEFINITIVA: Usar UPSERT para garantir que funcione sempre
+      if (!settingId) {
+        throw new Error('Setting ID not found. Please refresh the page.');
+      }
+
+      // CORREÇÃO DEFINITIVA: Sempre usar UPDATE com o ID específico do registro
       const { data, error } = await supabase
         .from('admin_settings')
-        .upsert({
-          key: 'chatbot_config',
+        .update({
           value: newConfig as any,
           updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'key'
         })
+        .eq('id', settingId)
         .select();
 
-      console.log('Upsert operation result:', { data, error });
+      console.log('Update operation result:', { data, error });
 
       if (error) {
         console.error('Database operation error:', error);
         throw error;
+      }
+
+      if (!data || data.length === 0) {
+        throw new Error('No record was updated. Record may not exist.');
       }
 
       // Atualizar estado local apenas após sucesso no banco
