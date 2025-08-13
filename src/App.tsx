@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PreloadManager } from "@/components/optimized/PreloadManager";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import Index from "./pages/Index";
@@ -80,7 +81,9 @@ function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <AppContent />
+        <PreloadManager>
+          <AppContent />
+        </PreloadManager>
       </QueryClientProvider>
     </ErrorBoundary>
   );

@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useRoleCheck } from "@/hooks/useRoleCheck";
 import { useProfileRealtime } from "@/hooks/useProfileRealtime";
+import { useOptimizedProfile } from "@/hooks/useOptimizedProfile";
+import { PageLoading } from "@/components/optimized/OptimizedLoadingStates";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
@@ -212,14 +214,7 @@ export default function Dashboard() {
   };
 
   if (loading || !user || roleLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="w-6 h-6 animate-spin text-primary" />
-          <span className="text-lg">Carregando dashboard...</span>
-        </div>
-      </div>
-    );
+    return <PageLoading message="Carregando dashboard..." />;
   }
 
   if (!isAuthenticated) {
@@ -227,14 +222,7 @@ export default function Dashboard() {
   }
 
   if (!currentProfile) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-6 h-6 animate-spin text-primary mb-2" />
-          <p className="text-muted-foreground">Carregando perfil...</p>
-        </div>
-      </div>
-    );
+    return <PageLoading message="Carregando perfil..." />;
   }
 
   const renderActiveSection = () => {

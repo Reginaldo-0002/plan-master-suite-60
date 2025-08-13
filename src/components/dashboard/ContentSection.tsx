@@ -30,6 +30,18 @@ interface ContentSectionProps {
 }
 
 export const ContentSection = ({ contentType, title, description, userPlan, onContentSelect }: ContentSectionProps) => {
+  return (
+    <OptimizedContentSection
+      contentType={contentType}
+      title={title}
+      description={description}
+      userPlan={userPlan}
+      onContentSelect={onContentSelect}
+    />
+  );
+};
+
+export const LegacyContentSection = ({ contentType, title, description, userPlan, onContentSelect }: ContentSectionProps) => {
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();

@@ -1,7 +1,11 @@
-
 import { useEffect, useRef } from 'react';
+import { OptimizedMagneticBackground } from '@/components/optimized/OptimizedBackground';
 
 export const MagneticBackground = () => {
+  return <OptimizedMagneticBackground />;
+};
+
+export const LegacyMagneticBackground = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const mouseRef = useRef({ x: 0, y: 0 });
   const particlesRef = useRef<Array<{
