@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Send, MessageCircle, X, Minimize2, Bot } from "lucide-react";
+import { Send, MessageCircle, X, Minimize2, Bot, Trash2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 import { useChatRestrictions } from "@/hooks/useChatRestrictions";
 import { ChatBlockCountdown } from "./ChatBlockCountdown";
@@ -78,6 +78,20 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
           } else {
             console.log('🔔 Message from current user, skipping');
           }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'DELETE',
+          schema: 'public',
+          table: 'support_messages',
+          filter: `ticket_id=eq.${ticketId}`
+        },
+        (payload) => {
+          console.log('🗑️ Message deleted via real-time:', payload);
+          const deletedMessage = payload.old as Message;
+          setMessages(prev => prev.filter(msg => msg.id !== deletedMessage.id));
         }
       )
       .subscribe((status) => {
@@ -389,6 +403,33 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     }
   };
 
+  const deleteMessage = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', profile.user_id);
+
+      if (error) throw error;
+
+      // Remover da lista local
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+      
+      toast({
+        title: "Sucesso",
+        description: "Mensagem apagada com sucesso",
+      });
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao apagar mensagem",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -458,33 +499,66 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                       <p className="text-xs text-green-600">✅ Chat Liberado</p>
                     </div>
                   )}
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex gap-2 ${
-                        message.sender_id === profile.user_id || !message.is_bot
-                          ? 'justify-end'
-                          : 'justify-start'
-                      }`}
-                    >
-                      {(message.is_bot || message.sender_id !== profile.user_id) && (
-                        <Avatar className="w-6 h-6">
-                          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
-                            S
-                          </AvatarFallback>
-                        </Avatar>
-                      )}
+                  {messages.map((message) => {
+                    const isUserMessage = message.sender_id === profile.user_id;
+                    const isAdminMessage = !message.is_bot && message.sender_id !== profile.user_id && message.sender_id !== 'bot';
+                    
+                    return (
                       <div
-                        className={`max-w-[70%] rounded-lg p-2 text-sm ${
-                          message.sender_id === profile.user_id || !message.is_bot
-                            ? 'bg-primary text-primary-foreground'
-                            : 'bg-muted'
+                        key={message.id}
+                        className={`flex gap-2 mb-3 ${
+                          isUserMessage ? 'justify-end' : 'justify-start'
                         }`}
                       >
-                        {message.message}
+                        {!isUserMessage && (
+                          <Avatar className="w-6 h-6 flex-shrink-0">
+                            <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                              {isAdminMessage ? 'A' : 'S'}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
+                        <div className="flex flex-col max-w-[70%]">
+                          <div
+                            className={`rounded-lg p-3 text-sm relative group ${
+                              isUserMessage
+                                ? 'bg-primary text-primary-foreground ml-auto'
+                                : isAdminMessage
+                                ? 'bg-blue-500 text-white'
+                                : 'bg-muted text-foreground'
+                            }`}
+                          >
+                            {message.message}
+                            {isUserMessage && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                onClick={() => deleteMessage(message.id)}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                              </Button>
+                            )}
+                          </div>
+                          <div className={`text-xs text-muted-foreground mt-1 ${
+                            isUserMessage ? 'text-right' : 'text-left'
+                          }`}>
+                            {new Date(message.created_at).toLocaleTimeString('pt-BR', {
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                            {isAdminMessage && ' • Admin'}
+                          </div>
+                        </div>
+                        {isUserMessage && (
+                          <Avatar className="w-6 h-6 flex-shrink-0">
+                            <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
+                              U
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {showOptions && chatOptions.length > 0 && !restriction.isBlocked && (
                     <div className="space-y-2 mt-4">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
