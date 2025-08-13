@@ -72,6 +72,27 @@ export type Database = {
           },
         ]
       }
+      admin_notification_views: {
+        Row: {
+          admin_id: string
+          id: string
+          notification_id: string
+          viewed_at: string
+        }
+        Insert: {
+          admin_id: string
+          id?: string
+          notification_id: string
+          viewed_at?: string
+        }
+        Update: {
+          admin_id?: string
+          id?: string
+          notification_id?: string
+          viewed_at?: string
+        }
+        Relationships: []
+      }
       admin_settings: {
         Row: {
           auto_status_config: Json | null
@@ -561,6 +582,7 @@ export type Database = {
           is_active: boolean | null
           is_popup: boolean | null
           message: string
+          notification_metadata: Json | null
           popup_duration: number | null
           target_plans: string[] | null
           target_users: string[] | null
@@ -574,6 +596,7 @@ export type Database = {
           is_active?: boolean | null
           is_popup?: boolean | null
           message: string
+          notification_metadata?: Json | null
           popup_duration?: number | null
           target_plans?: string[] | null
           target_users?: string[] | null
@@ -587,6 +610,7 @@ export type Database = {
           is_active?: boolean | null
           is_popup?: boolean | null
           message?: string
+          notification_metadata?: Json | null
           popup_duration?: number | null
           target_plans?: string[] | null
           target_users?: string[] | null
