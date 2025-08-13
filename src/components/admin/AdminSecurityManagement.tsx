@@ -263,25 +263,32 @@ export const AdminSecurityManagement = () => {
   };
 
   const clearAllSessions = async () => {
+    if (!confirm('Tem certeza que deseja apagar TODAS as sessões? Esta ação não pode ser desfeita.')) {
+      return;
+    }
+
     try {
       setClearingSessions(true);
 
       const { error } = await supabase.rpc('admin_clear_all_sessions');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro ao apagar sessões:', error);
+        throw error;
+      }
 
       toast({
         title: "Sucesso",
-        description: "Todas as sessões foram apagadas",
+        description: "Todas as sessões foram apagadas com sucesso",
       });
 
       // Recarregar dados após limpar
-      loadSecurityData();
-    } catch (error) {
+      await loadSecurityData();
+    } catch (error: any) {
       console.error('Error clearing sessions:', error);
       toast({
         title: "Erro",
-        description: "Erro ao apagar todas as sessões",
+        description: error.message || "Erro ao apagar todas as sessões",
         variant: "destructive",
       });
     } finally {
@@ -467,19 +474,21 @@ export const AdminSecurityManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4 flex gap-2">
+          <div className="mb-4 flex gap-2 flex-wrap">
             <Button 
               onClick={loadSecurityData}
               variant="outline"
               size="sm"
+              disabled={loading}
             >
-              🔄 Atualizar Dados
+              {loading ? "Carregando..." : "🔄 Atualizar Dados"}
             </Button>
             <Button 
               onClick={clearAllSessions}
               variant="destructive"
               size="sm"
-              disabled={clearingSessions}
+              disabled={clearingSessions || loading}
+              className="bg-red-600 hover:bg-red-700 text-white"
             >
               {clearingSessions ? "Apagando..." : "🗑️ Apagar Todas as Sessões"}
             </Button>
