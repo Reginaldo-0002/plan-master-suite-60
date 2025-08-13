@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
 import Index from "./pages/Index";

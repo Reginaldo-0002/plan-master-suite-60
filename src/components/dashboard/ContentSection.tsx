@@ -55,8 +55,6 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
   const fetchContent = async () => {
     try {
-      setLoading(true);
-      
       let query = supabase
         .from('content')
         .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')

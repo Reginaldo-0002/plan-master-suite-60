@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 
 export const MagneticBackground = () => {
@@ -12,7 +13,6 @@ export const MagneticBackground = () => {
     life: number;
     maxLife: number;
   }>>([]);
-
 
   useEffect(() => {
     const canvas = canvasRef.current;

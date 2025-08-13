@@ -4,11 +4,13 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useOptimizedQueries } from "@/hooks/useOptimizedQueries";
 
 export const RulesSection = () => {
   const [rulesContent, setRulesContent] = useState("");
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { optimizedRulesFetch } = useOptimizedQueries();
 
   useEffect(() => {
     fetchRules();
@@ -16,18 +18,9 @@ export const RulesSection = () => {
 
   const fetchRules = async () => {
     try {
-      setLoading(true);
-      
-      const { data, error } = await supabase
-        .from('admin_settings')
-        .select('value')
-        .eq('key', 'site_rules')
-        .single();
+      const data = await optimizedRulesFetch();
 
-      if (error) {
-        console.error('Error fetching rules:', error);
-        setRulesContent(defaultRulesContent);
-      } else if (data && data.value) {
+      if (data && 'value' in data && data.value) {
         const value = data.value as any;
         if (typeof value === 'object' && 'content' in value) {
           setRulesContent(value.content as string);
@@ -42,11 +35,6 @@ export const RulesSection = () => {
     } catch (error) {
       console.error('Error fetching rules:', error);
       setRulesContent(defaultRulesContent);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar regras da plataforma",
-        variant: "destructive",
-      });
     } finally {
       setLoading(false);
     }
