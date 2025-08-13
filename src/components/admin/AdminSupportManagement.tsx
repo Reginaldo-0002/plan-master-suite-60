@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye } from "lucide-react";
+import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotConfigManager } from "./ChatbotConfigManager";
 import { AdminChatControl } from "./AdminChatControl";
@@ -242,6 +242,38 @@ export const AdminSupportManagement = () => {
       toast({
         title: "Erro",
         description: "Erro ao atualizar ticket",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteAdminMessage = async (messageId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      const { error } = await supabase
+        .from('support_messages')
+        .delete()
+        .eq('id', messageId)
+        .eq('sender_id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Mensagem apagada com sucesso",
+      });
+
+      // Recarregar mensagens
+      if (selectedTicket) {
+        await fetchTicketMessages(selectedTicket.id);
+      }
+    } catch (error) {
+      console.error('Error deleting admin message:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao apagar mensagem",
         variant: "destructive",
       });
     }
@@ -705,7 +737,7 @@ export const AdminSupportManagement = () => {
                 <h4 className="font-medium">Mensagens</h4>
                 <div className="max-h-60 overflow-y-auto space-y-3">
                   {ticketMessages.map((message) => (
-                    <div key={message.id} className="p-3 border rounded-lg">
+                    <div key={message.id} className="p-3 border rounded-lg group hover:bg-muted/50">
                       <div className="flex justify-between items-start mb-2">
                         <div className="font-medium text-sm">
                           {message.profiles?.full_name || "Usuário"}
@@ -713,8 +745,20 @@ export const AdminSupportManagement = () => {
                             <Badge variant="secondary" className="ml-2">Admin</Badge>
                           )}
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(message.created_at).toLocaleString('pt-BR')}
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(message.created_at).toLocaleString('pt-BR')}
+                          </div>
+                          {message.profiles?.role === 'admin' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0"
+                              onClick={() => deleteAdminMessage(message.id)}
+                            >
+                              <Trash2 className="h-3 w-3 text-destructive" />
+                            </Button>
+                          )}
                         </div>
                       </div>
                       <p className="text-sm">{message.message}</p>
