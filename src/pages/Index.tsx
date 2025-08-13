@@ -26,7 +26,7 @@ const Index = () => {
         <div className="relative container mx-auto px-4 py-20">
           <div className="text-center space-y-8 max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold font-heading text-foreground">
-              Sua Jornada de
+              Sua Jornada de Sucesso
               <span className="block gradient-hero bg-clip-text text-transparent">
                 Sucesso Começa Aqui
               </span>
