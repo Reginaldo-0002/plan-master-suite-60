@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2 } from "lucide-react";
+import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2, UserX } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotConfigManager } from "./ChatbotConfigManager";
 import { AdminChatControl } from "./AdminChatControl";
@@ -62,7 +62,6 @@ export const AdminSupportManagement = () => {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [newOption, setNewOption] = useState({ title: "", response: "" });
-  const [chatCleared, setChatCleared] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -84,7 +83,7 @@ export const AdminSupportManagement = () => {
         schema: 'public',
         table: 'support_messages'
       }, () => {
-        if (selectedTicket && !chatCleared) {
+        if (selectedTicket) {
           fetchTicketMessages(selectedTicket.id);
         }
       })
@@ -417,13 +416,10 @@ export const AdminSupportManagement = () => {
     if (!selectedTicket) return;
 
     try {
-      // Definir flag para evitar recarregamento automático
-      setChatCleared(true);
-      
-      const { error } = await supabase
-        .from('support_messages')
-        .delete()
-        .eq('ticket_id', selectedTicket.id);
+      // Usar função do banco de dados para apagar definitivamente
+      const { error } = await supabase.rpc('admin_clear_chat_messages', {
+        ticket_id_param: selectedTicket.id
+      });
 
       if (error) throw error;
 
@@ -432,17 +428,11 @@ export const AdminSupportManagement = () => {
       
       toast({
         title: "Sucesso",
-        description: "Chat apagado com sucesso",
+        description: "Chat apagado definitivamente",
       });
-
-      // Resetar flag após 2 segundos
-      setTimeout(() => {
-        setChatCleared(false);
-      }, 2000);
       
     } catch (error) {
       console.error('Error clearing chat:', error);
-      setChatCleared(false);
       toast({
         title: "Erro",
         description: "Erro ao apagar chat",
@@ -451,9 +441,44 @@ export const AdminSupportManagement = () => {
     }
   };
 
+  const deleteUser = async (userId: string, userName: string) => {
+    if (!confirm(`Tem certeza que deseja excluir PERMANENTEMENTE o usuário "${userName}"? Esta ação não pode ser desfeita e todos os dados do usuário serão apagados.`)) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('admin_delete_user_completely', {
+        target_user_id: userId
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Usuário "${userName}" foi excluído permanentemente do sistema`,
+      });
+
+      // Recarregar lista de tickets
+      fetchTickets();
+      
+      // Fechar dialog se estava aberto para este usuário
+      if (selectedTicket && selectedTicket.user_id === userId) {
+        setIsTicketDialogOpen(false);
+        setSelectedTicket(null);
+      }
+      
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir usuário",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openTicketDialog = (ticket: Ticket) => {
     setSelectedTicket(ticket);
-    setChatCleared(false); // Resetar flag ao abrir novo ticket
     fetchTicketMessages(ticket.id);
     setIsTicketDialogOpen(true);
   };
@@ -683,15 +708,25 @@ export const AdminSupportManagement = () => {
                   <TableCell>
                     {new Date(ticket.created_at).toLocaleDateString('pt-BR')}
                   </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => openTicketDialog(ticket)}
-                    >
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                  </TableCell>
+                   <TableCell>
+                     <div className="flex gap-2">
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => openTicketDialog(ticket)}
+                       >
+                         <Eye className="w-4 h-4" />
+                       </Button>
+                       <Button
+                         variant="ghost"
+                         size="sm"
+                         onClick={() => deleteUser(ticket.user_id, ticket.profiles?.full_name || "Usuário")}
+                         className="text-red-600 hover:text-red-700"
+                       >
+                         <UserX className="w-4 h-4" />
+                       </Button>
+                     </div>
+                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>

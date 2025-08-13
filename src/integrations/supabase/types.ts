@@ -1409,6 +1409,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_clear_chat_messages: {
+        Args: { ticket_id_param: string }
+        Returns: undefined
+      }
       admin_create_user: {
         Args: {
           user_email: string
@@ -1427,6 +1431,10 @@ export type Database = {
           user_plan?: Database["public"]["Enums"]["user_plan"]
           user_role?: Database["public"]["Enums"]["app_role"]
         }
+        Returns: Json
+      }
+      admin_delete_user_completely: {
+        Args: { target_user_id: string }
         Returns: Json
       }
       award_loyalty_points: {
