@@ -62,6 +62,7 @@ export const AdminSupportManagement = () => {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [newOption, setNewOption] = useState({ title: "", response: "" });
+  const [chatCleared, setChatCleared] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -83,7 +84,7 @@ export const AdminSupportManagement = () => {
         schema: 'public',
         table: 'support_messages'
       }, () => {
-        if (selectedTicket) {
+        if (selectedTicket && !chatCleared) {
           fetchTicketMessages(selectedTicket.id);
         }
       })
@@ -416,6 +417,9 @@ export const AdminSupportManagement = () => {
     if (!selectedTicket) return;
 
     try {
+      // Definir flag para evitar recarregamento automático
+      setChatCleared(true);
+      
       const { error } = await supabase
         .from('support_messages')
         .delete()
@@ -423,14 +427,22 @@ export const AdminSupportManagement = () => {
 
       if (error) throw error;
 
+      // Limpar mensagens do estado local
       setTicketMessages([]);
       
       toast({
         title: "Sucesso",
         description: "Chat apagado com sucesso",
       });
+
+      // Resetar flag após 2 segundos
+      setTimeout(() => {
+        setChatCleared(false);
+      }, 2000);
+      
     } catch (error) {
       console.error('Error clearing chat:', error);
+      setChatCleared(false);
       toast({
         title: "Erro",
         description: "Erro ao apagar chat",
@@ -441,6 +453,7 @@ export const AdminSupportManagement = () => {
 
   const openTicketDialog = (ticket: Ticket) => {
     setSelectedTicket(ticket);
+    setChatCleared(false); // Resetar flag ao abrir novo ticket
     fetchTicketMessages(ticket.id);
     setIsTicketDialogOpen(true);
   };
