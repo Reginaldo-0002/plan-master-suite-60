@@ -10,16 +10,24 @@ export const useSessionTracking = () => {
   useEffect(() => {
     if (!user) return;
 
+    console.log('Starting session tracking for user:', user.id);
+
     const startSession = async () => {
       try {
-        // Obter IP do usuário (aproximado)
-        const response = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await response.json();
+        // Obter IP do usuário
+        let userIP = '127.0.0.1'; // fallback
+        try {
+          const response = await fetch('https://api.ipify.org?format=json');
+          const data = await response.json();
+          userIP = data.ip;
+        } catch (ipError) {
+          console.warn('Could not get external IP, using fallback');
+        }
 
         // Verificar limite de IPs
         const { data: checkResult } = await supabase.rpc('check_ip_limit', {
           target_user_id: user.id,
-          current_ip: ip
+          current_ip: userIP
         });
 
         if (checkResult && typeof checkResult === 'object' && 'allowed' in checkResult && !checkResult.allowed) {
@@ -34,10 +42,11 @@ export const useSessionTracking = () => {
           .from('user_sessions')
           .insert({
             user_id: user.id,
-            ip_address: ip,
+            ip_address: userIP,
             user_agent: navigator.userAgent,
             session_start: new Date().toISOString(),
-            is_active: true
+            is_active: true,
+            duration_minutes: 0
           })
           .select('id')
           .single();
@@ -49,20 +58,27 @@ export const useSessionTracking = () => {
 
         sessionIdRef.current = sessionData.id;
         startTimeRef.current = new Date();
+        
+        console.log('Session created successfully:', sessionData.id);
 
-        // Atualizar atividade a cada 5 minutos
+        // Atualizar atividade a cada 2 minutos para capturar melhor
         const activityInterval = setInterval(() => {
           if (sessionIdRef.current && startTimeRef.current) {
             const duration = Math.floor((Date.now() - startTimeRef.current.getTime()) / 1000 / 60);
+            console.log('Updating session duration:', duration, 'minutes');
             supabase
               .from('user_sessions')
               .update({ duration_minutes: duration })
               .eq('id', sessionIdRef.current)
-              .then(() => {
-                console.log('Session activity updated');
+              .then((result) => {
+                if (result.error) {
+                  console.error('Error updating session:', result.error);
+                } else {
+                  console.log('Session activity updated successfully');
+                }
               });
           }
-        }, 5 * 60 * 1000); // 5 minutos
+        }, 2 * 60 * 1000); // 2 minutos
 
         // Finalizar sessão quando sair
         const handleBeforeUnload = () => {
@@ -95,6 +111,22 @@ export const useSessionTracking = () => {
 
       } catch (error) {
         console.error('Error in session tracking:', error);
+        // Ainda assim tenta criar uma sessão básica
+        try {
+          await supabase
+            .from('user_sessions')
+            .insert({
+              user_id: user.id,
+              ip_address: '127.0.0.1',
+              user_agent: navigator.userAgent || 'Unknown',
+              session_start: new Date().toISOString(),
+              is_active: true,
+              duration_minutes: 0
+            });
+          console.log('Fallback session created');
+        } catch (fallbackError) {
+          console.error('Failed to create fallback session:', fallbackError);
+        }
       }
     };
 

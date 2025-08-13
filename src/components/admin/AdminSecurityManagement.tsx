@@ -37,6 +37,16 @@ interface UserSession {
   user_name: string;
 }
 
+interface AllUsersData {
+  user_id: string;
+  user_name: string;
+  plan: string;
+  last_session: string | null;
+  total_sessions: number;
+  unique_ips: number;
+  is_blocked: boolean;
+}
+
 interface SecurityBlock {
   id: string;
   user_id: string;
@@ -52,6 +62,7 @@ interface SecurityBlock {
 export const AdminSecurityManagement = () => {
   const [settings, setSettings] = useState<SecuritySettings | null>(null);
   const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [allUsers, setAllUsers] = useState<AllUsersData[]>([]);
   const [blocks, setBlocks] = useState<SecurityBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
@@ -64,6 +75,11 @@ export const AdminSecurityManagement = () => {
 
   useEffect(() => {
     loadSecurityData();
+    
+    // Atualizar dados a cada 30 segundos
+    const interval = setInterval(loadSecurityData, 30000);
+    
+    return () => clearInterval(interval);
   }, []);
 
   const loadSecurityData = async () => {
@@ -94,8 +110,7 @@ export const AdminSecurityManagement = () => {
         .from('user_sessions')
         .select('*')
         .gte('session_start', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString())
-        .order('session_start', { ascending: false })
-        .limit(100);
+        .order('session_start', { ascending: false });
 
       if (sessionsError) {
         console.error('Error loading sessions:', sessionsError);
@@ -112,6 +127,7 @@ export const AdminSecurityManagement = () => {
         const formattedSessions = sessionsData?.map(session => ({
           ...session,
           ip_address: String(session.ip_address),
+          duration_minutes: session.duration_minutes || 0,
           user_name: profilesMap.get(session.user_id) || 'Usuário desconhecido'
         })) || [];
         setSessions(formattedSessions);
@@ -142,6 +158,63 @@ export const AdminSecurityManagement = () => {
           user_name: profilesMap.get(block.user_id) || 'Usuário desconhecido'
         })) || [];
         setBlocks(formattedBlocks);
+      }
+
+      // Carregar resumo de todos os usuários
+      const { data: allProfilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, plan');
+
+      if (allProfilesData) {
+        const usersWithSessions = await Promise.all(
+          allProfilesData.map(async (profile) => {
+            // Contar sessões do usuário
+            const { count: totalSessions } = await supabase
+              .from('user_sessions')
+              .select('*', { count: 'exact', head: true })
+              .eq('user_id', profile.user_id);
+
+            // Buscar última sessão
+            const { data: lastSession } = await supabase
+              .from('user_sessions')
+              .select('session_start')
+              .eq('user_id', profile.user_id)
+              .order('session_start', { ascending: false })
+              .limit(1)
+              .single();
+
+            // Contar IPs únicos
+            const { data: uniqueIPsData } = await supabase
+              .from('user_sessions')
+              .select('ip_address')
+              .eq('user_id', profile.user_id)
+              .gte('session_start', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
+
+            const uniqueIPs = uniqueIPsData ? new Set(uniqueIPsData.map(s => s.ip_address)).size : 0;
+
+            // Verificar se está bloqueado
+            const { data: blockData } = await supabase
+              .from('user_security_blocks')
+              .select('id')
+              .eq('user_id', profile.user_id)
+              .eq('is_active', true)
+              .gte('blocked_until', new Date().toISOString())
+              .limit(1)
+              .single();
+
+            return {
+              user_id: profile.user_id,
+              user_name: profile.full_name || 'Usuário sem nome',
+              plan: profile.plan || 'free',
+              last_session: lastSession?.session_start || null,
+              total_sessions: totalSessions || 0,
+              unique_ips: uniqueIPs,
+              is_blocked: !!blockData
+            };
+          })
+        );
+
+        setAllUsers(usersWithSessions);
       }
 
     } catch (error) {
@@ -313,18 +386,94 @@ export const AdminSecurityManagement = () => {
 
       <Separator />
 
-      {/* Sessões de Usuários */}
+      {/* Resumo de Todos os Usuários */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />
-            Sessões de Usuários (Últimas 24h)
+            Resumo de Todos os Usuários
+            <Badge variant="outline">{allUsers.length} usuários</Badge>
           </CardTitle>
           <CardDescription>
-            Monitoramento de sessões e IPs dos usuários
+            Visão geral de atividade e segurança de todos os usuários cadastrados
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {allUsers.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum usuário encontrado
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Plano</TableHead>
+                    <TableHead>Total Sessões</TableHead>
+                    <TableHead>IPs Únicos (7 dias)</TableHead>
+                    <TableHead>Última Sessão</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allUsers.map((user) => (
+                    <TableRow key={user.user_id}>
+                      <TableCell className="font-medium">
+                        {user.user_name}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={user.plan === 'pro' ? 'default' : user.plan === 'vip' ? 'secondary' : 'outline'}>
+                          {user.plan.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{user.total_sessions}</TableCell>
+                      <TableCell>
+                        <Badge variant={user.unique_ips > 3 ? 'destructive' : 'outline'}>
+                          {user.unique_ips} IPs
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {user.last_session ? formatDateTime(user.last_session) : 'Nunca'}
+                      </TableCell>
+                      <TableCell>
+                        {user.is_blocked ? (
+                          <Badge variant="destructive">Bloqueado</Badge>
+                        ) : (
+                          <Badge variant="default">Ativo</Badge>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Sessões de Usuários */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Clock className="w-5 h-5" />
+            Sessões Ativas (Últimas 24h)
+            <Badge variant="outline">{sessions.length} sessões</Badge>
+          </CardTitle>
+          <CardDescription>
+            Monitoramento detalhado de sessões e IPs dos usuários - Atualização automática
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <Button 
+              onClick={loadSecurityData}
+              variant="outline"
+              size="sm"
+            >
+              🔄 Atualizar Dados
+            </Button>
+          </div>
           {sessions.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               Nenhuma sessão encontrada nas últimas 24 horas
@@ -347,7 +496,11 @@ export const AdminSecurityManagement = () => {
                       <TableCell className="font-medium">
                         {session.user_name}
                       </TableCell>
-                      <TableCell>{session.ip_address}</TableCell>
+                      <TableCell>
+                        <code className="bg-muted px-2 py-1 rounded">
+                          {session.ip_address}
+                        </code>
+                      </TableCell>
                       <TableCell>{formatDateTime(session.session_start)}</TableCell>
                       <TableCell>{formatDuration(session.duration_minutes)}</TableCell>
                       <TableCell>{getSessionStatus(session)}</TableCell>
