@@ -1142,6 +1142,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_chat_visibility: {
+        Row: {
+          created_at: string
+          hidden_at: string | null
+          hidden_by: string | null
+          id: string
+          is_hidden: boolean
+          reason: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          is_hidden?: boolean
+          reason?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          hidden_at?: string | null
+          hidden_by?: string | null
+          id?: string
+          is_hidden?: boolean
+          reason?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_content_access: {
         Row: {
           access_type: string
@@ -1435,6 +1468,14 @@ export type Database = {
       }
       admin_delete_user_completely: {
         Args: { target_user_id: string }
+        Returns: Json
+      }
+      admin_toggle_user_chat_visibility: {
+        Args: {
+          target_user_id: string
+          hide_chat: boolean
+          hide_reason?: string
+        }
         Returns: Json
       }
       award_loyalty_points: {

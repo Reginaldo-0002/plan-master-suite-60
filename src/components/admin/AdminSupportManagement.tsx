@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2, UserX } from "lucide-react";
+import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2, UserX, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotConfigManager } from "./ChatbotConfigManager";
 import { AdminChatControl } from "./AdminChatControl";
@@ -62,6 +62,7 @@ export const AdminSupportManagement = () => {
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [newOption, setNewOption] = useState({ title: "", response: "" });
+  const [userVisibilityStates, setUserVisibilityStates] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -120,6 +121,21 @@ export const AdminSupportManagement = () => {
       }));
       
       setTickets(ticketsWithProfiles);
+
+      // Load visibility states for all users
+      const ticketUserIds = ticketsWithProfiles.map(ticket => ticket.user_id);
+      if (ticketUserIds.length > 0) {
+        const { data: visibilityData } = await supabase
+          .from('user_chat_visibility')
+          .select('user_id, is_hidden')
+          .in('user_id', ticketUserIds);
+
+        const visibilityMap: Record<string, boolean> = {};
+        visibilityData?.forEach(v => {
+          visibilityMap[v.user_id] = v.is_hidden;
+        });
+        setUserVisibilityStates(visibilityMap);
+      }
     } catch (error) {
       console.error('Error fetching tickets:', error);
       toast({
@@ -254,32 +270,6 @@ export const AdminSupportManagement = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
-      // Primeiro verificar se o usuário está bloqueado
-      const { data: restrictions, error: restrictionError } = await supabase
-        .from('user_chat_restrictions')
-        .select('*')
-        .eq('user_id', selectedTicket.user_id)
-        .order('created_at', { ascending: false });
-
-      if (restrictionError) {
-        console.error('Error checking restrictions:', restrictionError);
-      }
-
-      // Verificar se há bloqueio ativo
-      const now = new Date();
-      const activeRestriction = restrictions?.find(r => {
-        if (!r.blocked_until) return false;
-        return new Date(r.blocked_until) > now;
-      });
-
-      if (activeRestriction) {
-        toast({
-          title: "Usuário Bloqueado",
-          description: `Este usuário está bloqueado até ${new Date(activeRestriction.blocked_until).toLocaleString('pt-BR')}`,
-          variant: "destructive",
-        });
-        return;
-      }
 
       console.log('💬 Admin sending message to user:', selectedTicket.user_id);
 
@@ -436,6 +426,45 @@ export const AdminSupportManagement = () => {
       toast({
         title: "Erro",
         description: "Erro ao apagar chat",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const toggleChatVisibility = async (userId: string, userName: string, shouldHide: boolean) => {
+    const action = shouldHide ? 'ocultar' : 'liberar';
+    if (!confirm(`Tem certeza que deseja ${action} o chat para o usuário "${userName}"?`)) {
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('admin_toggle_user_chat_visibility', {
+        target_user_id: userId,
+        hide_chat: shouldHide,
+        hide_reason: shouldHide ? `Chat ocultado pelo administrador em ${new Date().toLocaleString('pt-BR')}` : null
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Chat ${shouldHide ? 'ocultado' : 'liberado'} para o usuário "${userName}"`,
+      });
+
+      // Atualizar estado local de visibilidade
+      setUserVisibilityStates(prev => ({
+        ...prev,
+        [userId]: shouldHide
+      }));
+
+      // Recarregar lista de tickets
+      fetchTickets();
+      
+    } catch (error) {
+      console.error('Error toggling chat visibility:', error);
+      toast({
+        title: "Erro",
+        description: `Erro ao ${action} chat`,
         variant: "destructive",
       });
     }
@@ -717,11 +746,33 @@ export const AdminSupportManagement = () => {
                        >
                          <Eye className="w-4 h-4" />
                        </Button>
+                        {userVisibilityStates[ticket.user_id] ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleChatVisibility(ticket.user_id, ticket.profiles?.full_name || "Usuário", false)}
+                            className="text-green-600 hover:text-green-700"
+                            title="Liberar Chat"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleChatVisibility(ticket.user_id, ticket.profiles?.full_name || "Usuário", true)}
+                            className="text-orange-600 hover:text-orange-700"
+                            title="Ocultar Chat"
+                          >
+                            <EyeOff className="w-4 h-4" />
+                          </Button>
+                        )}
                        <Button
                          variant="ghost"
                          size="sm"
                          onClick={() => deleteUser(ticket.user_id, ticket.profiles?.full_name || "Usuário")}
                          className="text-red-600 hover:text-red-700"
+                         title="Excluir Usuário"
                        >
                          <UserX className="w-4 h-4" />
                        </Button>
@@ -779,15 +830,38 @@ export const AdminSupportManagement = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
                   <h4 className="font-medium">Mensagens</h4>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={clearTicketChat}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Apagar Chat
-                  </Button>
+                  <div className="flex gap-2">
+                    {userVisibilityStates[selectedTicket.user_id] ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleChatVisibility(selectedTicket.user_id, selectedTicket.profiles?.full_name || "Usuário", false)}
+                        className="text-green-600 hover:text-green-700"
+                      >
+                        <Eye className="w-4 h-4 mr-2" />
+                        Liberar Chat
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => toggleChatVisibility(selectedTicket.user_id, selectedTicket.profiles?.full_name || "Usuário", true)}
+                        className="text-orange-600 hover:text-orange-700"
+                      >
+                        <EyeOff className="w-4 h-4 mr-2" />
+                        Ocultar Chat
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearTicketChat}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Apagar Chat
+                    </Button>
+                  </div>
                 </div>
                 <div className="max-h-60 overflow-y-auto space-y-3">
                   {ticketMessages.map((message) => (

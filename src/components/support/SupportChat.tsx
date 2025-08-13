@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Send, MessageCircle, X, Minimize2, Bot, Trash2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 import { useChatRestrictions } from "@/hooks/useChatRestrictions";
+import { useChatVisibility } from "@/hooks/useChatVisibility";
 import { ChatBlockCountdown } from "./ChatBlockCountdown";
 
 interface Message {
@@ -42,6 +43,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const { restriction, loading: restrictionLoading } = useChatRestrictions(profile?.user_id);
+  const { visibility, loading: visibilityLoading } = useChatVisibility(profile?.user_id);
 
   useEffect(() => {
     if (isOpen && !ticketId) {
@@ -436,6 +438,11 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       sendMessage();
     }
   };
+
+  // Se o chat está oculto para este usuário, não mostrar o botão
+  if (visibility.isHidden || visibilityLoading) {
+    return null;
+  }
 
   if (!isOpen) {
     return (
