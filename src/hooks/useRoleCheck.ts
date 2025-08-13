@@ -64,27 +64,34 @@ export const useRoleCheck = (): RoleCheckResult => {
 
     // Configurar listener real-time para mudanças nos roles
     const channel = supabase
-      .channel('user-roles-changes')
+      .channel('user-roles-realtime')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'user_roles'
       }, async (payload) => {
         console.log('Role changed, refreshing...', payload);
-        // Verificar se a mudança é para o usuário atual
-        const { data: { user } } = await supabase.auth.getUser();
-        const newUserRole = payload.new as any;
-        const oldUserRole = payload.old as any;
-        
-        if (user && (newUserRole?.user_id === user.id || oldUserRole?.user_id === user.id)) {
-          console.log('Role change detected for current user, forcing refresh');
-          // Forçar um reload completo da página para garantir que tudo seja atualizado
-          window.location.reload();
+        try {
+          // Verificar se a mudança é para o usuário atual
+          const { data: { user } } = await supabase.auth.getUser();
+          const newUserRole = payload.new as any;
+          const oldUserRole = payload.old as any;
+          
+          if (user && (newUserRole?.user_id === user.id || oldUserRole?.user_id === user.id)) {
+            console.log('Role change detected for current user, refreshing role');
+            // Atualizar role imediatamente sem recarregar a página
+            await checkUserRoleDirectly();
+          }
+        } catch (error) {
+          console.error('Error handling role change:', error);
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log('Role subscription status:', status);
+      });
 
     return () => {
+      console.log('Cleaning up role subscription');
       supabase.removeChannel(channel);
     };
   }, []);

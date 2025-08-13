@@ -1663,6 +1663,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
+      is_user_admin: {
+        Args: { user_uuid?: string }
+        Returns: boolean
+      }
       is_user_blocked: {
         Args: { target_user_id: string }
         Returns: boolean
