@@ -44,6 +44,8 @@ interface AllUsersData {
   last_session: string | null;
   total_sessions: number;
   unique_ips: number;
+  total_time_minutes: number;
+  is_currently_active: boolean;
   is_blocked: boolean;
 }
 
@@ -160,61 +162,25 @@ export const AdminSecurityManagement = () => {
         setBlocks(formattedBlocks);
       }
 
-      // Carregar resumo de todos os usuários
-      const { data: allProfilesData } = await supabase
-        .from('profiles')
-        .select('user_id, full_name, plan');
+      // Carregar resumo de todos os usuários usando função otimizada
+      const { data: allUsersStats, error: statsError } = await supabase
+        .rpc('get_user_security_stats');
 
-      if (allProfilesData) {
-        const usersWithSessions = await Promise.all(
-          allProfilesData.map(async (profile) => {
-            // Contar sessões do usuário
-            const { count: totalSessions } = await supabase
-              .from('user_sessions')
-              .select('*', { count: 'exact', head: true })
-              .eq('user_id', profile.user_id);
-
-            // Buscar última sessão
-            const { data: lastSession } = await supabase
-              .from('user_sessions')
-              .select('session_start')
-              .eq('user_id', profile.user_id)
-              .order('session_start', { ascending: false })
-              .limit(1)
-              .single();
-
-            // Contar IPs únicos
-            const { data: uniqueIPsData } = await supabase
-              .from('user_sessions')
-              .select('ip_address')
-              .eq('user_id', profile.user_id)
-              .gte('session_start', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString());
-
-            const uniqueIPs = uniqueIPsData ? new Set(uniqueIPsData.map(s => s.ip_address)).size : 0;
-
-            // Verificar se está bloqueado
-            const { data: blockData } = await supabase
-              .from('user_security_blocks')
-              .select('id')
-              .eq('user_id', profile.user_id)
-              .eq('is_active', true)
-              .gte('blocked_until', new Date().toISOString())
-              .limit(1)
-              .single();
-
-            return {
-              user_id: profile.user_id,
-              user_name: profile.full_name || 'Usuário sem nome',
-              plan: profile.plan || 'free',
-              last_session: lastSession?.session_start || null,
-              total_sessions: totalSessions || 0,
-              unique_ips: uniqueIPs,
-              is_blocked: !!blockData
-            };
-          })
-        );
-
-        setAllUsers(usersWithSessions);
+      if (statsError) {
+        console.error('Error loading user stats:', statsError);
+      } else {
+        const formattedUsers = allUsersStats?.map(user => ({
+          user_id: user.user_id,
+          user_name: user.user_name,
+          plan: user.user_plan,
+          last_session: user.last_session_start,
+          total_sessions: Number(user.total_sessions),
+          unique_ips: Number(user.unique_ips),
+          total_time_minutes: Number(user.total_time_minutes),
+          is_currently_active: user.is_currently_active,
+          is_blocked: user.is_blocked
+        })) || [];
+        setAllUsers(formattedUsers);
       }
 
     } catch (error) {
@@ -411,7 +377,8 @@ export const AdminSecurityManagement = () => {
                     <TableHead>Usuário</TableHead>
                     <TableHead>Plano</TableHead>
                     <TableHead>Total Sessões</TableHead>
-                    <TableHead>IPs Únicos (7 dias)</TableHead>
+                    <TableHead>IPs Únicos</TableHead>
+                    <TableHead>Tempo Total</TableHead>
                     <TableHead>Última Sessão</TableHead>
                     <TableHead>Status</TableHead>
                   </TableRow>
@@ -434,13 +401,20 @@ export const AdminSecurityManagement = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
+                        <Badge variant="secondary">
+                          {formatDuration(user.total_time_minutes)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
                         {user.last_session ? formatDateTime(user.last_session) : 'Nunca'}
                       </TableCell>
                       <TableCell>
                         {user.is_blocked ? (
                           <Badge variant="destructive">Bloqueado</Badge>
+                        ) : user.is_currently_active ? (
+                          <Badge variant="default">Online</Badge>
                         ) : (
-                          <Badge variant="default">Ativo</Badge>
+                          <Badge variant="secondary">Offline</Badge>
                         )}
                       </TableCell>
                     </TableRow>

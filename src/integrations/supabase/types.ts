@@ -1600,6 +1600,10 @@ export type Database = {
         Args: { target_role: string }
         Returns: boolean
       }
+      cleanup_user_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       get_all_users_for_admin: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1621,6 +1625,20 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_user_security_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          user_id: string
+          user_name: string
+          user_plan: string
+          total_sessions: number
+          unique_ips: number
+          last_session_start: string
+          total_time_minutes: number
+          is_currently_active: boolean
+          is_blocked: boolean
+        }[]
       }
       has_role: {
         Args: {
