@@ -9,6 +9,7 @@ import { Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useAuth } from "@/hooks/useAuth";
 import { useSessionTracking } from "@/hooks/useSessionTracking";
+import { NotificationPopup } from "@/components/ui/notification-popup";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -53,6 +54,7 @@ function AppContent() {
         <TooltipProvider delayDuration={300} skipDelayDuration={100}>
           <Toaster />
           <Sonner />
+          <NotificationPopup />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
