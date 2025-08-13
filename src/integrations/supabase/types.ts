@@ -1544,6 +1544,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_clear_all_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       admin_clear_chat_messages: {
         Args: { ticket_id_param: string }
         Returns: undefined
