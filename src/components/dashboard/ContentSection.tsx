@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { OptimizedContentSection } from "@/components/optimized/OptimizedContentSection";
 
 interface Content {
   id: string;
@@ -31,18 +30,6 @@ interface ContentSectionProps {
 }
 
 export const ContentSection = ({ contentType, title, description, userPlan, onContentSelect }: ContentSectionProps) => {
-  return (
-    <OptimizedContentSection
-      contentType={contentType}
-      title={title}
-      description={description}
-      userPlan={userPlan}
-      onContentSelect={onContentSelect}
-    />
-  );
-};
-
-export const LegacyContentSection = ({ contentType, title, description, userPlan, onContentSelect }: ContentSectionProps) => {
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -68,6 +55,8 @@ export const LegacyContentSection = ({ contentType, title, description, userPlan
 
   const fetchContent = async () => {
     try {
+      setLoading(true);
+      
       let query = supabase
         .from('content')
         .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')
