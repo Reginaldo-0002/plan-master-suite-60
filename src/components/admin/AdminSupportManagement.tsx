@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye } from "lucide-react";
+import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotConfigManager } from "./ChatbotConfigManager";
 import { AdminChatControl } from "./AdminChatControl";
@@ -412,6 +412,33 @@ export const AdminSupportManagement = () => {
     }
   };
 
+  const clearTicketChat = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .delete()
+        .eq('ticket_id', selectedTicket.id);
+
+      if (error) throw error;
+
+      setTicketMessages([]);
+      
+      toast({
+        title: "Sucesso",
+        description: "Chat apagado com sucesso",
+      });
+    } catch (error) {
+      console.error('Error clearing chat:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao apagar chat",
+        variant: "destructive",
+      });
+    }
+  };
+
   const openTicketDialog = (ticket: Ticket) => {
     setSelectedTicket(ticket);
     fetchTicketMessages(ticket.id);
@@ -702,7 +729,18 @@ export const AdminSupportManagement = () => {
               )}
 
               <div className="space-y-4">
-                <h4 className="font-medium">Mensagens</h4>
+                <div className="flex justify-between items-center">
+                  <h4 className="font-medium">Mensagens</h4>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearTicketChat}
+                    className="text-red-600 hover:text-red-700"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Apagar Chat
+                  </Button>
+                </div>
                 <div className="max-h-60 overflow-y-auto space-y-3">
                   {ticketMessages.map((message) => (
                     <div key={message.id} className="p-3 border rounded-lg">
