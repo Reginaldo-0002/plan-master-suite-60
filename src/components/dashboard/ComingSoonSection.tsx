@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { Calendar, Clock, Star, Bell, Loader2 } from "lucide-react";
+import { Calendar, Clock, Star, Bell, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TopicsRouter } from "@/components/navigation/TopicsRouter";
 
 interface UpcomingRelease {
   id: string;
@@ -24,6 +25,7 @@ interface ComingSoonSectionProps {
 export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
   const [releases, setReleases] = useState<UpcomingRelease[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -81,6 +83,36 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
     return false;
   };
 
+  const handleAccessContent = async (releaseTitle: string) => {
+    try {
+      // Buscar conteúdo associado ao título do lançamento
+      const { data: content, error } = await supabase
+        .from('content')
+        .select('id')
+        .eq('title', releaseTitle)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !content) {
+        toast({
+          title: "Erro",
+          description: "Conteúdo não encontrado ou ainda não disponível",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setSelectedContentId(content.id);
+    } catch (error) {
+      console.error('Error accessing content:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao acessar conteúdo",
+        variant: "destructive",
+      });
+    }
+  };
+
   const formatReleaseDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -103,6 +135,29 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
     return (
       <div className="flex items-center justify-center min-h-96">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Se um conteúdo foi selecionado, mostrar os tópicos
+  if (selectedContentId && userPlan) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Button
+            variant="outline"
+            onClick={() => setSelectedContentId(null)}
+            className="flex items-center gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar aos Lançamentos
+          </Button>
+        </div>
+        <TopicsRouter
+          contentId={selectedContentId}
+          userPlan={userPlan}
+          onBack={() => setSelectedContentId(null)}
+        />
       </div>
     );
   }
@@ -200,12 +255,7 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
                   {isReleased(release.release_date) ? (
                     <Button 
                       className="w-full" 
-                      onClick={() => {
-                        toast({
-                          title: "Conteúdo Liberado!",
-                          description: "Este lançamento já está disponível para acesso.",
-                        });
-                      }}
+                      onClick={() => handleAccessContent(release.title)}
                       disabled={!canUserAccess(release.target_plans)}
                     >
                       <Star className="w-4 h-4 mr-2" />
