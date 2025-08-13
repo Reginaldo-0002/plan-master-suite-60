@@ -90,36 +90,35 @@ export const AdminTeamManagement = () => {
     try {
       console.log('Updating member role:', { userId: selectedMember.user_id, newRole });
       
-      // Primeiro, deletar qualquer role existente para esse usuário
-      const { error: deleteError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', selectedMember.user_id);
-
-      if (deleteError) {
-        console.error('Error deleting existing role:', deleteError);
-        throw deleteError;
+      // Obter o usuário atual (admin que está fazendo a alteração)
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        throw new Error('Usuário não autenticado');
       }
 
-      // Então, inserir o novo role
-      const { error: insertError } = await supabase
+      // Usar upsert para atualizar ou inserir o role
+      const { error } = await supabase
         .from('user_roles')
-        .insert({ 
+        .upsert({ 
           user_id: selectedMember.user_id,
-          role: newRole as UserRole,
-          assigned_by: null // Pode ser definido como o ID do admin atual se necessário
+          role: newRole,
+          assigned_by: user.id,
+          assigned_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
         });
 
-      if (insertError) {
-        console.error('Error inserting new role:', insertError);
-        throw insertError;
+      if (error) {
+        console.error('Error updating role:', error);
+        throw error;
       }
 
       console.log('Role updated successfully');
 
       toast({
         title: "Sucesso",
-        description: "Cargo atualizado com sucesso",
+        description: `Cargo atualizado para ${newRole === 'admin' ? 'Administrador' : newRole === 'moderator' ? 'Moderador' : 'Usuário'} com sucesso`,
       });
       
       setIsEditDialogOpen(false);
@@ -127,7 +126,7 @@ export const AdminTeamManagement = () => {
       setNewRole("user");
       
       // Recarregar os dados imediatamente
-      fetchTeamMembers();
+      await fetchTeamMembers();
       
     } catch (error) {
       console.error('Error updating member role:', error);
