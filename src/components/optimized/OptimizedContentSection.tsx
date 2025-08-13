@@ -213,7 +213,7 @@ export const OptimizedContentSection = memo(({
         return supabase
           .from('content')
           .select('*')
-          .eq('content_type', contentType)
+          .eq('content_type', contentType as any)
           .eq('is_active', true)
           .order('is_featured', { ascending: false })
           .order('created_at', { ascending: false });

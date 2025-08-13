@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { OptimizedContentSection } from "@/components/optimized/OptimizedContentSection";
 
 interface Content {
   id: string;
