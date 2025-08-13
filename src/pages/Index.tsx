@@ -4,27 +4,31 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, Zap, Shield } from "lucide-react";
 
-// --- INÍCIO: CSS para as Animações ---
-// Adicionei os estilos de animação diretamente aqui para facilitar.
-// O ideal é movê-los para o seu arquivo CSS global (ex: app.css ou globals.css).
+// --- INÍCIO: CSS para as Animações (ATUALIZADO) ---
 const AnimationStyles = () => (
   <style>
     {`
-      @keyframes scroll {
+      /* Animação da Faixa (Marquee) */
+      @keyframes scroll-left {
         from {
           transform: translateX(0);
         }
         to {
-          transform: translateX(-50%);
+          transform: translateX(-100%);
         }
       }
 
-      .animate-scroll {
+      .animate-scroll-left {
+        /* Garante que o bloco de conteúdo não encolha */
+        flex-shrink: 0;
+        /* Alinha os itens dentro do bloco */
         display: flex;
-        width: 200%; /* Dobro da largura para o conteúdo duplicado */
-        animation: scroll 40s linear infinite;
+        align-items: center;
+        /* Aplica a animação de rolagem */
+        animation: scroll-left 40s linear infinite;
       }
 
+      /* Animação de Raios (Sem alterações) */
       @keyframes lightning-strike {
         0% { opacity: 0; }
         50% { opacity: 0.25; }
@@ -62,15 +66,25 @@ const AnimationStyles = () => (
 );
 // --- FIM: CSS para as Animações ---
 
+// --- INÍCIO: Componente Reutilizável para o Item da Faixa ---
+// Isso torna o código mais limpo e fácil de manter.
+const MarqueeItem = () => (
+    <div className="flex flex-shrink-0 items-center mx-8">
+        <Users className="w-6 h-6 mr-3 text-primary"/>
+        <span className="whitespace-nowrap text-xl font-semibold text-foreground">
+            Comunidade Vitrine Do Digital
+        </span>
+    </div>
+);
+// --- FIM: Componente Reutilizável ---
+
+
 const Index = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
     const checkUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         navigate("/dashboard");
       }
@@ -80,19 +94,19 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background-alt">
-      <AnimationStyles /> {/* Injeta os estilos de animação no componente */}
+      <AnimationStyles />
+
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-10"></div>
         
-        {/* --- INÍCIO: Efeitos de Raios e Relâmpagos --- */}
+        {/* Efeitos de Raios e Relâmpagos */}
         <div className="absolute inset-0 overflow-hidden">
             <div className="lightning lightning-1"></div>
             <div className="lightning lightning-2"></div>
             <div className="lightning lightning-3"></div>
         </div>
-        {/* --- FIM: Efeitos de Raios e Relâmpagos --- */}
-
+        
         <div className="relative container mx-auto px-4 py-20">
           <div className="text-center space-y-8 max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold font-heading text-foreground text-center">
@@ -126,31 +140,18 @@ const Index = () => {
         </div>
       </div>
 
-      {/* --- INÍCIO: Faixa Animada (Marquee) --- */}
-      <div className="py-4 bg-background-alt overflow-hidden whitespace-nowrap">
-        <div className="animate-scroll">
-            {/* O conteúdo é duplicado para criar o efeito de loop infinito e contínuo */}
-            <div className="flex w-1/2">
-                {[...Array(6)].map((_, i) => (
-                    <div key={`marquee-a-${i}`} className="flex items-center mx-8 flex-shrink-0">
-                        <Users className="w-6 h-6 mr-3 text-primary" />
-                        <span className="text-xl font-semibold text-foreground">
-                        Comunidade Vitrine Do Digital
-                        </span>
-                    </div>
-                ))}
-            </div>
-            <div className="flex w-1/2">
-                {[...Array(6)].map((_, i) => (
-                    <div key={`marquee-b-${i}`} className="flex items-center mx-8 flex-shrink-0">
-                        <Users className="w-6 h-6 mr-3 text-primary" />
-                        <span className="text-xl font-semibold text-foreground">
-                        Comunidade Vitrine Do Digital
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
+      {/* --- INÍCIO: Faixa Animada (Marquee) CORRIGIDA --- */}
+      <div className="py-4 bg-background-alt flex overflow-hidden">
+          {/* Bloco de Conteúdo 1 */}
+          <div className="animate-scroll-left">
+              <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
+              <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
+          </div>
+          {/* Bloco de Conteúdo 2 (cópia exata para o loop contínuo) */}
+          <div className="animate-scroll-left" aria-hidden="true">
+              <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
+              <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
+          </div>
       </div>
       {/* --- FIM: Faixa Animada (Marquee) --- */}
 
