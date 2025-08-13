@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useRoleCheck } from "@/hooks/useRoleCheck";
 import { useProfileRealtime } from "@/hooks/useProfileRealtime";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
@@ -26,6 +27,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
+  const { role: userRole, loading: roleLoading } = useRoleCheck();
   const { profile: realtimeProfile } = useProfileRealtime(user?.id);
 
   // Usar o perfil em tempo real se disponível, senão usar o perfil local
@@ -133,17 +135,7 @@ export default function Dashboard() {
         return;
       }
 
-      // Get the actual role from user_roles table
-      const { data: roleData, error: roleError } = await supabase.rpc('get_current_user_role');
-      
-      console.log('Role check result:', { roleData, roleError });
-      
-      if (!roleError && roleData) {
-        data.role = roleData;
-      }
-
       console.log('Profile loaded:', data);
-      console.log('Profile role:', data.role);
       setProfile(data);
     } catch (error) {
       console.error('Profile fetch error:', error);
@@ -219,7 +211,7 @@ export default function Dashboard() {
     setProfile(updatedProfile);
   };
 
-  if (loading || !user) {
+  if (loading || !user || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-2">
@@ -323,7 +315,7 @@ export default function Dashboard() {
         activeSection={activeSection} 
         onNavigate={handleNavigation}
         userPlan={currentProfile.plan}
-        userRole={currentProfile.role}
+        userRole={userRole || 'user'}
       />
       <main className="flex-1 overflow-auto">
         {renderActiveSection()}
