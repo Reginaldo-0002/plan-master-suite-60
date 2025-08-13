@@ -96,7 +96,7 @@ export const AdminSecurityManagement = () => {
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (settingsError && settingsError.code !== 'PGRST116') {
         console.error('Error loading settings:', settingsError);
