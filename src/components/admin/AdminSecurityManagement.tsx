@@ -68,6 +68,7 @@ export const AdminSecurityManagement = () => {
   const [blocks, setBlocks] = useState<SecurityBlock[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const [clearingSessions, setClearingSessions] = useState(false);
   const { toast } = useToast();
 
   const [newSettings, setNewSettings] = useState({
@@ -261,6 +262,33 @@ export const AdminSecurityManagement = () => {
     }
   };
 
+  const clearAllSessions = async () => {
+    try {
+      setClearingSessions(true);
+
+      const { error } = await supabase.rpc('admin_clear_all_sessions');
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Todas as sessões foram apagadas",
+      });
+
+      // Recarregar dados após limpar
+      loadSecurityData();
+    } catch (error) {
+      console.error('Error clearing sessions:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao apagar todas as sessões",
+        variant: "destructive",
+      });
+    } finally {
+      setClearingSessions(false);
+    }
+  };
+
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}min`;
     const hours = Math.floor(minutes / 60);
@@ -439,13 +467,21 @@ export const AdminSecurityManagement = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
+          <div className="mb-4 flex gap-2">
             <Button 
               onClick={loadSecurityData}
               variant="outline"
               size="sm"
             >
               🔄 Atualizar Dados
+            </Button>
+            <Button 
+              onClick={clearAllSessions}
+              variant="destructive"
+              size="sm"
+              disabled={clearingSessions}
+            >
+              {clearingSessions ? "Apagando..." : "🗑️ Apagar Todas as Sessões"}
             </Button>
           </div>
           {sessions.length === 0 ? (
