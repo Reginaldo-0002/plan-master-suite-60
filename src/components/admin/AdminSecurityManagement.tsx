@@ -239,23 +239,37 @@ export const AdminSecurityManagement = () => {
 
   const unblockUser = async (blockId: string) => {
     try {
+      console.log('Tentando desbloquear usuário com ID:', blockId);
+      
       const { data, error } = await supabase.rpc('admin_unblock_user', {
         block_id: blockId
       });
 
-      if (error) throw error;
+      console.log('Resposta do desbloqueio:', { data, error });
 
-      toast({
-        title: "Sucesso",
-        description: "Usuário desbloqueado com sucesso",
-      });
+      if (error) {
+        console.error('Erro específico do Supabase:', error);
+        throw error;
+      }
 
-      loadSecurityData();
-    } catch (error) {
+      const response = data as { success: boolean; message: string; user_id: string };
+      
+      if (response?.success) {
+        toast({
+          title: "Sucesso",
+          description: response.message || "Usuário desbloqueado com sucesso",
+        });
+
+        // Recarregar dados imediatamente após sucesso
+        await loadSecurityData();
+      } else {
+        throw new Error('Resposta inesperada do servidor');
+      }
+    } catch (error: any) {
       console.error('Error unblocking user:', error);
       toast({
         title: "Erro",
-        description: "Erro ao desbloquear usuário",
+        description: error.message || "Erro ao desbloquear usuário",
         variant: "destructive",
       });
     }
