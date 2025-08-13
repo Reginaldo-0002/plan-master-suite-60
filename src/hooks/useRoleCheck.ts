@@ -69,9 +69,18 @@ export const useRoleCheck = (): RoleCheckResult => {
         event: '*',
         schema: 'public',
         table: 'user_roles'
-      }, (payload) => {
+      }, async (payload) => {
         console.log('Role changed, refreshing...', payload);
-        checkUserRoleDirectly();
+        // Verificar se a mudança é para o usuário atual
+        const { data: { user } } = await supabase.auth.getUser();
+        const newUserRole = payload.new as any;
+        const oldUserRole = payload.old as any;
+        
+        if (user && (newUserRole?.user_id === user.id || oldUserRole?.user_id === user.id)) {
+          console.log('Role change detected for current user, forcing refresh');
+          // Forçar um reload completo da página para garantir que tudo seja atualizado
+          window.location.reload();
+        }
       })
       .subscribe();
 
