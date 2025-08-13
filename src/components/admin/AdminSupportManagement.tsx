@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye } from "lucide-react";
+import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { ChatbotConfigManager } from "./ChatbotConfigManager";
 import { AdminChatControl } from "./AdminChatControl";
@@ -242,6 +242,62 @@ export const AdminSupportManagement = () => {
       toast({
         title: "Erro",
         description: "Erro ao atualizar ticket",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const deleteAdminMessage = async (messageId: string) => {
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .delete()
+        .eq('id', messageId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Mensagem apagada com sucesso",
+      });
+
+      // Recarregar mensagens
+      if (selectedTicket) {
+        await fetchTicketMessages(selectedTicket.id);
+      }
+    } catch (error) {
+      console.error('Error deleting admin message:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao apagar mensagem",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const clearAllChatMessages = async () => {
+    if (!selectedTicket) return;
+
+    try {
+      const { error } = await supabase
+        .from('support_messages')
+        .delete()
+        .eq('ticket_id', selectedTicket.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Todas as mensagens foram apagadas",
+      });
+
+      // Limpar mensagens localmente
+      setTicketMessages([]);
+    } catch (error) {
+      console.error('Error clearing all messages:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao limpar todas as mensagens",
         variant: "destructive",
       });
     }
@@ -701,26 +757,55 @@ export const AdminSupportManagement = () => {
                 </div>
               )}
 
-              <div className="space-y-4">
-                <h4 className="font-medium">Mensagens</h4>
-                <div className="max-h-60 overflow-y-auto space-y-3">
-                  {ticketMessages.map((message) => (
-                    <div key={message.id} className="p-3 border rounded-lg">
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="font-medium text-sm">
-                          {message.profiles?.full_name || "Usuário"}
-                          {message.profiles?.role === 'admin' && (
-                            <Badge variant="secondary" className="ml-2">Admin</Badge>
-                          )}
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-medium">Mensagens</h4>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={clearAllChatMessages}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="w-4 h-4 mr-2" />
+                      Limpar Chat
+                    </Button>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto space-y-3">
+                    {ticketMessages.map((message) => {
+                      const isAdminMessage = message.profiles?.role === 'admin';
+                      
+                      return (
+                        <div key={message.id} className={`p-3 border rounded-lg relative group ${
+                          isAdminMessage ? 'bg-blue-50 border-blue-200' : 'bg-gray-50'
+                        }`}>
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="font-medium text-sm">
+                              {message.profiles?.full_name || "Usuário"}
+                              {isAdminMessage && (
+                                <Badge variant="secondary" className="ml-2">Admin</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <div className="text-xs text-muted-foreground">
+                                {new Date(message.created_at).toLocaleString('pt-BR')}
+                              </div>
+                              {isAdminMessage && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 text-destructive hover:text-destructive"
+                                  onClick={() => deleteAdminMessage(message.id)}
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          <p className="text-sm">{message.message}</p>
                         </div>
-                        <div className="text-xs text-muted-foreground">
-                          {new Date(message.created_at).toLocaleString('pt-BR')}
-                        </div>
-                      </div>
-                      <p className="text-sm">{message.message}</p>
-                    </div>
-                  ))}
-                </div>
+                      );
+                    })}
+                  </div>
 
                 <div className="space-y-2">
                   <Label>Nova mensagem</Label>
