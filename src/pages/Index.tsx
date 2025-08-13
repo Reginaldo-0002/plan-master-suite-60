@@ -25,12 +25,12 @@ const Index = () => {
         <div className="absolute inset-0 gradient-hero opacity-10"></div>
         <div className="relative container mx-auto px-4 py-20">
           <div className="text-center space-y-8 max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-6xl font-bold font-heading text-foreground">
-              Sua Jornada de Sucesso
-              <span className="block gradient-hero bg-clip-text text-transparent">
-                Sucesso Começa Aqui
+            <h1 className="text-5xl md:text-6xl font-bold font-heading text-foreground text-center">
+                Sua Jornada de
+                <span className="block text-foreground">
+               Sucesso Começa Aqui
               </span>
-            </h1>
+             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
               Acesse conteúdo exclusivo, ferramentas poderosas e uma comunidade de alta performance. 
               Transforme seus resultados com nossa plataforma completa.
