@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { X, Bell, AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 
 interface PopupNotification {
   id: string;
@@ -27,7 +26,6 @@ interface PopupNotification {
 export const NotificationPopup = () => {
   const [notifications, setNotifications] = useState<PopupNotification[]>([]);
   const { user } = useAuth();
-  const navigate = useNavigate();
 
   useEffect(() => {
     if (!user) return;
@@ -183,10 +181,10 @@ export const NotificationPopup = () => {
           .maybeSingle();
 
         if (existingTicket) {
-          navigate(`/admin/support/${existingTicket.id}`);
+          window.location.href = `/admin/support/${existingTicket.id}`;
         } else {
           // Se não há ticket, navegar para gerenciamento de suporte
-          navigate('/admin/support');
+          window.location.href = '/admin/support';
         }
       }
     } catch (error) {
