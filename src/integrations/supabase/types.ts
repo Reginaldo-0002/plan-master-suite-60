@@ -1679,6 +1679,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      test_admin_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
