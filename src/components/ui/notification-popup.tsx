@@ -26,16 +26,35 @@ export const NotificationPopup = () => {
 
     fetchPopupNotifications();
 
+    // Configurar canal de tempo real
     const channel = supabase
       .channel('popup-notifications')
       .on('postgres_changes', {
         event: 'INSERT',
         schema: 'public',
         table: 'notifications'
-      }, (payload) => {
+      }, async (payload) => {
         const newNotification = payload.new as PopupNotification;
-        if (newNotification.is_popup && shouldShowNotification(newNotification)) {
-          setNotifications(prev => [...prev, newNotification]);
+        
+        if (newNotification.is_popup) {
+          // Buscar informações do usuário para verificar se deve mostrar
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('user_id, plan')
+            .eq('user_id', user?.id)
+            .single();
+
+          const { data: userRole } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', user?.id)
+            .single();
+
+          const isAdmin = userRole?.role === 'admin';
+          
+          if (shouldShowNotification(newNotification, { ...profile, isAdmin })) {
+            setNotifications(prev => [...prev, newNotification]);
+          }
         }
       })
       .subscribe();
@@ -47,26 +66,36 @@ export const NotificationPopup = () => {
 
   const fetchPopupNotifications = async () => {
     try {
+      // Buscar perfil e role do usuário
       const { data: profile } = await supabase
         .from('profiles')
-        .select('user_id, plan')
+        .select('user_id, plan, role')
         .eq('user_id', user?.id)
         .single();
 
       if (!profile) return;
 
+      // Buscar role na tabela user_roles
+      const { data: userRole } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user?.id)
+        .single();
+
+      const isAdmin = userRole?.role === 'admin';
+
       const { data, error } = await supabase
         .from('notifications')
-        .select('id, title, message, type, popup_duration, created_at, target_users, target_plans')
+        .select('id, title, message, type, popup_duration, created_at, target_users, target_plans, is_popup')
         .eq('is_active', true)
         .eq('is_popup', true)
-        .gte('created_at', new Date(Date.now() - 60000).toISOString()) // Last minute
+        .gte('created_at', new Date(Date.now() - 300000).toISOString()) // Last 5 minutes
         .order('created_at', { ascending: false });
 
       if (error) throw error;
 
       const filteredNotifications = (data || []).filter(notification => 
-        shouldShowNotification(notification, profile)
+        shouldShowNotification(notification, { ...profile, isAdmin })
       );
 
       setNotifications(filteredNotifications);
@@ -83,6 +112,10 @@ export const NotificationPopup = () => {
 
     // Check if notification targets specific plans
     if (notification.target_plans && Array.isArray(notification.target_plans) && profile) {
+      // Admin notifications should show for admins
+      if (notification.target_plans.includes('admin') && profile.isAdmin) {
+        return true;
+      }
       return notification.target_plans.includes(profile.plan);
     }
 
