@@ -103,9 +103,9 @@ const Auth = () => {
           <div className="space-y-4">
             <h1 className="text-4xl font-bold font-heading text-foreground">
               Bem-vindo à nossa
-              <span className="block gradient-hero bg-clip-text text-transparent">
-                Plataforma SaaS
-              </span>
+            <span className="block text-blue-400 drop-shadow-[0_0_15px_rgba(59,130,246,0.5)]">
+               Plataforma SaaS
+             </span>
             </h1>
             <p className="text-xl text-muted-foreground">
               Acesse conteúdo exclusivo, ferramentas avançadas e muito mais.
