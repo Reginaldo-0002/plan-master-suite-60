@@ -239,16 +239,15 @@ export const AdminSecurityManagement = () => {
 
   const unblockUser = async (blockId: string) => {
     try {
-      const { error } = await supabase
-        .from('user_security_blocks')
-        .update({ is_active: false })
-        .eq('id', blockId);
+      const { data, error } = await supabase.rpc('admin_unblock_user', {
+        block_id: blockId
+      });
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: "Usuário desbloqueado",
+        description: "Usuário desbloqueado com sucesso",
       });
 
       loadSecurityData();

@@ -1584,6 +1584,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_unblock_user: {
+        Args: { block_id: string }
+        Returns: Json
+      }
       award_loyalty_points: {
         Args: {
           user_uuid: string
@@ -1605,6 +1609,10 @@ export type Database = {
         Returns: boolean
       }
       cleanup_user_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      enforce_ip_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
