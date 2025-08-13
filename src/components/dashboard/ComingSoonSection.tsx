@@ -67,6 +67,20 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
     return { days, hours, minutes };
   };
 
+  const isReleased = (releaseDate: string) => {
+    const now = new Date();
+    const release = new Date(releaseDate);
+    return now >= release;
+  };
+
+  const canUserAccess = (targetPlans: string[]) => {
+    if (!userPlan) return false;
+    if (targetPlans.includes('free')) return true;
+    if (targetPlans.includes('vip') && (userPlan === 'vip' || userPlan === 'pro')) return true;
+    if (targetPlans.includes('pro') && userPlan === 'pro') return true;
+    return false;
+  };
+
   const formatReleaseDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('pt-BR', {
@@ -183,10 +197,26 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
                   )}
 
                   {/* Action Button */}
-                  <Button variant="outline" className="w-full" disabled>
-                    <Bell className="w-4 h-4 mr-2" />
-                    Aguardando Lançamento
-                  </Button>
+                  {isReleased(release.release_date) ? (
+                    <Button 
+                      className="w-full" 
+                      onClick={() => {
+                        toast({
+                          title: "Conteúdo Liberado!",
+                          description: "Este lançamento já está disponível para acesso.",
+                        });
+                      }}
+                      disabled={!canUserAccess(release.target_plans)}
+                    >
+                      <Star className="w-4 h-4 mr-2" />
+                      {canUserAccess(release.target_plans) ? 'Acessar' : 'Upgrade Necessário'}
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="w-full" disabled>
+                      <Bell className="w-4 h-4 mr-2" />
+                      Aguardando Lançamento
+                    </Button>
+                  )}
                 </CardContent>
               </Card>
             );
