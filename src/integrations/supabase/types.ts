@@ -845,6 +845,36 @@ export type Database = {
           },
         ]
       }
+      security_settings: {
+        Row: {
+          block_duration_minutes: number
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          max_ips_per_user: number
+          updated_at: string
+        }
+        Insert: {
+          block_duration_minutes?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_ips_per_user?: number
+          updated_at?: string
+        }
+        Update: {
+          block_duration_minutes?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          max_ips_per_user?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       support_messages: {
         Row: {
           created_at: string
@@ -1399,6 +1429,78 @@ export type Database = {
         }
         Relationships: []
       }
+      user_security_blocks: {
+        Row: {
+          block_reason: string
+          blocked_by_system: boolean
+          blocked_until: string
+          created_at: string
+          id: string
+          ip_count: number | null
+          is_active: boolean
+          user_id: string
+        }
+        Insert: {
+          block_reason: string
+          blocked_by_system?: boolean
+          blocked_until: string
+          created_at?: string
+          id?: string
+          ip_count?: number | null
+          is_active?: boolean
+          user_id: string
+        }
+        Update: {
+          block_reason?: string
+          blocked_by_system?: boolean
+          blocked_until?: string
+          created_at?: string
+          id?: string
+          ip_count?: number | null
+          is_active?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_sessions: {
+        Row: {
+          created_at: string
+          duration_minutes: number | null
+          id: string
+          ip_address: unknown
+          is_active: boolean
+          location_data: Json | null
+          session_end: string | null
+          session_start: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          ip_address: unknown
+          is_active?: boolean
+          location_data?: Json | null
+          session_end?: string | null
+          session_start?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_minutes?: number | null
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean
+          location_data?: Json | null
+          session_end?: string | null
+          session_start?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           amount: number
@@ -1490,6 +1592,10 @@ export type Database = {
         Args: { referrer_user_id: string; referred_plan: string }
         Returns: number
       }
+      check_ip_limit: {
+        Args: { target_user_id: string; current_ip: unknown }
+        Returns: Json
+      }
       check_user_role: {
         Args: { target_role: string }
         Returns: boolean
@@ -1525,6 +1631,10 @@ export type Database = {
       }
       is_admin_user: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_user_blocked: {
+        Args: { target_user_id: string }
         Returns: boolean
       }
     }

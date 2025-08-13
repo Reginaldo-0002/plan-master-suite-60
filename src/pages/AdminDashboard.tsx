@@ -12,6 +12,7 @@ import { AdminTeamManagement } from "@/components/admin/AdminTeamManagement";
 import { AdminReferralSettings } from "@/components/admin/AdminReferralSettings";
 import { AdminUpcomingReleases } from "@/components/admin/AdminUpcomingReleases";
 import { AdminCarouselManagement } from "@/components/admin/AdminCarouselManagement";
+import { AdminSecurityManagement } from "@/components/admin/AdminSecurityManagement";
 import { ContentTopicsEditor } from "@/components/content/ContentTopicsEditor";
 import { ArrowLeft } from "lucide-react";
 import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagement";
@@ -32,7 +33,8 @@ type ActiveAdminSection =
   | 'team' 
   | 'referral-settings' 
   | 'upcoming-releases' 
-  | 'carousel';
+  | 'carousel'
+  | 'security';
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState<ActiveAdminSection>('overview');
@@ -44,7 +46,7 @@ const AdminDashboard = () => {
     console.log('AdminDashboard - Section change:', tab);
     const validSections: ActiveAdminSection[] = [
       'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
-      'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel'
+      'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'security'
     ];
     
     if (validSections.includes(tab as ActiveAdminSection)) {
@@ -115,6 +117,8 @@ const AdminDashboard = () => {
         return <AdminUpcomingReleases />;
       case 'carousel':
         return <AdminCarouselManagement />;
+      case 'security':
+        return <AdminSecurityManagement />;
       default:
         return <AdminDashboardContent />;
     }

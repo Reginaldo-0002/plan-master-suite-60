@@ -7,6 +7,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { Suspense } from "react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useAuth } from "@/hooks/useAuth";
+import { useSessionTracking } from "@/hooks/useSessionTracking";
 import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -41,35 +43,44 @@ function LoadingFallback() {
   );
 }
 
+function AppContent() {
+  const { isAuthenticated } = useAuth();
+  useSessionTracking();
+
+  return (
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
+      <Suspense fallback={<LoadingFallback />}>
+        <TooltipProvider delayDuration={300} skipDelayDuration={100}>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/auth" element={<Auth />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/admin" element={<AdminDashboard />} />
+              {/* All content sections now handled within Dashboard */}
+              <Route path="/rules" element={<Dashboard />} />
+              <Route path="/produtos" element={<Dashboard />} />
+              <Route path="/cursos" element={<Dashboard />} />
+              <Route path="/ferramentas" element={<Dashboard />} />
+              <Route path="/tutoriais" element={<Dashboard />} />
+              <Route path="/carousel" element={<Dashboard />} />
+              <Route path="/em-breve" element={<Dashboard />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </Suspense>
+    </ThemeProvider>
+  );
+}
+
 function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-          <Suspense fallback={<LoadingFallback />}>
-            <TooltipProvider delayDuration={300} skipDelayDuration={100}>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/auth" element={<Auth />} />
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/admin" element={<AdminDashboard />} />
-                  {/* All content sections now handled within Dashboard */}
-                  <Route path="/rules" element={<Dashboard />} />
-                  <Route path="/produtos" element={<Dashboard />} />
-                  <Route path="/cursos" element={<Dashboard />} />
-                  <Route path="/ferramentas" element={<Dashboard />} />
-                  <Route path="/tutoriais" element={<Dashboard />} />
-                  <Route path="/carousel" element={<Dashboard />} />
-                  <Route path="/em-breve" element={<Dashboard />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </Suspense>
-        </ThemeProvider>
+        <AppContent />
       </QueryClientProvider>
     </ErrorBoundary>
   );

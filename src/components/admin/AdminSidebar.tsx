@@ -14,7 +14,8 @@ import {
   UserPlus,
   Settings,
   Calendar,
-  ImageIcon
+  ImageIcon,
+  Shield
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -36,6 +37,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     { id: 'referral-settings', label: 'Configurações de Indicação', icon: Settings },
     { id: 'upcoming-releases', label: 'Próximos Lançamentos', icon: Calendar },
     { id: 'carousel', label: 'Carrossel', icon: ImageIcon },
+    { id: 'security', label: 'Segurança', icon: Shield },
   ];
 
   return (
