@@ -10,6 +10,7 @@ interface RoleCheckResult {
   isAdmin: boolean;
   isModerator: boolean;
   loading: boolean;
+  refreshRole: () => Promise<void>;
 }
 
 export const useRoleCheck = (): RoleCheckResult => {
@@ -17,49 +18,66 @@ export const useRoleCheck = (): RoleCheckResult => {
   const [loading, setLoading] = useState(true);
   const { handleAsyncError } = useErrorHandler();
 
-  useEffect(() => {
-    const checkUserRoleDirectly = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          console.log('useRoleCheck - No user found');
-          setRole(null);
-          setLoading(false);
-          return;
-        }
-
-        console.log('useRoleCheck - User found, checking role:', user.id);
-
-        // Buscar role diretamente da tabela user_roles
-        const { data: userRoles, error } = await supabase
-          .from('user_roles')
-          .select('role')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        console.log('useRoleCheck - Direct role check:', { userRoles, error });
-
-        if (error) {
-          console.error('Error fetching user role directly:', error);
-          setRole('user');
-        } else if (userRoles && userRoles.length > 0) {
-          const userRole = userRoles[0].role as UserRole;
-          console.log('useRoleCheck - Setting role to:', userRole);
-          setRole(userRole);
-        } else {
-          console.log('useRoleCheck - No role found, defaulting to user');
-          setRole('user');
-        }
-      } catch (error) {
-        console.error('Error in role check:', error);
-        setRole('user');
-      } finally {
+  const checkUserRoleDirectly = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log('useRoleCheck - No user found');
+        setRole(null);
         setLoading(false);
+        return;
       }
-    };
 
+      console.log('useRoleCheck - User found, checking role:', user.id);
+
+      // Buscar role diretamente da tabela user_roles
+      const { data: userRoles, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .limit(1);
+
+      console.log('useRoleCheck - Direct role check:', { userRoles, error });
+
+      if (error) {
+        console.error('Error fetching user role directly:', error);
+        setRole('user');
+      } else if (userRoles && userRoles.length > 0) {
+        const userRole = userRoles[0].role as UserRole;
+        console.log('useRoleCheck - Setting role to:', userRole);
+        setRole(userRole);
+      } else {
+        console.log('useRoleCheck - No role found, defaulting to user');
+        setRole('user');
+      }
+    } catch (error) {
+      console.error('Error in role check:', error);
+      setRole('user');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     checkUserRoleDirectly();
+
+    // Configurar listener real-time para mudanças nos roles
+    const channel = supabase
+      .channel('user-roles-changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'user_roles'
+      }, (payload) => {
+        console.log('Role changed, refreshing...', payload);
+        checkUserRoleDirectly();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Remover a função checkUserRole antiga
@@ -74,11 +92,17 @@ export const useRoleCheck = (): RoleCheckResult => {
     return false;
   };
 
+  const refreshRole = async () => {
+    setLoading(true);
+    await checkUserRoleDirectly();
+  };
+
   return {
     role,
     hasRole,
     isAdmin: role === 'admin',
     isModerator: role === 'moderator' || role === 'admin',
-    loading
+    loading,
+    refreshRole
   };
 };

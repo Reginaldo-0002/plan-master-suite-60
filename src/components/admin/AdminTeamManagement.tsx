@@ -137,6 +137,9 @@ export const AdminTeamManagement = () => {
       // Recarregar os dados imediatamente
       await fetchTeamMembers();
       
+      // Forçar refresh dos roles em toda a aplicação
+      window.location.reload();
+      
     } catch (error) {
       console.error('Error updating member role:', error);
       toast({
