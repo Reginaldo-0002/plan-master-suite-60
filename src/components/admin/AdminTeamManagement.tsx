@@ -97,21 +97,30 @@ export const AdminTeamManagement = () => {
         throw new Error('Usuário não autenticado');
       }
 
-      // Usar upsert para atualizar ou inserir o role
-      const { error } = await supabase
+      // Primeiro, deletar qualquer role existente para esse usuário
+      const { error: deleteError } = await supabase
         .from('user_roles')
-        .upsert({ 
+        .delete()
+        .eq('user_id', selectedMember.user_id);
+
+      if (deleteError) {
+        console.error('Error deleting existing role:', deleteError);
+        throw deleteError;
+      }
+
+      // Então, inserir o novo role
+      const { error: insertError } = await supabase
+        .from('user_roles')
+        .insert({ 
           user_id: selectedMember.user_id,
           role: newRole,
           assigned_by: user.id,
           assigned_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'
         });
 
-      if (error) {
-        console.error('Error updating role:', error);
-        throw error;
+      if (insertError) {
+        console.error('Error inserting new role:', insertError);
+        throw insertError;
       }
 
       console.log('Role updated successfully');
