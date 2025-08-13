@@ -6,9 +6,23 @@ export const useSessionTracking = () => {
   const { user } = useAuth();
   const sessionIdRef = useRef<string | null>(null);
   const startTimeRef = useRef<Date | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Cleanup se usuário não existe
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      return;
+    }
+
+    // Evitar múltiplas sessões para o mesmo usuário
+    if (sessionIdRef.current) {
+      console.log('Session already active for user:', user.id);
+      return;
+    }
 
     console.log('Starting session tracking for user:', user.id);
 
@@ -62,7 +76,7 @@ export const useSessionTracking = () => {
         console.log('Session created successfully:', sessionData.id);
 
         // Atualizar atividade a cada 2 minutos para capturar melhor
-        const activityInterval = setInterval(() => {
+        intervalRef.current = setInterval(() => {
           if (sessionIdRef.current && startTimeRef.current) {
             const duration = Math.floor((Date.now() - startTimeRef.current.getTime()) / 1000 / 60);
             console.log('Updating session duration:', duration, 'minutes');
@@ -105,7 +119,10 @@ export const useSessionTracking = () => {
         window.addEventListener('beforeunload', handleBeforeUnload);
 
         return () => {
-          clearInterval(activityInterval);
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
           window.removeEventListener('beforeunload', handleBeforeUnload);
         };
 
@@ -134,6 +151,11 @@ export const useSessionTracking = () => {
 
     // Cleanup quando usuário faz logout
     return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      
       if (sessionIdRef.current && startTimeRef.current) {
         const duration = Math.floor((Date.now() - startTimeRef.current.getTime()) / 1000 / 60);
         supabase
@@ -146,6 +168,8 @@ export const useSessionTracking = () => {
           .eq('id', sessionIdRef.current)
           .then(() => {
             console.log('Session ended');
+            sessionIdRef.current = null;
+            startTimeRef.current = null;
           });
       }
     };
