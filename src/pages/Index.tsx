@@ -4,30 +4,28 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Users, Zap, Shield } from "lucide-react";
 
-// --- INÍCIO: CSS para as Animações (ATUALIZADO) ---
+// --- INÍCIO: CSS para as Animações (LÓGICA CORRIGIDA) ---
 const AnimationStyles = () => (
   <style>
     {`
-      /* Animação da Faixa (Marquee) */
+      /* Animação da Faixa (Marquee) - Lógica Simplificada e Robusta */
       @keyframes scroll-left {
         from {
           transform: translateX(0);
         }
         to {
-          transform: translateX(-100%);
+          /* Move o container para a esquerda pela largura exata de UM bloco de conteúdo (que é 50% do total) */
+          transform: translateX(-50%);
         }
       }
 
-      .animate-scroll-left {
-        /* Garante que o bloco de conteúdo não encolha */
-        flex-shrink: 0;
-        /* Alinha os itens dentro do bloco */
+      .animate-marquee-wrapper {
+        /* Usa flex para alinhar os dois blocos de conteúdo lado a lado */
         display: flex;
-        align-items: center;
-        /* Aplica a animação de rolagem */
+        /* Aplica a animação */
         animation: scroll-left 40s linear infinite;
       }
-
+      
       /* Animação de Raios (Sem alterações) */
       @keyframes lightning-strike {
         0% { opacity: 0; }
@@ -66,8 +64,7 @@ const AnimationStyles = () => (
 );
 // --- FIM: CSS para as Animações ---
 
-// --- INÍCIO: Componente Reutilizável para o Item da Faixa ---
-// Isso torna o código mais limpo e fácil de manter.
+// --- Componente Reutilizável para o Item da Faixa (Sem alterações) ---
 const MarqueeItem = () => (
     <div className="flex flex-shrink-0 items-center mx-8">
         <Users className="w-6 h-6 mr-3 text-primary"/>
@@ -76,7 +73,6 @@ const MarqueeItem = () => (
         </span>
     </div>
 );
-// --- FIM: Componente Reutilizável ---
 
 
 const Index = () => {
@@ -99,14 +95,11 @@ const Index = () => {
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         <div className="absolute inset-0 gradient-hero opacity-10"></div>
-        
-        {/* Efeitos de Raios e Relâmpagos */}
         <div className="absolute inset-0 overflow-hidden">
             <div className="lightning lightning-1"></div>
             <div className="lightning lightning-2"></div>
             <div className="lightning lightning-3"></div>
         </div>
-        
         <div className="relative container mx-auto px-4 py-20">
           <div className="text-center space-y-8 max-w-4xl mx-auto">
             <h1 className="text-5xl md:text-6xl font-bold font-heading text-foreground text-center">
@@ -140,18 +133,20 @@ const Index = () => {
         </div>
       </div>
 
-      {/* --- INÍCIO: Faixa Animada (Marquee) CORRIGIDA --- */}
-      <div className="py-4 bg-background-alt flex overflow-hidden">
-          {/* Bloco de Conteúdo 1 */}
-          <div className="animate-scroll-left">
+      {/* --- INÍCIO: Faixa Animada (Marquee) CORRIGIDA E ESTÁVEL --- */}
+      <div className="py-4 bg-background-alt overflow-hidden">
+        <div className="animate-marquee-wrapper">
+          {/* Bloco de Conteúdo 1: Contém os itens e não encolhe */}
+          <div className="flex flex-shrink-0 items-center">
               <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
               <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
           </div>
-          {/* Bloco de Conteúdo 2 (cópia exata para o loop contínuo) */}
-          <div className="animate-scroll-left" aria-hidden="true">
+          {/* Bloco de Conteúdo 2: Uma cópia exata para criar o loop perfeito */}
+          <div className="flex flex-shrink-0 items-center" aria-hidden="true">
               <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
               <MarqueeItem /><MarqueeItem /><MarqueeItem /><MarqueeItem />
           </div>
+        </div>
       </div>
       {/* --- FIM: Faixa Animada (Marquee) --- */}
 
