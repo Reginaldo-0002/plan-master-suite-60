@@ -107,13 +107,18 @@ export const NotificationPopup = () => {
 
       const viewedIds = viewedNotifications?.map(v => v.notification_id) || [];
 
-      const { data, error } = await supabase
+      let query = supabase
         .from('notifications')
         .select('id, title, message, type, popup_duration, created_at, target_users, target_plans, is_popup, notification_metadata')
         .eq('is_active', true)
-        .eq('is_popup', true)
-        .not('id', 'in', `(${viewedIds.length ? viewedIds.join(',') : 'null'})`)
-        .order('created_at', { ascending: false });
+        .eq('is_popup', true);
+
+      // Only add the NOT IN condition if there are viewed notifications
+      if (viewedIds.length > 0) {
+        query = query.not('id', 'in', `(${viewedIds.join(',')})`);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
@@ -170,22 +175,8 @@ export const NotificationPopup = () => {
       // Redirecionar se for notificação de chat
       if (notification.notification_metadata?.action_type === 'chat_message' && 
           notification.notification_metadata?.user_id) {
-        // Buscar ou criar ticket de suporte para o usuário
-        const { data: existingTicket } = await supabase
-          .from('support_tickets')
-          .select('id')
-          .eq('user_id', notification.notification_metadata.user_id)
-          .eq('status', 'open')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-
-        if (existingTicket) {
-          window.location.href = `/admin/support/${existingTicket.id}`;
-        } else {
-          // Se não há ticket, navegar para gerenciamento de suporte
-          window.location.href = '/admin/support';
-        }
+        // Navegar para o painel admin com o suporte ativo
+        window.location.href = `/admin#support`;
       }
     } catch (error) {
       console.error('Error handling notification click:', error);
