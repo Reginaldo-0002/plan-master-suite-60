@@ -143,13 +143,13 @@ export const NotificationPopup = () => {
   const getBackgroundColor = (type: string) => {
     switch (type) {
       case 'success':
-        return 'bg-green-50 border-green-200';
+        return 'bg-green-100 border-green-300 text-green-800';
       case 'warning':
-        return 'bg-yellow-50 border-yellow-200';
+        return 'bg-yellow-100 border-yellow-300 text-yellow-800';
       case 'error':
-        return 'bg-red-50 border-red-200';
+        return 'bg-red-100 border-red-300 text-red-800';
       default:
-        return 'bg-blue-50 border-blue-200';
+        return 'bg-blue-100 border-blue-300 text-blue-800';
     }
   };
 
@@ -178,10 +178,10 @@ export const NotificationPopup = () => {
                 {getIcon(notification.type)}
               </div>
               <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-semibold text-foreground mb-1">
+                <h4 className="text-sm font-semibold mb-1">
                   {notification.title}
                 </h4>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm opacity-90">
                   {notification.message}
                 </p>
               </div>
