@@ -68,7 +68,13 @@ export const NotificationPopup = () => {
                 action_type?: string;
               } | null
             };
-            setNotifications(prev => [...prev, formattedNotification]);
+            
+            // Verificar se a notificação já existe antes de adicionar
+            setNotifications(prev => {
+              const exists = prev.some(n => n.id === formattedNotification.id);
+              if (exists) return prev;
+              return [...prev, formattedNotification];
+            });
           }
         }
       })
@@ -122,19 +128,24 @@ export const NotificationPopup = () => {
 
       if (error) throw error;
 
-      const filteredNotifications = (data || []).filter(notification => 
-        shouldShowNotification(notification, { ...profile, isAdmin })
-      ).map(notification => ({
-        ...notification,
-        notification_metadata: notification.notification_metadata as {
-          user_id?: string;
-          user_name?: string;
-          ticket_id?: string;
-          action_type?: string;
-        } | null
-      }));
+      // Filtrar notificações únicas e aplicar targeting
+      const uniqueNotifications = (data || []).reduce((acc: any[], notification: any) => {
+        const exists = acc.some(n => n.id === notification.id);
+        if (!exists && shouldShowNotification(notification, { ...profile, isAdmin })) {
+          acc.push({
+            ...notification,
+            notification_metadata: notification.notification_metadata as {
+              user_id?: string;
+              user_name?: string;
+              ticket_id?: string;
+              action_type?: string;
+            } | null
+          });
+        }
+        return acc;
+      }, []);
 
-      setNotifications(filteredNotifications);
+      setNotifications(uniqueNotifications);
     } catch (error) {
       console.error('Error fetching popup notifications:', error);
     }
@@ -161,6 +172,9 @@ export const NotificationPopup = () => {
 
   const handleNotificationClick = async (notification: PopupNotification) => {
     try {
+      // Remover da lista local imediatamente para evitar múltiplos cliques
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+
       // Marcar como visualizada no banco
       await supabase
         .from('admin_notification_views')
@@ -168,9 +182,6 @@ export const NotificationPopup = () => {
           admin_id: user?.id,
           notification_id: notification.id
         });
-
-      // Remover da lista local
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
 
       // Redirecionar se for notificação de chat
       if (notification.notification_metadata?.action_type === 'chat_message' && 
@@ -180,13 +191,24 @@ export const NotificationPopup = () => {
       }
     } catch (error) {
       console.error('Error handling notification click:', error);
-      // Remover da lista mesmo se houver erro
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      // Notificação já foi removida da lista, não reverter
     }
   };
 
-  const removeNotification = (id: string) => {
+  const removeNotification = async (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
+    
+    // Marcar como visualizada no banco também
+    try {
+      await supabase
+        .from('admin_notification_views')
+        .insert({
+          admin_id: user?.id,
+          notification_id: id
+        });
+    } catch (error) {
+      console.error('Error marking notification as viewed:', error);
+    }
   };
 
   const getIcon = (type: string) => {
@@ -217,14 +239,21 @@ export const NotificationPopup = () => {
 
   // Auto remove notifications after their duration (only if duration is set)
   useEffect(() => {
+    const timers: NodeJS.Timeout[] = [];
+    
     notifications.forEach(notification => {
       const duration = notification.popup_duration;
       if (duration && duration > 0) {
-        setTimeout(() => {
+        const timer = setTimeout(() => {
           removeNotification(notification.id);
         }, duration);
+        timers.push(timer);
       }
     });
+
+    return () => {
+      timers.forEach(timer => clearTimeout(timer));
+    };
   }, [notifications]);
 
   if (notifications.length === 0) return null;
