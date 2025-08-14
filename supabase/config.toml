@@ -1,1 +1,25 @@
 project_id = "srnwogrjwhqjjyodxalx"
+
+[functions.webhook-hotmart]
+verify_jwt = false
+
+[functions.webhook-kiwify] 
+verify_jwt = false
+
+[functions.webhook-generic]
+verify_jwt = false
+
+[functions.meta-conversions-api]
+verify_jwt = false
+
+[functions.outbound-webhook-dispatcher]
+verify_jwt = false
+
+[functions.admin-chat-handler]
+verify_jwt = true
+
+[functions.auto-notification-sender]
+verify_jwt = true
+
+[functions.plan-expiration-checker]
+verify_jwt = true

@@ -20,7 +20,7 @@ import { AdvancedChatbotManager } from "@/components/admin/AdvancedChatbotManage
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RequireRole } from "@/components/auth/RequireRole";
-import { IntegrationsDashboard } from "@/components/integrations/IntegrationsDashboard";
+import { IntegrationsSettings } from "@/components/integrations/IntegrationsSettings";
 
 type ActiveAdminSection = 
   | 'overview' 
@@ -180,7 +180,7 @@ const AdminDashboard = () => {
       case 'carousel':
         return <AdminCarouselManagement />;
         case 'integrations':
-          return <IntegrationsDashboard onSectionChange={handleSectionChange} />;
+          return <IntegrationsSettings onSectionChange={handleSectionChange} />;
         case 'security':
           return <AdminSecurityManagement />;
       default:
