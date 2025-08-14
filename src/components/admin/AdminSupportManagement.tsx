@@ -80,15 +80,22 @@ export const AdminSupportManagement = () => {
           if (ticket) {
             console.log('Found ticket, opening chat:', ticket);
             setSelectedTicket(ticket);
-            // Open the ticket dialog automatically
-            setIsTicketDialogOpen(true);
-            // Scroll to the bottom of messages when opening
+            // Open the ticket dialog automatically with a small delay
             setTimeout(() => {
-              const messagesContainer = document.querySelector('[data-messages-container]');
-              if (messagesContainer) {
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
-              }
-            }, 500);
+              setIsTicketDialogOpen(true);
+              // Scroll to the bottom of messages when opening
+              setTimeout(() => {
+                const messagesContainer = document.querySelector('[data-messages-container]');
+                if (messagesContainer) {
+                  messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+              }, 300);
+            }, 200);
+            
+            toast({
+              title: "Chat Aberto",
+              description: `Conversa com ${userName} aberta com sucesso!`,
+            });
           } else {
             console.warn('Ticket not found in available tickets:', ticketId);
             toast({
@@ -103,6 +110,11 @@ export const AdminSupportManagement = () => {
         } catch (error) {
           console.error('Error processing notification data:', error);
           sessionStorage.removeItem('adminChatNotification');
+          toast({
+            title: "Erro",
+            description: "Erro ao processar notificação",
+            variant: "destructive"
+          });
         }
       }
     };
@@ -116,22 +128,48 @@ export const AdminSupportManagement = () => {
   // Separate useEffect for hash change listening
   useEffect(() => {
     const handleHashChange = () => {
+      console.log('Hash changed to:', window.location.hash);
       if (window.location.hash === '#support') {
         // Give a moment for the component to mount and tickets to load
         setTimeout(() => {
           const notificationData = sessionStorage.getItem('adminChatNotification');
-          if (notificationData && tickets.length > 0) {
-            // Process the notification redirect
-            window.dispatchEvent(new Event('storage'));
+          if (notificationData) {
+            console.log('Hash change detected, processing notification:', notificationData);
+            // Force a re-check by dispatching a custom event
+            const event = new CustomEvent('checkNotification');
+            window.dispatchEvent(event);
           }
-        }, 300);
+        }, 500);
+      }
+    };
+    
+    // Listen for both hash changes and custom events
+    const handleCustomEvent = () => {
+      if (tickets.length > 0) {
+        const notificationData = sessionStorage.getItem('adminChatNotification');
+        if (notificationData) {
+          try {
+            const { userId, userName, ticketId } = JSON.parse(notificationData);
+            const ticket = tickets.find(t => t.id === ticketId);
+            if (ticket) {
+              setSelectedTicket(ticket);
+              setTimeout(() => setIsTicketDialogOpen(true), 100);
+              sessionStorage.removeItem('adminChatNotification');
+            }
+          } catch (error) {
+            console.error('Error in custom event handler:', error);
+            sessionStorage.removeItem('adminChatNotification');
+          }
+        }
       }
     };
     
     window.addEventListener('hashchange', handleHashChange);
+    window.addEventListener('checkNotification', handleCustomEvent);
     
     return () => {
       window.removeEventListener('hashchange', handleHashChange);
+      window.removeEventListener('checkNotification', handleCustomEvent);
     };
   }, [tickets]);
 

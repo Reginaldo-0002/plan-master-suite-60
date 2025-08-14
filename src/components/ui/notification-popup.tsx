@@ -238,7 +238,7 @@ export const NotificationPopup = () => {
 
       // Exclude viewed notifications only for admins
       if (isAdmin && viewedIds.length > 0) {
-        query = query.not('id', 'in', `(${viewedIds.map(id => `'${id}'`).join(',')})`);
+        query = query.not('id', 'in', `(${viewedIds.join(',')})`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
