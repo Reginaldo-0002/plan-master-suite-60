@@ -80,8 +80,9 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
 
       if (error) throw error;
       setChatbotResponses(data || []);
+      console.log('✅ [EnhancedChatbot] Carregadas', data?.length || 0, 'respostas do chatbot');
     } catch (error) {
-      console.error('Error loading chatbot responses:', error);
+      console.error('❌ [EnhancedChatbot] Erro ao carregar respostas do chatbot:', error);
     }
   };
 
@@ -117,6 +118,9 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
   const findBotResponse = (userInput: string): ChatbotResponse | null => {
     const normalizedInput = userInput.toLowerCase().trim();
     
+    console.log('🔍 [EnhancedChatbot] Buscando resposta para:', normalizedInput);
+    console.log('📊 [EnhancedChatbot] Total de respostas disponíveis:', chatbotResponses.length);
+    
     // Busca por correspondência exata primeiro
     let response = chatbotResponses.find(r => 
       r.trigger_text.toLowerCase() === normalizedInput
@@ -128,6 +132,12 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
         normalizedInput.includes(r.trigger_text.toLowerCase()) ||
         r.trigger_text.toLowerCase().includes(normalizedInput)
       );
+    }
+    
+    if (response) {
+      console.log('✅ [EnhancedChatbot] Resposta encontrada:', response.trigger_text, '→', response.response_type);
+    } else {
+      console.log('❌ [EnhancedChatbot] Nenhuma resposta encontrada para:', normalizedInput);
     }
     
     return response || null;
@@ -249,9 +259,20 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
         );
       } else {
         // Resposta padrão quando não encontra correspondência
+        const availableCommands = chatbotResponses
+          .filter(r => r.priority >= 50) // Só comandos principais
+          .slice(0, 5)
+          .map(r => `• ${r.trigger_text} - ${r.title}`)
+          .join('\n');
+          
         const defaultMsg: Message = {
           id: `bot-default-${Date.now()}`,
-          message: 'Desculpe, não entendi sua solicitação. Você pode tentar reformular ou digitar "ola" para ver as opções disponíveis.\n\nAlgumas palavras-chave que reconheço:\n• ola - Menu principal\n• planos - Nossos planos\n• suporte - Falar com suporte\n• contato - Informações de contato',
+          message: `Desculpe, não entendi sua solicitação. Você pode tentar reformular ou digitar "ola" para ver as opções disponíveis.
+
+**Comandos disponíveis:**
+${availableCommands || '• ola - Menu principal\n• planos - Nossos planos\n• suporte - Falar com suporte\n• contato - Informações de contato'}
+
+Digite exatamente uma das palavras-chave acima para acessar o menu correspondente.`,
           message_type: 'text',
           sender_id: 'bot',
           is_bot: true,
