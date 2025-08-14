@@ -146,10 +146,10 @@ export const AdminToolsManagement = () => {
       const { error } = await supabase
         .from('tool_status')
         .update({
-          tool_name: formData.tool_name,
           status: formData.status,
           message: formData.message || null,
-          scheduled_maintenance
+          scheduled_maintenance,
+          updated_at: new Date().toISOString()
         })
         .eq('id', editingTool.id);
 
@@ -157,17 +157,17 @@ export const AdminToolsManagement = () => {
 
       toast({
         title: "Sucesso",
-        description: "Ferramenta atualizada com sucesso",
+        description: "Status da ferramenta atualizado com sucesso",
       });
       
       setEditingTool(null);
       resetForm();
-      fetchTools();
+      // Não precisa chamar fetchTools - real-time vai atualizar
     } catch (error) {
       console.error('Error updating tool:', error);
       toast({
         title: "Erro",
-        description: "Erro ao atualizar ferramenta",
+        description: "Erro ao atualizar status da ferramenta",
         variant: "destructive",
       });
     }

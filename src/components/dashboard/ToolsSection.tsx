@@ -29,6 +29,22 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
 
   useEffect(() => {
     fetchTools();
+    
+    // Real-time updates para tool_status
+    const channel = supabase
+      .channel('tools-status-updates')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'tool_status'
+      }, () => {
+        fetchTools();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchTools = async () => {

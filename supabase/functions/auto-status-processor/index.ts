@@ -34,15 +34,15 @@ serve(async (req) => {
 
     for (const schedule of schedules) {
       try {
-        // Update tool status
+        // Update tool status usando UPDATE ao invés de UPSERT
         const { error: updateError } = await supabase
           .from('tool_status')
-          .upsert({
-            tool_name: schedule.tool_name,
+          .update({
             status: schedule.target_status,
             message: `Status automaticamente alterado para ${schedule.target_status}`,
             updated_at: new Date().toISOString()
-          });
+          })
+          .eq('tool_name', schedule.tool_name);
 
         if (updateError) {
           console.error(`Error updating tool ${schedule.tool_name}:`, updateError);
