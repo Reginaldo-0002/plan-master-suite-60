@@ -55,6 +55,10 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
   const fetchContent = async () => {
     try {
+      // Get current user first
+      const { data: userData } = await supabase.auth.getUser();
+      const currentUserId = userData.user?.id;
+
       let query = supabase
         .from('content')
         .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')
@@ -70,17 +74,23 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
       const { data, error } = await query;
 
-      if (error) {
-        console.error('Error fetching content:', error);
-        toast({
-          title: "Erro",
-          description: "Falha ao carregar conteúdo",
-          variant: "destructive",
-        });
-        return;
+      if (error) throw error;
+
+      // Filter out content that is hidden from the current user
+      let filteredData = data || [];
+      
+      if (currentUserId) {
+        const { data: visibilityRules } = await supabase
+          .from('content_visibility_rules')
+          .select('content_id')
+          .eq('user_id', currentUserId)
+          .eq('is_visible', false);
+
+        const hiddenContentIds = visibilityRules?.map(rule => rule.content_id) || [];
+        filteredData = filteredData.filter(content => !hiddenContentIds.includes(content.id));
       }
 
-      const mappedData: Content[] = (data || []).map(item => ({
+      const mappedData: Content[] = filteredData.map(item => ({
         ...item,
         status: (item.status as 'active' | 'maintenance' | 'blocked' | 'published' | 'draft') || 'published',
         release_date: item.scheduled_publish_at
@@ -250,7 +260,16 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
                     {getStatusText(item.status)}
                   </Button>
                 ) : !canAccess(item.required_plan) ? (
-                  <Button variant="secondary" className="w-full">
+                  <Button 
+                    variant="secondary" 
+                    className="w-full"
+                    onClick={() => {
+                      // Redirect to plans section
+                      const currentUrl = new URL(window.location.href);
+                      currentUrl.hash = '#plans';
+                      window.location.href = currentUrl.toString();
+                    }}
+                  >
                     <Lock className="w-4 h-4 mr-2" />
                     Upgrade Necessário
                   </Button>

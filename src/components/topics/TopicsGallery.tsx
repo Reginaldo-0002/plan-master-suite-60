@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, Play, FileText, Link, Unlock, Eye } from "lucide-react";
+import { ArrowLeft, Play, FileText, Link, Unlock, Eye, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Topic {
@@ -34,12 +34,19 @@ interface TopicsGalleryProps {
   onBack: () => void;
 }
 
+interface VideoPlayer {
+  id: string;
+  title: string;
+  description: string | null;
+}
+
 export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProps) => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<Topic | null>(null);
   const [resources, setResources] = useState<Resource[]>([]);
   const [loading, setLoading] = useState(true);
   const [resourcesLoading, setResourcesLoading] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -136,13 +143,26 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
 
   const openResource = (resource: Resource) => {
     if (resource.is_premium && !hasAccess(resource)) {
-      toast({
-        title: "Acesso Restrito",
-        description: `Este recurso requer o plano ${resource.required_plan.toUpperCase()}`,
-        variant: "destructive",
-      });
+      // Redirect to plans section
+      const currentUrl = new URL(window.location.href);
+      currentUrl.hash = '#plans';
+      window.location.href = currentUrl.toString();
       return;
     }
+
+    // Handle YouTube videos to embed them
+    if (resource.resource_type === 'video' && resource.resource_url.includes('youtube.com')) {
+      const videoId = extractYouTubeVideoId(resource.resource_url);
+      if (videoId) {
+        setSelectedVideo({
+          id: videoId,
+          title: resource.title,
+          description: resource.description
+        });
+        return;
+      }
+    }
+    
     window.open(resource.resource_url, '_blank');
   };
 
@@ -163,6 +183,19 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
       case 'pro': return 'bg-purple-100 text-purple-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const extractYouTubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
   };
 
   if (loading) {
@@ -293,6 +326,40 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
                 <p className="text-sm text-muted-foreground mt-2">
                   Os recursos (vídeos, PDFs, links) aparecerão aqui quando forem adicionados pelos administradores.
                 </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* YouTube Video Player Dialog */}
+      <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <div className="relative">
+            <Button 
+              onClick={() => setSelectedVideo(null)}
+              className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white"
+              size="sm"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+            {selectedVideo && (
+              <div className="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${selectedVideo.id}?autoplay=1&rel=0`}
+                  title={selectedVideo.title}
+                  className="w-full h-full rounded-lg"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                />
+              </div>
+            )}
+            {selectedVideo && (
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2">{selectedVideo.title}</h3>
+                {selectedVideo.description && (
+                  <p className="text-muted-foreground">{selectedVideo.description}</p>
+                )}
               </div>
             )}
           </div>

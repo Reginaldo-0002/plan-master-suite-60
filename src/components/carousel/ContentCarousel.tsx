@@ -42,6 +42,10 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
     try {
       console.log('Fetching carousel content...');
       
+      // Get current user first
+      const { data: userData } = await supabase.auth.getUser();
+      const currentUserId = userData.user?.id;
+      
       const { data, error } = await supabase
         .from('content')
         .select(`
@@ -62,19 +66,25 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
         .order('carousel_order', { ascending: true })
         .order('created_at', { ascending: false });
 
-      console.log('Carousel content result:', { data, error });
+      if (error) throw error;
 
-      if (error) {
-        console.error('Error fetching carousel content:', error);
-        toast({
-          title: "Erro",
-          description: "Falha ao carregar conteúdo do carrossel",
-          variant: "destructive",
-        });
-        return;
+      // Filter out content that is hidden from the current user
+      let filteredData = data || [];
+      
+      if (currentUserId) {
+        const { data: visibilityRules } = await supabase
+          .from('content_visibility_rules')
+          .select('content_id')
+          .eq('user_id', currentUserId)
+          .eq('is_visible', false);
+
+        const hiddenContentIds = visibilityRules?.map(rule => rule.content_id) || [];
+        filteredData = filteredData.filter(content => !hiddenContentIds.includes(content.id));
       }
 
-      setCarouselContent(data || []);
+      console.log('Carousel content result:', { filteredData, error });
+
+      setCarouselContent(filteredData);
     } catch (error) {
       console.error('Error:', error);
       toast({
@@ -265,7 +275,16 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
                       Acessar
                     </Button>
                   ) : (
-                    <Button variant="outline" className="w-full" disabled>
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        // Redirect to plans section
+                        const currentUrl = new URL(window.location.href);
+                        currentUrl.hash = '#plans';
+                        window.location.href = currentUrl.toString();
+                      }}
+                    >
                       <Crown className="w-4 h-4 mr-2" />
                       Upgrade Necessário
                     </Button>

@@ -132,12 +132,10 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
           description: `Redirecionando para ${tool.name}...`,
         });
       } else if (!canAccess(tool)) {
-        // Usuário precisa fazer upgrade
-        toast({
-          title: "Upgrade necessário",
-          description: `Esta ferramenta requer o plano ${tool.required_plan?.toUpperCase()}. Faça o upgrade para acessar.`,
-          variant: "destructive",
-        });
+        // Redirect to plans section
+        const currentUrl = new URL(window.location.href);
+        currentUrl.hash = '#plans';
+        window.location.href = currentUrl.toString();
       } else {
         // Ferramenta indisponível
         toast({

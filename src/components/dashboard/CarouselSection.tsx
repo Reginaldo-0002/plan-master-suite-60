@@ -204,7 +204,16 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
                           Acessar
                         </Button>
                       ) : !canAccess(content.required_plan) ? (
-                        <Button variant="outline" className="w-full" disabled>
+                        <Button 
+                          variant="outline" 
+                          className="w-full"
+                          onClick={() => {
+                            // Redirect to plans section
+                            const currentUrl = new URL(window.location.href);
+                            currentUrl.hash = '#plans';
+                            window.location.href = currentUrl.toString();
+                          }}
+                        >
                           <Lock className="w-4 h-4 mr-2" />
                           Upgrade Necessário
                         </Button>
