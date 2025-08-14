@@ -33,6 +33,7 @@ interface PlatformProduct {
 export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [platformProducts, setPlatformProducts] = useState<PlatformProduct[]>([]);
+  const [plansFromDB, setPlansFromDB] = useState<any[]>([]);
   const { toast } = useToast();
 
   // Remove any admin-only restrictions for viewing plans
@@ -40,7 +41,23 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
 
   useEffect(() => {
     fetchPlatformProducts();
+    fetchPlans();
   }, []);
+
+  const fetchPlans = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('plans')
+        .select('*')
+        .eq('active', true)
+        .order('price_cents', { ascending: true });
+
+      if (error) throw error;
+      setPlansFromDB(data || []);
+    } catch (error) {
+      console.error('Error fetching plans:', error);
+    }
+  };
 
   const fetchPlatformProducts = async () => {
     try {
@@ -128,58 +145,82 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
     }
   };
 
-  const plans = [
-    {
-      id: 'free',
-      name: 'Free',
-      price: 'R$ 0',
-      description: 'Perfeito para começar',
-      icon: <Star className="w-6 h-6" />,
-      color: 'bg-plan-free',
-      features: [
-        'Acesso básico ao conteúdo',
-        'Suporte por email',
-        'Tutoriais essenciais',
-        'Dashboard básico'
-      ],
-      current: userPlan === 'free'
-    },
-    {
-      id: 'vip',
-      name: 'VIP',
-      price: 'R$ 97',
-      description: 'Para usuários avançados',
-      icon: <Gem className="w-6 h-6" />,
-      color: 'bg-plan-vip',
-      features: [
-        'Tudo do plano Free',
-        'Acesso a conteúdo premium',
-        'Suporte prioritário',
-        'Ferramentas avançadas',
-        'Webinars exclusivos',
-        'Comunidade VIP'
-      ],
-      current: userPlan === 'vip'
-    },
-    {
-      id: 'pro',
-      name: 'PRO',
-      price: 'R$ 197',
-      description: 'Para profissionais sérios',
-      icon: <Crown className="w-6 h-6" />,
-      color: 'bg-plan-pro',
-      features: [
-        'Tudo do plano VIP',
-        'Acesso ilimitado a tudo',
-        'Suporte 24/7',
-        'Consultoria individual',
-        'Recursos beta',
-        'Certificações',
-        'Mentorias ao vivo'
-      ],
-      current: userPlan === 'pro'
-    }
-  ];
+  const getPlansData = () => {
+    // Base plan structure
+    const planStructure = {
+      free: {
+        name: 'Free',
+        description: 'Perfeito para começar',
+        icon: <Star className="w-6 h-6" />,
+        color: 'bg-plan-free',
+        features: [
+          'Acesso básico ao conteúdo',
+          'Suporte por email',
+          'Tutoriais essenciais',
+          'Dashboard básico'
+        ]
+      },
+      vip: {
+        name: 'VIP',
+        description: 'Para usuários avançados',
+        icon: <Gem className="w-6 h-6" />,
+        color: 'bg-plan-vip',
+        features: [
+          'Tudo do plano Free',
+          'Acesso a conteúdo premium',
+          'Suporte prioritário',
+          'Ferramentas avançadas',
+          'Webinars exclusivos',
+          'Comunidade VIP'
+        ]
+      },
+      pro: {
+        name: 'PRO',
+        description: 'Para profissionais sérios',
+        icon: <Crown className="w-6 h-6" />,
+        color: 'bg-plan-pro',
+        features: [
+          'Tudo do plano VIP',
+          'Acesso ilimitado a tudo',
+          'Suporte 24/7',
+          'Consultoria individual',
+          'Recursos beta',
+          'Certificações',
+          'Mentorias ao vivo'
+        ]
+      }
+    };
+
+    // Create plans array with prices from database
+    const plans = [];
+    
+    // Add predefined plan order
+    const planOrder = ['free', 'vip', 'pro'];
+    
+    planOrder.forEach(slug => {
+      const dbPlan = plansFromDB.find(p => p.slug === slug);
+      const structure = planStructure[slug as keyof typeof planStructure];
+      
+      if (structure) {
+        const price = dbPlan 
+          ? `R$ ${(dbPlan.price_cents / 100).toFixed(2).replace('.', ',')}` 
+          : (slug === 'free' ? 'R$ 0' : 'R$ 0');
+          
+        plans.push({
+          id: slug,
+          name: structure.name,
+          price,
+          description: structure.description,
+          icon: structure.icon,
+          color: structure.color,
+          features: structure.features,
+          current: userPlan === slug
+        });
+      }
+    });
+
+    return plans;
+  };
 
   const getPlanEndDate = () => {
     if (profile.plan_end_date) {
@@ -214,7 +255,7 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        {plans.map((plan) => (
+        {getPlansData().map((plan) => (
           <Card 
             key={plan.id} 
             className={`relative border-2 transition-all duration-300 hover:scale-105 ${
