@@ -15,7 +15,8 @@ import {
   Settings,
   Calendar,
   ImageIcon,
-  Shield
+  Shield,
+  EyeOff
 } from "lucide-react";
 
 interface AdminSidebarProps {
@@ -28,6 +29,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     { id: 'overview', label: 'Visão Geral', icon: LayoutDashboard },
     { id: 'users', label: 'Usuários', icon: Users },
     { id: 'content', label: 'Conteúdo', icon: FileText },
+    { id: 'content-visibility', label: 'Visibilidade', icon: EyeOff },
     { id: 'support', label: 'Suporte', icon: MessageSquare },
     { id: 'notifications', label: 'Notificações', icon: Bell },
     { id: 'tools', label: 'Ferramentas', icon: Wrench },

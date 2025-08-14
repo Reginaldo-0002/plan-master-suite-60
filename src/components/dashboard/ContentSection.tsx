@@ -59,6 +59,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
         .from('content')
         .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')
         .eq('is_active', true)
+        .eq('status', 'published')
         .order('created_at', { ascending: false });
 
       const contentTypeQuery = getContentTypeForQuery(contentType);
@@ -249,7 +250,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
                     {getStatusText(item.status)}
                   </Button>
                 ) : !canAccess(item.required_plan) ? (
-                  <Button variant="outline" className="w-full" disabled>
+                  <Button variant="secondary" className="w-full">
                     <Lock className="w-4 h-4 mr-2" />
                     Upgrade Necessário
                   </Button>

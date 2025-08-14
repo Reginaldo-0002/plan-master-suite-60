@@ -22,12 +22,14 @@ import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { IntegrationsSettings } from "@/components/integrations/IntegrationsSettings";
+import { AdminContentVisibility } from "@/components/admin/AdminContentVisibility";
 
 type ActiveAdminSection = 
   | 'overview' 
   | 'users' 
   | 'content' 
   | 'content-topics'
+  | 'content-visibility'
   | 'support' 
   | 'notifications' 
   | 'tools' 
@@ -54,7 +56,7 @@ const AdminDashboard = () => {
       
       if (hash && hash !== activeSection) {
         const validSections: ActiveAdminSection[] = [
-          'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
+          'overview', 'users', 'content', 'content-topics', 'content-visibility', 'support', 'notifications', 'tools', 
           'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'integrations', 'security'
         ];
         
@@ -97,7 +99,7 @@ const AdminDashboard = () => {
   const handleSectionChange = (tab: string) => {
     console.log('AdminDashboard - Section change:', tab);
     const validSections: ActiveAdminSection[] = [
-      'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
+      'overview', 'users', 'content', 'content-topics', 'content-visibility', 'support', 'notifications', 'tools', 
       'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'integrations', 'security'
     ];
     
@@ -162,6 +164,8 @@ const AdminDashboard = () => {
           );
         }
         return <AdminContentManagement onEditTopics={handleEditTopics} />;
+      case 'content-visibility':
+        return <AdminContentVisibility />;
       case 'support':
         return (
           <div className="space-y-6">

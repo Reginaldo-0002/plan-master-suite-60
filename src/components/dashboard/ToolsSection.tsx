@@ -18,9 +18,10 @@ interface Tool {
 
 interface ToolsSectionProps {
   userPlan: 'free' | 'vip' | 'pro';
+  onContentSelect?: (contentId: string) => void;
 }
 
-export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
+export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) => {
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -55,6 +56,7 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
         .select('*')
         .eq('content_type', 'tool')
         .eq('is_active', true)
+        .eq('status', 'published')
         .order('title', { ascending: true });
 
       if (contentError) throw contentError;
@@ -76,7 +78,7 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
           status: status?.status === 'maintenance' ? 'maintenance' : 
                  status?.status === 'blocked' ? 'blocked' : 'active',
           message: status?.message || content.description || null,
-          url: content.video_url || `#`,
+          url: content.video_url || content.hero_image_url || `#`,
           description: content.description,
           required_plan: content.required_plan || 'free'
         };
@@ -101,7 +103,7 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
     return userLevel >= requiredLevel;
   };
 
-  const handleAccessTool = async (tool: Tool) => {
+  const handleAccessTool = async (tool: Tool, onContentSelect?: (contentId: string) => void) => {
     if (!canAccess(tool.required_plan || 'free') || tool.status !== 'active') {
       return;
     }
@@ -118,12 +120,27 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
           metadata: { tool_name: tool.name }
         }]);
 
-      // For now, just show a success message
-      toast({
-        title: "Ferramenta Acessada",
-        description: `Acessando ${tool.name}...`,
-        variant: "default",
-      });
+      // Se a ferramenta tem callback para navegação, usar
+      if (onContentSelect) {
+        onContentSelect(tool.id);
+        toast({
+          title: "Ferramenta Acessada",
+          description: `Abrindo tópicos da ferramenta ${tool.name}`,
+        });
+      } else if (tool.url && tool.url !== '#') {
+        // Se tem URL externa, abrir
+        window.open(tool.url, '_blank');
+        toast({
+          title: "Ferramenta Acessada",
+          description: `Abrindo ${tool.name} em nova aba`,
+        });
+      } else {
+        // Fallback para ferramentas sem configuração específica
+        toast({
+          title: "Ferramenta Acessada",
+          description: `Acessando ${tool.name}...`,
+        });
+      }
     } catch (error) {
       console.error('Error accessing tool:', error);
       toast({
@@ -202,6 +219,11 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {tools.map((tool) => (
             <Card key={tool.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              {/* Imagem da ferramenta */}
+              {tool.url && tool.url !== '#' && tool.url.includes('http') && (
+                <div className="h-48 bg-cover bg-center" 
+                     style={{ backgroundImage: `url(${tool.url})` }} />
+              )}
               <CardHeader>
                 <div className="flex justify-between items-start gap-2">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -233,14 +255,14 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
                     {getStatusText(tool.status)}
                   </Button>
                 ) : !canAccess(tool.required_plan || 'free') ? (
-                  <Button variant="outline" className="w-full" disabled>
+                  <Button variant="secondary" className="w-full">
                     <Lock className="w-4 h-4 mr-2" />
                     Upgrade Necessário
                   </Button>
                 ) : (
                   <Button 
                     className="w-full" 
-                    onClick={() => handleAccessTool(tool)}
+                    onClick={() => handleAccessTool(tool, onContentSelect)}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
                     Acessar Ferramenta

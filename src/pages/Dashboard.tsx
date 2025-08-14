@@ -273,7 +273,7 @@ export default function Dashboard() {
           />
         );
       case 'tools':
-        return <ToolsSection userPlan={currentProfile.plan} />;
+        return <ToolsSection userPlan={currentProfile.plan} onContentSelect={handleContentSelection} />;
       case 'courses':
         return (
           <ContentSection 

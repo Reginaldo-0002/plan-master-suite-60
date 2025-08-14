@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit2, Trash2, Eye, EyeOff, Settings } from "lucide-react";
+import { Plus, Edit2, Trash2, Eye, EyeOff, Settings, Users } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { AdminContentDialog } from "./AdminContentDialog";
 
@@ -266,6 +266,15 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
                         className="text-blue-600 hover:text-blue-700"
                       >
                         <Settings className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => window.open(`/admin#content-visibility?content=${content.id}`, '_blank')}
+                        title="Gerenciar visibilidade"
+                        className="text-purple-600 hover:text-purple-700"
+                      >
+                        <Users className="w-4 h-4" />
                       </Button>
                       <Button
                         variant="ghost"
