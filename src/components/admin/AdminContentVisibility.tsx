@@ -60,27 +60,47 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
 
   const fetchData = async () => {
     try {
+      console.log('🚀 Iniciando fetchData...');
+      
+      // Verificar se usuário é admin
+      const { data: adminCheck } = await supabase.rpc('is_current_user_admin');
+      console.log('👑 Usuário é admin?', adminCheck);
+      
       // Buscar conteúdos
+      console.log('📖 Buscando conteúdos ativos...');
       const { data: contentData, error: contentError } = await supabase
         .from('content')
         .select('id, title, content_type, required_plan')
         .eq('is_active', true)
         .order('title');
 
-      if (contentError) throw contentError;
+      if (contentError) {
+        console.error('❌ Erro ao buscar conteúdos:', contentError);
+        throw contentError;
+      }
+      
+      console.log('📖 Conteúdos encontrados:', contentData?.length || 0);
 
       // Buscar usuários
+      console.log('👥 Buscando usuários...');
       const { data: userData, error: userError } = await supabase
         .from('profiles')
         .select('id, user_id, full_name, plan')
         .order('full_name');
 
-      if (userError) throw userError;
+      if (userError) {
+        console.error('❌ Erro ao buscar usuários:', userError);
+        throw userError;
+      }
+      
+      console.log('👥 Usuários encontrados:', userData?.length || 0);
 
       setContents(contentData || []);
       setUsers(userData || []);
+      
+      console.log('✅ fetchData concluído com sucesso');
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('❌ Error fetching data:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar dados",
