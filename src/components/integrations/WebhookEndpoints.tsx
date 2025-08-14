@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit2, Trash2, Globe, Shield, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Globe, Shield, CheckCircle, XCircle, Info } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import type { WebhookEndpoint } from '@/types/integrations';
+import { PlatformInstructions } from './PlatformInstructions';
 
 export function WebhookEndpoints() {
   const [endpoints, setEndpoints] = useState<WebhookEndpoint[]>([]);
@@ -35,9 +36,32 @@ export function WebhookEndpoints() {
     active: true
   });
 
+  const [webhookUrl, setWebhookUrl] = useState<string>('');
+  const [isTestingWebhook, setIsTestingWebhook] = useState<string | null>(null);
+  const [showInstructions, setShowInstructions] = useState(false);
+
   useEffect(() => {
     loadEndpoints();
   }, []);
+
+  // Gerar URL automaticamente quando o provider muda
+  useEffect(() => {
+    const generateUrl = async () => {
+      try {
+        const { data, error } = await supabase.rpc('generate_webhook_url', {
+          provider_name: formData.provider
+        });
+        
+        if (error) throw error;
+        setWebhookUrl(data);
+        setFormData(prev => ({ ...prev, url: data }));
+      } catch (error: any) {
+        console.error('Erro ao gerar URL:', error);
+      }
+    };
+
+    generateUrl();
+  }, [formData.provider]);
 
   const loadEndpoints = async () => {
     try {
@@ -149,6 +173,45 @@ export function WebhookEndpoints() {
     }
   };
 
+  const handleTestWebhook = async (endpoint: WebhookEndpoint) => {
+    setIsTestingWebhook(endpoint.id);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('webhook-test', {
+        body: {
+          endpoint_id: endpoint.id,
+          test_type: 'full'
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success && data?.test_result?.success) {
+        toast({
+          title: 'Teste Bem-sucedido',
+          description: `Webhook ${endpoint.provider} testado com sucesso! Status: ${data.test_result.status}`
+        });
+        
+        // Atualizar lista para mostrar último check
+        loadEndpoints();
+      } else {
+        throw new Error(
+          data?.test_result?.error || 
+          `HTTP ${data?.test_result?.status}: ${data?.test_result?.statusText}` ||
+          'Teste falhou'
+        );
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Erro no Teste',
+        description: `Erro ao testar webhook: ${error.message}`,
+        variant: 'destructive'
+      });
+    } finally {
+      setIsTestingWebhook(null);
+    }
+  };
+
   const getProviderInfo = (provider: string) => {
     const providers = {
       hotmart: { name: 'Hotmart', color: 'bg-orange-500' },
@@ -205,15 +268,18 @@ export function WebhookEndpoints() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="url">URL do Webhook</Label>
+                <Label htmlFor="url">URL do Webhook (Gerada Automaticamente)</Label>
                 <Input
                   id="url"
                   type="url"
                   value={formData.url}
-                  onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                  placeholder="https://api.exemplo.com/webhook"
-                  required
+                  readOnly
+                  className="bg-muted"
+                  placeholder="URL será gerada automaticamente"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Configure esta URL na sua plataforma {getProviderInfo(formData.provider).name}
+                </p>
               </div>
               
               <div className="space-y-2">
@@ -247,14 +313,34 @@ export function WebhookEndpoints() {
                 <Label htmlFor="active">Ativo</Label>
               </div>
               
-              <div className="flex justify-end space-x-2">
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Cancelar
+              <div className="flex items-center justify-between">
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  onClick={() => setShowInstructions(!showInstructions)}
+                  className="text-xs"
+                >
+                  <Info className="h-3 w-3 mr-1" />
+                  {showInstructions ? 'Ocultar' : 'Ver'} Instruções
                 </Button>
-                <Button type="submit">
-                  {editingEndpoint ? 'Atualizar' : 'Criar'}
-                </Button>
+                
+                <div className="flex space-x-2">
+                  <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">
+                    {editingEndpoint ? 'Atualizar' : 'Criar'}
+                  </Button>
+                </div>
               </div>
+
+              {showInstructions && formData.url && (
+                <PlatformInstructions 
+                  provider={formData.provider}
+                  webhookUrl={formData.url}
+                  secret={formData.secret}
+                />
+              )}
             </form>
           </DialogContent>
         </Dialog>
@@ -352,6 +438,18 @@ export function WebhookEndpoints() {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleTestWebhook(endpoint)}
+                            disabled={isTestingWebhook === endpoint.id}
+                          >
+                            {isTestingWebhook === endpoint.id ? (
+                              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+                            ) : (
+                              <Globe className="h-4 w-4" />
+                            )}
+                          </Button>
                           <Button
                             size="sm"
                             variant="outline"

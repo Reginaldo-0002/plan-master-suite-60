@@ -9,6 +9,9 @@ verify_jwt = false
 [functions.webhook-generic]
 verify_jwt = false
 
+[functions.webhook-test]
+verify_jwt = true
+
 [functions.meta-conversions-api]
 verify_jwt = false
 

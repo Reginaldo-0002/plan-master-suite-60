@@ -2212,6 +2212,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      generate_webhook_url: {
+        Args: { provider_name: string }
+        Returns: string
+      }
       get_all_users_for_admin: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -2274,6 +2278,10 @@ export type Database = {
           notification_type?: string
         }
         Returns: undefined
+      }
+      process_webhook_event: {
+        Args: { event_id: string }
+        Returns: Json
       }
       test_admin_notifications: {
         Args: Record<PropertyKey, never>
