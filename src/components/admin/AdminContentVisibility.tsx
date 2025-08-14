@@ -188,31 +188,31 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
       const currentUser = await supabase.auth.getUser();
       console.log('👤 Current user:', currentUser.data.user?.id);
       
-      const rulesToInsert = selectedUsers.map(userId => ({
-        content_id: selectedContent,
-        user_id: userId,
-        is_visible: false,
-        created_by: currentUser.data.user?.id,
-      }));
-      
-      console.log('📝 Regras para inserir:', rulesToInsert);
+      // Inserir regras uma por uma para melhor debugging
+      for (const userId of selectedUsers) {
+        console.log(`📝 Inserindo regra para usuário: ${userId}`);
+        
+        const { data, error } = await supabase
+          .from('content_visibility_rules')
+          .upsert({
+            content_id: selectedContent,
+            user_id: userId,
+            is_visible: false,
+            created_by: currentUser.data.user?.id,
+          }, {
+            onConflict: 'content_id,user_id'
+          })
+          .select();
 
-      console.log('💾 Executando upsert no banco...');
-      const { data, error } = await supabase
-        .from('content_visibility_rules')
-        .upsert(rulesToInsert, {
-          onConflict: 'content_id,user_id'
-        })
-        .select();
+        console.log(`💾 Resultado para usuário ${userId}:`, { data, error });
 
-      console.log('💾 Resultado do upsert:', { data, error });
-
-      if (error) {
-        console.error('❌ Erro no upsert:', error);
-        throw error;
+        if (error) {
+          console.error(`❌ Erro para usuário ${userId}:`, error);
+          throw new Error(`Erro ao ocultar conteúdo para usuário: ${error.message}`);
+        }
+        
+        console.log(`✅ Regra salva com sucesso para usuário ${userId}`);
       }
-
-      console.log('✅ Upsert realizado com sucesso!');
       
       toast({
         title: "Sucesso",
@@ -222,9 +222,9 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
       setSelectedUsers([]);
       
       console.log('🔄 Recarregando regras de visibilidade...');
-      await fetchVisibilityRules(); // Recarregar as regras após salvar
+      await fetchVisibilityRules();
       
-      console.log('✅ Regras de visibilidade salvas e recarregadas com sucesso');
+      console.log('✅ Todas as regras salvas e recarregadas com sucesso');
     } catch (error) {
       console.error('❌ Error hiding content:', error);
       toast({
