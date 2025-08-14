@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Clock } from 'lucide-react';
 
 interface ChatBlockCountdownProps {
-  blockedUntil: Date;
+  blockedUntil: Date | null;
   reason?: string | null;
 }
 
@@ -16,6 +16,11 @@ export const ChatBlockCountdown = ({ blockedUntil, reason }: ChatBlockCountdownP
   const [isExpired, setIsExpired] = useState(false);
 
   useEffect(() => {
+    if (!blockedUntil) {
+      setIsExpired(true);
+      return;
+    }
+
     const calculateTimeLeft = () => {
       const now = new Date();
       const difference = blockedUntil.getTime() - now.getTime();
@@ -99,16 +104,18 @@ export const ChatBlockCountdown = ({ blockedUntil, reason }: ChatBlockCountdownP
         </div>
       </div>
 
-      <p className="text-xs text-destructive/60 mt-2">
-        <strong>Liberado em:</strong> {blockedUntil.toLocaleString('pt-BR', { 
-          timeZone: 'America/Sao_Paulo',
-          day: '2-digit',
-          month: '2-digit', 
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit'
-        })}
-      </p>
+      {blockedUntil && (
+        <p className="text-xs text-destructive/60 mt-2">
+          <strong>Liberado em:</strong> {blockedUntil.toLocaleString('pt-BR', { 
+            timeZone: 'America/Sao_Paulo',
+            day: '2-digit',
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          })}
+        </p>
+      )}
     </div>
   );
 };

@@ -455,7 +455,21 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
   // Se o chat está oculto para este usuário, não mostrar o botão
   if (visibility.isHidden || visibilityLoading) {
+    console.log('🚫 [SupportChat] Chat oculto por visibilidade');
     return null;
+  }
+
+  // Se o chat está globalmente bloqueado, mostrar apenas mensagem de bloqueio
+  if (restriction.isBlocked && !restrictionLoading) {
+    console.log('🚫 [SupportChat] Chat bloqueado globalmente');
+    return (
+      <div className="fixed bottom-4 right-4 z-50">
+        <ChatBlockCountdown 
+          blockedUntil={restriction.blockedUntil} 
+          reason={restriction.reason}
+        />
+      </div>
+    );
   }
 
   if (!isOpen) {
@@ -513,8 +527,8 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                   {restriction.isBlocked ? (
                     <>
                       {console.log('🚫 CHAT BLOQUEADO - Restriction:', restriction)}
-                      <ChatBlockCountdown 
-                        blockedUntil={restriction.blockedUntil!} 
+                       <ChatBlockCountdown 
+                        blockedUntil={restriction.blockedUntil} 
                         reason={restriction.reason}
                       />
                     </>
@@ -617,7 +631,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
               {restriction.isBlocked ? (
                 <div className="text-center py-2">
                   <ChatBlockCountdown 
-                    blockedUntil={restriction.blockedUntil!} 
+                    blockedUntil={restriction.blockedUntil} 
                     reason={restriction.reason}
                   />
                 </div>
