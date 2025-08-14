@@ -39,16 +39,62 @@ export const NotificationPopup = () => {
     }
   }, []);
 
+  const shouldShowNotification = useCallback((notification: any, profile?: any) => {
+    if (!user?.id || !profile) return false;
+    
+    // Check if notification targets specific users
+    if (notification.target_users && Array.isArray(notification.target_users)) {
+      return notification.target_users.includes(user.id);
+    }
+
+    // Check if notification targets specific plans
+    if (notification.target_plans && Array.isArray(notification.target_plans)) {
+      // CRITICAL: Chat messages notifications ONLY for admins
+      if (notification.notification_metadata?.action_type === 'chat_message') {
+        return profile.isAdmin && notification.target_plans.includes('admin');
+      }
+      
+      // Other admin notifications (new user, blocked user) ONLY for admins
+      if (notification.target_plans.includes('admin')) {
+        return profile.isAdmin;
+      }
+      
+      // Regular notifications for user plans (created by admin in panel)
+      return notification.target_plans.includes(profile.plan);
+    }
+
+    // Show to everyone if no specific targeting and NOT a chat message
+    if (!notification.target_users && !notification.target_plans) {
+      // Never show chat messages to non-admins even if no targeting
+      if (notification.notification_metadata?.action_type === 'chat_message') {
+        return profile.isAdmin;
+      }
+      return true;
+    }
+    
+    return false;
+  }, [user?.id]);
+
   // Stable callback for handling realtime notifications
   const handleRealtimeNotification = useCallback(async (payload: any) => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || !profileCacheRef.current) return;
     
     const newNotification = payload.new as any;
+    console.log('Realtime notification received:', {
+      id: newNotification.id,
+      title: newNotification.title,
+      actionType: newNotification.notification_metadata?.action_type,
+      targetPlans: newNotification.target_plans,
+      isPopup: newNotification.is_popup
+    });
     
     if (newNotification.is_popup && profileCacheRef.current) {
       const { profile, isAdmin } = profileCacheRef.current;
       
-      if (shouldShowNotification(newNotification, { ...profile, isAdmin })) {
+      const shouldShow = shouldShowNotification(newNotification, { ...profile, isAdmin });
+      console.log('Should show realtime notification:', shouldShow, { isAdmin, actionType: newNotification.notification_metadata?.action_type });
+      
+      if (shouldShow) {
         const formattedNotification: PopupNotification = {
           ...newNotification,
           notification_metadata: newNotification.notification_metadata as {
@@ -63,13 +109,15 @@ export const NotificationPopup = () => {
           // Use Set for better duplicate checking
           const existingIds = new Set(prev.map(n => n.id));
           if (existingIds.has(formattedNotification.id)) {
+            console.log('Notification already exists, skipping');
             return prev;
           }
+          console.log('Adding new notification to popup');
           return [...prev, formattedNotification];
         });
       }
     }
-  }, []);
+  }, [shouldShowNotification]);
 
   // Fetch and cache user profile data
   const fetchUserProfile = useCallback(async () => {
@@ -91,7 +139,8 @@ export const NotificationPopup = () => {
 
       const profile = profileResponse.data;
       const isAdmin = userRoleResponse.data?.role === 'admin';
-
+      
+      console.log('Profile cache updated:', { profile, isAdmin, userId: user.id });
       profileCacheRef.current = { profile, isAdmin };
       return { profile, isAdmin };
     } catch (error) {
@@ -163,15 +212,22 @@ export const NotificationPopup = () => {
     
     try {
       const { profile, isAdmin } = profileData || profileCacheRef.current || {};
-      if (!profile) return;
+      if (!profile) {
+        console.log('No profile data available for notifications');
+        return;
+      }
 
-      // Fetch viewed notifications
-      const { data: viewedNotifications } = await supabase
-        .from('admin_notification_views')
-        .select('notification_id')
-        .eq('admin_id', user.id);
+      console.log('Fetching notifications for user:', { userId: user.id, isAdmin, plan: profile.plan });
 
-      const viewedIds = viewedNotifications?.map(v => v.notification_id) || [];
+      // Fetch viewed notifications only for admins
+      let viewedIds: string[] = [];
+      if (isAdmin) {
+        const { data: viewedNotifications } = await supabase
+          .from('admin_notification_views')
+          .select('notification_id')
+          .eq('admin_id', user.id);
+        viewedIds = viewedNotifications?.map(v => v.notification_id) || [];
+      }
 
       // Build query with improved SQL syntax
       let query = supabase
@@ -180,8 +236,8 @@ export const NotificationPopup = () => {
         .eq('is_active', true)
         .eq('is_popup', true);
 
-      // Use proper SQL syntax for NOT IN condition
-      if (viewedIds.length > 0) {
+      // Exclude viewed notifications only for admins
+      if (isAdmin && viewedIds.length > 0) {
         query = query.not('id', 'in', `(${viewedIds.map(id => `'${id}'`).join(',')})`);
       }
 
@@ -189,12 +245,23 @@ export const NotificationPopup = () => {
 
       if (error) throw error;
 
+      console.log('Raw notifications fetched:', data?.length || 0);
+
       // Filter notifications with Set for better performance
       const existingIds = new Set();
       const uniqueNotifications = (data || []).filter((notification: any) => {
         if (existingIds.has(notification.id)) return false;
         existingIds.add(notification.id);
-        return shouldShowNotification(notification, { ...profile, isAdmin });
+        const shouldShow = shouldShowNotification(notification, { ...profile, isAdmin });
+        console.log('Notification filter:', {
+          id: notification.id,
+          title: notification.title,
+          actionType: notification.notification_metadata?.action_type,
+          targetPlans: notification.target_plans,
+          shouldShow,
+          isAdmin
+        });
+        return shouldShow;
       }).map((notification: any) => ({
         ...notification,
         notification_metadata: notification.notification_metadata as {
@@ -205,49 +272,16 @@ export const NotificationPopup = () => {
         } | null
       }));
 
+      console.log('Filtered notifications:', uniqueNotifications.length);
+
       if (mountedRef.current) {
         setNotifications(uniqueNotifications);
       }
     } catch (error) {
       console.error('Error fetching popup notifications:', error);
     }
-  }, [user?.id]);
+  }, [user?.id, shouldShowNotification]);
 
-  const shouldShowNotification = useCallback((notification: any, profile?: any) => {
-    if (!user?.id || !profile) return false;
-    
-    // Check if notification targets specific users
-    if (notification.target_users && Array.isArray(notification.target_users)) {
-      return notification.target_users.includes(user.id);
-    }
-
-    // Check if notification targets specific plans
-    if (notification.target_plans && Array.isArray(notification.target_plans)) {
-      // CRITICAL: Chat messages notifications ONLY for admins
-      if (notification.notification_metadata?.action_type === 'chat_message') {
-        return profile.isAdmin && notification.target_plans.includes('admin');
-      }
-      
-      // Other admin notifications (new user, blocked user) ONLY for admins
-      if (notification.target_plans.includes('admin')) {
-        return profile.isAdmin;
-      }
-      
-      // Regular notifications for user plans (created by admin in panel)
-      return notification.target_plans.includes(profile.plan);
-    }
-
-    // Show to everyone if no specific targeting and NOT a chat message
-    if (!notification.target_users && !notification.target_plans) {
-      // Never show chat messages to non-admins even if no targeting
-      if (notification.notification_metadata?.action_type === 'chat_message') {
-        return profile.isAdmin;
-      }
-      return true;
-    }
-    
-    return false;
-  }, [user?.id]);
 
   const handleNotificationClick = useCallback(async (notification: PopupNotification) => {
     if (!user?.id || !mountedRef.current) return;
