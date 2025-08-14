@@ -2208,6 +2208,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      create_platform_checkout: {
+        Args: { plan_slug: string; platform_name: string; user_email?: string }
+        Returns: Json
+      }
       enforce_ip_limits: {
         Args: Record<PropertyKey, never>
         Returns: undefined

@@ -21,6 +21,13 @@ interface PlatformProduct {
   plan_id: string;
   active: boolean;
   metadata: any;
+  plans?: {
+    id: string;
+    name: string;
+    slug: string;
+    price_cents: number;
+    active: boolean;
+  };
 }
 
 export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
@@ -52,31 +59,25 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
   const handleUpgrade = async (planSlug: 'vip' | 'pro') => {
     setLoading(true);
     try {
-      // Buscar produto da plataforma para o plano
-      const product = platformProducts.find(p => 
-        p.plans?.slug === planSlug && p.active
-      );
-
-      if (!product) {
-        toast({
-          title: "Produto não encontrado",
-          description: "Não foi possível encontrar um produto ativo para este plano.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      // Se tem checkout_url direto, redirecionar
-      if (product.checkout_url) {
-        window.open(product.checkout_url, '_blank');
-        return;
-      }
-
-      // Caso contrário, tentar gerar URL de checkout via webhook
-      toast({
-        title: "Redirecionando...",
-        description: "Redirecionando para a página de pagamento."
+      // Chamar edge function para criar checkout
+      const { data, error } = await supabase.functions.invoke('platform-checkout', {
+        body: {
+          platform: 'kiwify', // ou 'hotmart' dependendo da plataforma ativa
+          plan_slug: planSlug
+        }
       });
+
+      if (error) throw error;
+
+      if (data?.success && data.checkout_url) {
+        window.open(data.checkout_url, '_blank');
+        toast({
+          title: "Redirecionando",
+          description: `Redirecionando para pagamento do plano ${planSlug.toUpperCase()}`
+        });
+      } else {
+        throw new Error(data?.error || 'Erro ao gerar checkout');
+      }
 
       // Aqui você pode implementar lógica adicional para gerar checkout
       // via webhook se necessário

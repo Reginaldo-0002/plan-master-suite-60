@@ -26,3 +26,6 @@ verify_jwt = true
 
 [functions.plan-expiration-checker]
 verify_jwt = true
+
+[functions.platform-checkout]
+verify_jwt = true

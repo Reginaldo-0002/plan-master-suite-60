@@ -5,6 +5,7 @@ export interface Profile {
   full_name: string | null;
   avatar_url: string | null;
   plan: 'free' | 'vip' | 'pro';
+  plan_end_date: string | null;
   pix_key: string | null;
   total_session_time: number;
   areas_accessed: number;
