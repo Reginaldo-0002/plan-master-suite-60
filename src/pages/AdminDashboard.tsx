@@ -6,6 +6,7 @@ import { AdminContentManagement } from "@/components/admin/AdminContentManagemen
 import { AdminSupportManagement } from "@/components/admin/AdminSupportManagement";
 import { AdminNotificationManagement } from "@/components/admin/AdminNotificationManagement";
 import { AdminToolsManagement } from "@/components/admin/AdminToolsManagement";
+import { AdminAutoStatusControl } from "@/components/admin/AdminAutoStatusControl";
 import { AdminFinancialManagement } from "@/components/admin/AdminFinancialManagement";
 import { AdminRulesEditor } from "@/components/admin/AdminRulesEditor";
 import { AdminTeamManagement } from "@/components/admin/AdminTeamManagement";
@@ -162,11 +163,21 @@ const AdminDashboard = () => {
         }
         return <AdminContentManagement onEditTopics={handleEditTopics} />;
       case 'support':
-        return <AdminSupportManagement />;
+        return (
+          <div className="space-y-6">
+            <AdminSupportManagement />
+            <AdvancedChatbotManager />
+          </div>
+        );
       case 'notifications':
         return <AdminNotificationManagement />;
       case 'tools':
-        return <AdvancedChatbotManager />;
+        return (
+          <div className="space-y-6">
+            <AdminToolsManagement />
+            <AdminAutoStatusControl />
+          </div>
+        );
       case 'financial':
         return <AdminFinancialManagement />;
       case 'rules':
