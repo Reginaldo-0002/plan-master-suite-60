@@ -37,6 +37,7 @@ export const AdminSidebar = ({ activeTab, setActiveTab }: AdminSidebarProps) => 
     { id: 'referral-settings', label: 'Configurações de Indicação', icon: Settings },
     { id: 'upcoming-releases', label: 'Próximos Lançamentos', icon: Calendar },
     { id: 'carousel', label: 'Carrossel', icon: ImageIcon },
+    { id: 'integrations', label: 'Integrações & Webhooks', icon: Settings },
     { id: 'security', label: 'Segurança', icon: Shield },
   ];
 

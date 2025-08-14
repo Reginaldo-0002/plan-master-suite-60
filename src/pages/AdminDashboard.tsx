@@ -177,8 +177,10 @@ const AdminDashboard = () => {
         return <AdminUpcomingReleases />;
       case 'carousel':
         return <AdminCarouselManagement />;
-      case 'security':
-        return <AdminSecurityManagement />;
+        case 'integrations':
+          return <IntegrationsDashboard onSectionChange={handleSectionChange} />;
+        case 'security':
+          return <AdminSecurityManagement />;
       default:
         return <AdminDashboardContent />;
     }

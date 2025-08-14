@@ -123,6 +123,39 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          action: string
+          actor_id: string | null
+          area: string
+          created_at: string
+          diff: Json | null
+          id: string
+          metadata: Json | null
+          target_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          area: string
+          created_at?: string
+          diff?: Json | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          area?: string
+          created_at?: string
+          diff?: Json | null
+          id?: string
+          metadata?: Json | null
+          target_id?: string | null
+        }
+        Relationships: []
+      }
       auto_status_schedules: {
         Row: {
           created_at: string
@@ -579,6 +612,53 @@ export type Database = {
           },
         ]
       }
+      event_bus: {
+        Row: {
+          created_at: string
+          data: Json
+          dispatched_at: string | null
+          error_message: string | null
+          id: string
+          retry_count: number | null
+          status: Database["public"]["Enums"]["event_bus_status"]
+          subscription_id: string | null
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json
+          dispatched_at?: string | null
+          error_message?: string | null
+          id?: string
+          retry_count?: number | null
+          status?: Database["public"]["Enums"]["event_bus_status"]
+          subscription_id?: string | null
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          dispatched_at?: string | null
+          error_message?: string | null
+          id?: string
+          retry_count?: number | null
+          status?: Database["public"]["Enums"]["event_bus_status"]
+          subscription_id?: string | null
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "event_bus_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       loyalty_rewards: {
         Row: {
           created_at: string | null
@@ -699,6 +779,102 @@ export type Database = {
         }
         Relationships: []
       }
+      outbound_deliveries: {
+        Row: {
+          attempt: number
+          created_at: string
+          delivered_at: string | null
+          event_id: string
+          id: string
+          next_retry_at: string | null
+          response_body: string | null
+          response_code: number | null
+          status: Database["public"]["Enums"]["delivery_status"]
+          target_id: string
+        }
+        Insert: {
+          attempt?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_id: string
+          id?: string
+          next_retry_at?: string | null
+          response_body?: string | null
+          response_code?: number | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          target_id: string
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          delivered_at?: string | null
+          event_id?: string
+          id?: string
+          next_retry_at?: string | null
+          response_body?: string | null
+          response_code?: number | null
+          status?: Database["public"]["Enums"]["delivery_status"]
+          target_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "outbound_deliveries_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "event_bus"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "outbound_deliveries_target_id_fkey"
+            columns: ["target_id"]
+            isOneToOne: false
+            referencedRelation: "outbound_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      outbound_subscriptions: {
+        Row: {
+          active: boolean
+          backoff_state: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          failures_count: number | null
+          id: string
+          last_delivery_at: string | null
+          secret: string | null
+          target_url: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          backoff_state?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          failures_count?: number | null
+          id?: string
+          last_delivery_at?: string | null
+          secret?: string | null
+          target_url: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          backoff_state?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          failures_count?: number | null
+          id?: string
+          last_delivery_at?: string | null
+          secret?: string | null
+          target_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       plan_expiration_queue: {
         Row: {
           created_at: string | null
@@ -737,6 +913,92 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          active: boolean
+          created_at: string
+          description: string | null
+          features: Json | null
+          id: string
+          interval: string
+          metadata: Json | null
+          name: string
+          price_cents: number
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          interval?: string
+          metadata?: Json | null
+          name: string
+          price_cents?: number
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          description?: string | null
+          features?: Json | null
+          id?: string
+          interval?: string
+          metadata?: Json | null
+          name?: string
+          price_cents?: number
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      platform_products: {
+        Row: {
+          active: boolean
+          checkout_url: string | null
+          created_at: string
+          id: string
+          metadata: Json | null
+          plan_id: string
+          platform: Database["public"]["Enums"]["platform_enum"]
+          price_id: string | null
+          product_id: string
+        }
+        Insert: {
+          active?: boolean
+          checkout_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          plan_id: string
+          platform: Database["public"]["Enums"]["platform_enum"]
+          price_id?: string | null
+          product_id: string
+        }
+        Update: {
+          active?: boolean
+          checkout_url?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          plan_id?: string
+          platform?: Database["public"]["Enums"]["platform_enum"]
+          price_id?: string | null
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "platform_products_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -979,6 +1241,65 @@ export type Database = {
         }
         Relationships: []
       }
+      subscriptions: {
+        Row: {
+          amount_cents: number | null
+          created_at: string
+          currency: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          external_customer_id: string | null
+          external_subscription_id: string | null
+          id: string
+          metadata: Json | null
+          plan_id: string | null
+          platform: Database["public"]["Enums"]["platform_enum"] | null
+          status: Database["public"]["Enums"]["subscription_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount_cents?: number | null
+          created_at?: string
+          currency?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          external_subscription_id?: string | null
+          id?: string
+          metadata?: Json | null
+          plan_id?: string | null
+          platform?: Database["public"]["Enums"]["platform_enum"] | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount_cents?: number | null
+          created_at?: string
+          currency?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          external_customer_id?: string | null
+          external_subscription_id?: string | null
+          id?: string
+          metadata?: Json | null
+          plan_id?: string | null
+          platform?: Database["public"]["Enums"]["platform_enum"] | null
+          status?: Database["public"]["Enums"]["subscription_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       support_messages: {
         Row: {
           attachments: Json | null
@@ -1147,6 +1468,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tracking_events: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_id: string
+          event_name: string
+          fb_response: Json | null
+          id: string
+          source: Database["public"]["Enums"]["tracking_source"]
+          success: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_id: string
+          event_name: string
+          fb_response?: Json | null
+          id?: string
+          source: Database["public"]["Enums"]["tracking_source"]
+          success?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_id?: string
+          event_name?: string
+          fb_response?: Json | null
+          id?: string
+          source?: Database["public"]["Enums"]["tracking_source"]
+          success?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      tracking_meta: {
+        Row: {
+          access_token: string
+          active: boolean
+          created_at: string
+          created_by: string | null
+          enable_client: boolean
+          enable_dedup: boolean
+          enable_server: boolean
+          id: string
+          pixel_id: string
+          test_event_code: string | null
+          updated_at: string
+        }
+        Insert: {
+          access_token: string
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          enable_client?: boolean
+          enable_dedup?: boolean
+          enable_server?: boolean
+          id?: string
+          pixel_id: string
+          test_event_code?: string | null
+          updated_at?: string
+        }
+        Update: {
+          access_token?: string
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          enable_client?: boolean
+          enable_dedup?: boolean
+          enable_server?: boolean
+          id?: string
+          pixel_id?: string
+          test_event_code?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       upcoming_releases: {
         Row: {
@@ -1614,6 +2013,90 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_endpoints: {
+        Row: {
+          active: boolean
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          last_healthcheck_at: string | null
+          provider: Database["public"]["Enums"]["platform_enum"]
+          secret: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_healthcheck_at?: string | null
+          provider: Database["public"]["Enums"]["platform_enum"]
+          secret: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          last_healthcheck_at?: string | null
+          provider?: Database["public"]["Enums"]["platform_enum"]
+          secret?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
+      webhook_events: {
+        Row: {
+          canonical_event: Json | null
+          created_at: string
+          error_message: string | null
+          id: string
+          idempotency_key: string
+          processed_at: string | null
+          provider: Database["public"]["Enums"]["platform_enum"]
+          raw_headers: Json
+          raw_payload: Json
+          received_at: string
+          status: Database["public"]["Enums"]["webhook_status"]
+          verified: boolean
+        }
+        Insert: {
+          canonical_event?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key: string
+          processed_at?: string | null
+          provider: Database["public"]["Enums"]["platform_enum"]
+          raw_headers: Json
+          raw_payload: Json
+          received_at?: string
+          status?: Database["public"]["Enums"]["webhook_status"]
+          verified?: boolean
+        }
+        Update: {
+          canonical_event?: Json | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          idempotency_key?: string
+          processed_at?: string | null
+          provider?: Database["public"]["Enums"]["platform_enum"]
+          raw_headers?: Json
+          raw_payload?: Json
+          received_at?: string
+          status?: Database["public"]["Enums"]["webhook_status"]
+          verified?: boolean
+        }
+        Relationships: []
+      }
       withdrawal_requests: {
         Row: {
           amount: number
@@ -1800,7 +2283,18 @@ export type Database = {
     Enums: {
       app_role: "admin" | "moderator" | "user"
       content_type: "product" | "tool" | "course" | "tutorial"
+      delivery_status: "pending" | "success" | "failed" | "retry"
+      event_bus_status: "pending" | "dispatched" | "failed"
+      platform_enum: "hotmart" | "kiwify" | "caktor" | "generic"
+      subscription_status:
+        | "active"
+        | "past_due"
+        | "canceled"
+        | "trialing"
+        | "pending"
+      tracking_source: "client" | "server"
       user_plan: "free" | "vip" | "pro"
+      webhook_status: "received" | "processed" | "failed" | "discarded"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1930,7 +2424,19 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "moderator", "user"],
       content_type: ["product", "tool", "course", "tutorial"],
+      delivery_status: ["pending", "success", "failed", "retry"],
+      event_bus_status: ["pending", "dispatched", "failed"],
+      platform_enum: ["hotmart", "kiwify", "caktor", "generic"],
+      subscription_status: [
+        "active",
+        "past_due",
+        "canceled",
+        "trialing",
+        "pending",
+      ],
+      tracking_source: ["client", "server"],
       user_plan: ["free", "vip", "pro"],
+      webhook_status: ["received", "processed", "failed", "discarded"],
     },
   },
 } as const
