@@ -2271,6 +2271,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: boolean
       }
+      normalize_webhook_payload: {
+        Args: { payload: Json; provider_name: string }
+        Returns: Json
+      }
       notify_admins: {
         Args: {
           notification_message: string

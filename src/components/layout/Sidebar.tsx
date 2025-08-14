@@ -23,7 +23,7 @@ import {
   Shield
 } from "lucide-react";
 
-type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "profile" | "rules" | "coming-soon" | "carousel" | "settings" | "topics";
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "plans" | "profile" | "rules" | "coming-soon" | "carousel" | "settings" | "topics";
 
 interface SidebarProps {
   activeSection: ActiveSection;
@@ -78,6 +78,7 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
     { id: 'tools', icon: Wrench, label: 'Ferramentas' },
     { id: 'courses', icon: GraduationCap, label: 'Cursos' },
     { id: 'tutorials', icon: BookOpen, label: 'Tutoriais' },
+    { id: 'plans', icon: Crown, label: 'Planos' },
     { id: 'rules', icon: FileText, label: 'Regras' },
     { id: 'coming-soon', icon: Calendar, label: 'Em Breve' },
     { id: 'carousel', icon: Images, label: 'Carrossel' },

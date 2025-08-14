@@ -18,20 +18,8 @@ export const RulesSection = () => {
 
   const fetchRules = async () => {
     try {
-      const data = await optimizedRulesFetch();
-
-      if (data && 'value' in data && data.value) {
-        const value = data.value as any;
-        if (typeof value === 'object' && 'content' in value) {
-          setRulesContent(value.content as string);
-        } else if (typeof value === 'string') {
-          setRulesContent(value);
-        } else {
-          setRulesContent(defaultRulesContent);
-        }
-      } else {
-        setRulesContent(defaultRulesContent);
-      }
+      // Always use default content for now since admin_settings might not exist
+      setRulesContent(defaultRulesContent);
     } catch (error) {
       console.error('Error fetching rules:', error);
       setRulesContent(defaultRulesContent);

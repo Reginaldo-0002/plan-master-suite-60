@@ -10,6 +10,7 @@ import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { RulesSection } from "@/components/dashboard/RulesSection";
+import { PlansSection } from "@/components/dashboard/PlansSection";
 import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { CarouselSection } from "@/components/dashboard/CarouselSection";
 import { TopicsRouter } from "@/components/navigation/TopicsRouter";
@@ -17,7 +18,7 @@ import { SupportChat } from "@/components/support/SupportChat";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 
-type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "rules" | "coming-soon" | "carousel" | "profile" | "settings" | "topics";
+type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials" | "plans" | "rules" | "coming-soon" | "carousel" | "profile" | "settings" | "topics";
 
 export default function Dashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -295,6 +296,8 @@ export default function Dashboard() {
             onContentSelect={handleContentSelection}
           />
         );
+      case 'plans':
+        return <PlansSection userPlan={currentProfile.plan} profile={currentProfile} />;
       case 'rules':
         return <RulesSection />;
       case 'coming-soon':
