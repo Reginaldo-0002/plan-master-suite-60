@@ -260,7 +260,7 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
                 id="hero_image_url"
                 value={formData.hero_image_url || ''}
                 onChange={(e) => handleInputChange('hero_image_url', e.target.value)}
-                placeholder="https://exemplo.com/imagem.jpg"
+                placeholder="https://cdn.site.com/imagem.jpg"
               />
             </div>
           </div>
@@ -271,7 +271,7 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
               id="carousel_image_url"
               value={formData.carousel_image_url || ''}
               onChange={(e) => handleInputChange('carousel_image_url', e.target.value)}
-              placeholder="https://exemplo.com/carousel.jpg"
+              placeholder="https://cdn.site.com/carousel.jpg"
             />
           </div>
 

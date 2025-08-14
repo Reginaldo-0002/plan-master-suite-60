@@ -760,7 +760,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                 id="topic-image"
                 value={topicImageUrl}
                 onChange={(e) => setTopicImageUrl(e.target.value)}
-                placeholder="https://exemplo.com/imagem.jpg"
+                placeholder="https://cdn.site.com/imagem.jpg"
               />
             </div>
             <div className="flex gap-2">
@@ -878,7 +878,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                   placeholder={
                     resourceType === 'video' ? "https://youtube.com/watch?v=... ou https://vimeo.com/..." :
                     resourceType === 'pdf' ? "https://exemplo.com/arquivo.pdf" :
-                    "https://exemplo.com/recurso"
+                    "https://cdn.site.com/recurso"
                   }
                   className={(!resourceUrl.trim() || !urlValidation.isValid) && isResourceDialogOpen ? "border-destructive" : urlValidation.isValid && resourceUrl.trim() ? "border-green-500" : ""}
                 />
@@ -898,7 +898,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
                   id="thumbnail-url"
                   value={thumbnailUrl}
                   onChange={(e) => setThumbnailUrl(e.target.value)}
-                  placeholder="https://exemplo.com/thumbnail.jpg"
+                  placeholder="https://cdn.site.com/thumbnail.jpg"
                 />
                 <p className="text-xs text-muted-foreground mt-1">
                   Será usado como imagem de capa do recurso

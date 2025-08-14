@@ -469,7 +469,7 @@ export const AdvancedUserManagement = () => {
                 type="email"
                 value={newUserData.email}
                 onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                placeholder="email@exemplo.com"
+                placeholder="email@suaempresa.com"
               />
             </div>
             <div>

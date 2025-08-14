@@ -263,7 +263,7 @@ export const AdminCarouselManagement = () => {
                 id="carousel_image_url"
                 value={formData.carousel_image_url}
                 onChange={(e) => setFormData({...formData, carousel_image_url: e.target.value})}
-                placeholder="https://exemplo.com/imagem.jpg"
+                placeholder="https://cdn.site.com/imagem.jpg"
               />
             </div>
             

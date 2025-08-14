@@ -367,7 +367,7 @@ export function PlansManagement() {
                     type="url"
                     value={productFormData.checkout_url}
                     onChange={(e) => setProductFormData({ ...productFormData, checkout_url: e.target.value })}
-                    placeholder="https://checkout.exemplo.com"
+                    placeholder="https://checkout.hotmart.com/produto"
                   />
                 </div>
                 

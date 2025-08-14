@@ -23,11 +23,11 @@ export function TestLab() {
   "data": {
     "product": {
       "id": "123456",
-      "name": "Curso de Exemplo"
+      "name": "Produto Real"
     },
     "buyer": {
-      "email": "cliente@exemplo.com",
-      "name": "João Silva"
+      "email": "cliente@real.com",
+      "name": "Cliente Real"
     },
     "purchase": {
       "order_id": "HP123456789",
@@ -45,8 +45,8 @@ export function TestLab() {
       "name": "Assinatura VIP"
     },
     "buyer": {
-      "email": "cliente@exemplo.com",
-      "name": "Maria Santos"
+      "email": "cliente@real.com",
+      "name": "Cliente Real"
     },
     "subscription": {
       "subscriber_code": "SUB123456",
@@ -67,9 +67,9 @@ export function TestLab() {
     "Name": "Produto Kiwify"
   },
   "Customer": {
-    "email": "cliente@exemplo.com",
+    "email": "cliente@real.com",
     "first_name": "João",
-    "last_name": "Silva"
+    "last_name": "Real"
   },
   "order": {
     "id": "KW789123",
@@ -85,7 +85,7 @@ export function TestLab() {
     "Name": "Produto Kiwify"
   },
   "Customer": {
-    "email": "cliente@exemplo.com"
+    "email": "cliente@real.com"
   },
   "order": {
     "id": "KW789123",
@@ -98,7 +98,7 @@ export function TestLab() {
     generic: {
       payment_succeeded: `{
   "event_type": "payment_succeeded",
-  "email": "cliente@exemplo.com",
+  "email": "cliente@real.com",
   "plan_slug": "vip-mensal",
   "amount_cents": 9700,
   "currency": "BRL",
