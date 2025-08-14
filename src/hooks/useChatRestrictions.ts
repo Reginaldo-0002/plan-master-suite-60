@@ -62,12 +62,15 @@ export const useChatRestrictions = (userId: string | undefined) => {
         .eq('key', 'global_chat_settings')
         .maybeSingle();
 
-      console.log('📊 [useChatRestrictions] Configurações globais:', globalSettings);
+      console.log('📊 [useChatRestrictions] Configurações globais raw:', globalSettings);
+      console.log('❌ [useChatRestrictions] Erro na consulta global:', globalError);
+      
       if (globalError) {
         console.error('❌ [useChatRestrictions] Erro ao buscar configurações globais:', globalError);
       }
 
-      if (globalSettings?.chat_blocked_until) {
+      // Forçar verificação do bloqueio global - agora que a configuração existe no BD
+      if (globalSettings && globalSettings.chat_blocked_until) {
         const blockUntil = new Date(globalSettings.chat_blocked_until);
         const isGloballyBlocked = blockUntil > currentTime;
         
@@ -79,7 +82,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
           console.log('🚫 [useChatRestrictions] APLICANDO BLOQUEIO GLOBAL para usuário NON-ADMIN:', userId);
           setRestriction({
             isBlocked: true,
-            reason: 'Chat bloqueado globalmente pelo administrador',
+            reason: (globalSettings.value as any)?.reason || 'Chat bloqueado globalmente pelo administrador',
             blockedUntil: blockUntil
           });
           setLoading(false);
@@ -88,7 +91,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
           console.log('✅ [useChatRestrictions] Bloqueio global expirado');
         }
       } else {
-        console.log('✅ [useChatRestrictions] Nenhum bloqueio global encontrado');
+        console.log('✅ [useChatRestrictions] Nenhum bloqueio global encontrado ou não configurado');
       }
 
       // ===== VERIFICAR BLOQUEIO ESPECÍFICO DO USUÁRIO =====

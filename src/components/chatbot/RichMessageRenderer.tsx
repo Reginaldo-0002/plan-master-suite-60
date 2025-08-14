@@ -61,8 +61,16 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
     } else if (button.value && onButtonClick) {
       onButtonClick(button.value);
     } else if (button.text?.toLowerCase().includes('upgrade') || button.text?.toLowerCase().includes('plano')) {
-      // Redirecionar para página de planos quando houver menção a upgrade ou planos
-      window.location.href = '/dashboard?tab=plans';
+      // Redirecionar para seção de planos no dashboard
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.pathname === '/dashboard') {
+        // Se já está no dashboard, mudar apenas a aba
+        window.location.hash = '#plans';
+        window.dispatchEvent(new HashChangeEvent('hashchange'));
+      } else {
+        // Se não está no dashboard, navegar para lá com a aba de planos
+        window.location.href = '/dashboard#plans';
+      }
     }
   };
 
