@@ -459,9 +459,9 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     return null;
   }
 
-  // Se o chat está globalmente bloqueado, mostrar apenas mensagem de bloqueio
+  // Se o chat está globalmente bloqueado E o usuário não é admin/moderator, mostrar bloqueio
   if (restriction.isBlocked && !restrictionLoading) {
-    console.log('🚫 [SupportChat] Chat bloqueado globalmente');
+    console.log('🚫 [SupportChat] Chat bloqueado globalmente para usuário não-admin');
     return (
       <div className="fixed bottom-4 right-4 z-50">
         <ChatBlockCountdown 

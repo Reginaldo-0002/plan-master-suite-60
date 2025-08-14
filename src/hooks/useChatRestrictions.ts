@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useRoleCheck } from '@/hooks/useRoleCheck';
 
 interface ChatRestriction {
   isBlocked: boolean;
@@ -14,6 +15,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
     blockedUntil: null
   });
   const [loading, setLoading] = useState(true);
+  const { isAdmin, isModerator, loading: roleLoading } = useRoleCheck();
 
   const checkRestrictions = useCallback(async () => {
     if (!userId) {
@@ -26,10 +28,29 @@ export const useChatRestrictions = (userId: string | undefined) => {
       return;
     }
 
+    // Se ainda está carregando roles, aguardar
+    if (roleLoading) {
+      console.log('⏳ [useChatRestrictions] Aguardando carregamento de roles...');
+      return;
+    }
+
     try {
       const currentTime = new Date();
       console.log('🔍 [useChatRestrictions] Verificando restrições para usuário:', userId);
+      console.log('👑 [useChatRestrictions] User roles - Admin:', isAdmin, 'Moderator:', isModerator);
       console.log('🕒 [useChatRestrictions] Hora atual:', currentTime.toISOString());
+
+      // ===== VERIFICAR SE É ADMIN/MODERATOR PRIMEIRO =====
+      if (isAdmin || isModerator) {
+        console.log('👑 [useChatRestrictions] Usuário é admin/moderator - Chat sempre liberado');
+        setRestriction({
+          isBlocked: false,
+          reason: null,
+          blockedUntil: null
+        });
+        setLoading(false);
+        return;
+      }
 
       // ===== VERIFICAR BLOQUEIO GLOBAL PRIMEIRO (PRIORITÁRIO) =====
       console.log('🌐 [useChatRestrictions] Verificando bloqueio global...');
@@ -131,9 +152,12 @@ export const useChatRestrictions = (userId: string | undefined) => {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, [userId, isAdmin, isModerator, roleLoading]);
 
   useEffect(() => {
+    // Não executar se ainda está carregando roles
+    if (roleLoading) return;
+    
     checkRestrictions();
 
     if (!userId) return;
@@ -178,7 +202,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
       supabase.removeChannel(restrictionsChannel);
       supabase.removeChannel(adminChannel);
     };
-  }, [userId, checkRestrictions]);
+  }, [userId, roleLoading, isAdmin, isModerator, checkRestrictions]);
 
   return { restriction, loading, checkRestrictions };
 };
