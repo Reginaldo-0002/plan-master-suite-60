@@ -92,9 +92,14 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
   };
 
   const fetchVisibilityRules = async () => {
-    if (!selectedContent) return;
+    if (!selectedContent) {
+      console.log('❌ Nenhum conteúdo selecionado para buscar regras');
+      return;
+    }
 
     try {
+      console.log('🔍 Buscando regras de visibilidade para conteúdo:', selectedContent);
+      
       // Buscar regras de visibilidade primeiro
       const { data: rulesData, error } = await supabase
         .from('content_visibility_rules')
@@ -102,10 +107,18 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
         .eq('content_id', selectedContent)
         .eq('is_visible', false);
 
-      if (error) throw error;
+      console.log('📋 Regras encontradas:', rulesData?.length || 0);
+      console.log('📋 Dados das regras:', rulesData);
+
+      if (error) {
+        console.error('❌ Erro ao buscar regras:', error);
+        throw error;
+      }
 
       // Depois buscar dados dos usuários para cada regra
       const enrichedRules = await Promise.all((rulesData || []).map(async (rule) => {
+        console.log('👤 Buscando dados do usuário:', rule.user_id);
+        
         const { data: profileData } = await supabase
           .from('profiles')
           .select('id, user_id, full_name, plan')
@@ -118,6 +131,8 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
           .eq('id', rule.content_id)
           .single();
 
+        console.log('👤 Dados do perfil encontrados:', profileData);
+
         return {
           ...rule,
           profiles: profileData,
@@ -125,9 +140,10 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
         };
       }));
 
+      console.log('✅ Regras enriquecidas:', enrichedRules);
       setVisibilityRules(enrichedRules);
     } catch (error) {
-      console.error('Error fetching visibility rules:', error);
+      console.error('❌ Error fetching visibility rules:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar regras de visibilidade",
@@ -137,7 +153,12 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
   };
 
   const hideContentFromUsers = async () => {
+    console.log('🎯 hideContentFromUsers - Iniciando função');
+    console.log('🎯 selectedContent:', selectedContent);
+    console.log('🎯 selectedUsers:', selectedUsers);
+    
     if (!selectedContent || selectedUsers.length === 0) {
+      console.log('❌ Erro: Conteúdo ou usuários não selecionados');
       toast({
         title: "Erro",
         description: "Selecione um conteúdo e pelo menos um usuário",
@@ -147,36 +168,52 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
     }
 
     try {
+      console.log('🔐 Obtendo usuário atual...');
       const currentUser = await supabase.auth.getUser();
+      console.log('👤 Current user:', currentUser.data.user?.id);
+      
       const rulesToInsert = selectedUsers.map(userId => ({
         content_id: selectedContent,
         user_id: userId,
         is_visible: false,
         created_by: currentUser.data.user?.id,
       }));
+      
+      console.log('📝 Regras para inserir:', rulesToInsert);
 
-      const { error } = await supabase
+      console.log('💾 Executando upsert no banco...');
+      const { data, error } = await supabase
         .from('content_visibility_rules')
         .upsert(rulesToInsert, {
           onConflict: 'content_id,user_id'
-        });
+        })
+        .select();
 
-      if (error) throw error;
+      console.log('💾 Resultado do upsert:', { data, error });
 
+      if (error) {
+        console.error('❌ Erro no upsert:', error);
+        throw error;
+      }
+
+      console.log('✅ Upsert realizado com sucesso!');
+      
       toast({
         title: "Sucesso",
         description: `Conteúdo ocultado para ${selectedUsers.length} usuário(s)`,
       });
 
       setSelectedUsers([]);
+      
+      console.log('🔄 Recarregando regras de visibilidade...');
       await fetchVisibilityRules(); // Recarregar as regras após salvar
       
       console.log('✅ Regras de visibilidade salvas e recarregadas com sucesso');
     } catch (error) {
-      console.error('Error hiding content:', error);
+      console.error('❌ Error hiding content:', error);
       toast({
         title: "Erro",
-        description: "Erro ao ocultar conteúdo",
+        description: `Erro ao ocultar conteúdo: ${error.message || 'Erro desconhecido'}`,
         variant: "destructive",
       });
     }
