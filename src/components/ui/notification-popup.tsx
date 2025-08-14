@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { X, Bell, AlertTriangle, CheckCircle, Info } from "lucide-react";
@@ -25,136 +25,200 @@ interface PopupNotification {
 
 export const NotificationPopup = () => {
   const [notifications, setNotifications] = useState<PopupNotification[]>([]);
-  const { user } = useAuth();
+  const [isLoading, setIsLoading] = useState(false);
+  const { user, loading } = useAuth();
+  const channelRef = useRef<any>(null);
+  const mountedRef = useRef(true);
+  const profileCacheRef = useRef<{ profile: any; isAdmin: boolean } | null>(null);
 
-  useEffect(() => {
-    if (!user) return;
+  // Cleanup function to remove old channel
+  const cleanupChannel = useCallback(() => {
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+  }, []);
 
-    fetchPopupNotifications();
-
-    // Configurar canal de tempo real
-    const channel = supabase
-      .channel('popup-notifications')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'notifications'
-      }, async (payload) => {
-        const newNotification = payload.new as any;
+  // Stable callback for handling realtime notifications
+  const handleRealtimeNotification = useCallback(async (payload: any) => {
+    if (!mountedRef.current) return;
+    
+    const newNotification = payload.new as any;
+    
+    if (newNotification.is_popup && profileCacheRef.current) {
+      const { profile, isAdmin } = profileCacheRef.current;
+      
+      if (shouldShowNotification(newNotification, { ...profile, isAdmin })) {
+        const formattedNotification: PopupNotification = {
+          ...newNotification,
+          notification_metadata: newNotification.notification_metadata as {
+            user_id?: string;
+            user_name?: string;
+            ticket_id?: string;
+            action_type?: string;
+          } | null
+        };
         
-        if (newNotification.is_popup) {
-          // Buscar informações do usuário para verificar se deve mostrar
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('user_id, plan')
-            .eq('user_id', user?.id)
-            .single();
-
-          const { data: userRole } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', user?.id)
-            .single();
-
-          const isAdmin = userRole?.role === 'admin';
-          
-          if (shouldShowNotification(newNotification, { ...profile, isAdmin })) {
-            const formattedNotification: PopupNotification = {
-              ...newNotification,
-              notification_metadata: newNotification.notification_metadata as {
-                user_id?: string;
-                user_name?: string;
-                ticket_id?: string;
-                action_type?: string;
-              } | null
-            };
-            
-            // Verificar se a notificação já existe antes de adicionar
-            setNotifications(prev => {
-              const exists = prev.some(n => n.id === formattedNotification.id);
-              if (exists) return prev;
-              return [...prev, formattedNotification];
-            });
+        setNotifications(prev => {
+          // Use Set for better duplicate checking
+          const existingIds = new Set(prev.map(n => n.id));
+          if (existingIds.has(formattedNotification.id)) {
+            return prev;
           }
+          return [...prev, formattedNotification];
+        });
+      }
+    }
+  }, []);
+
+  // Fetch and cache user profile data
+  const fetchUserProfile = useCallback(async () => {
+    if (!user?.id) return null;
+
+    try {
+      const [profileResponse, userRoleResponse] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('user_id, plan')
+          .eq('user_id', user.id)
+          .single(),
+        supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .single()
+      ]);
+
+      const profile = profileResponse.data;
+      const isAdmin = userRoleResponse.data?.role === 'admin';
+
+      profileCacheRef.current = { profile, isAdmin };
+      return { profile, isAdmin };
+    } catch (error) {
+      console.error('Error fetching user profile:', error);
+      return null;
+    }
+  }, [user?.id]);
+
+  // Main effect for setting up notifications
+  useEffect(() => {
+    if (loading || !user?.id) return;
+    
+    let isCancelled = false;
+    
+    const initializeNotifications = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Cleanup previous channel
+        cleanupChannel();
+        
+        // Fetch user profile and cache it
+        const profileData = await fetchUserProfile();
+        if (isCancelled || !profileData) return;
+        
+        // Fetch initial notifications
+        await fetchPopupNotifications(profileData);
+        if (isCancelled) return;
+        
+        // Setup realtime channel with unique name
+        const channelName = `popup-notifications-${user.id}-${Date.now()}`;
+        const channel = supabase
+          .channel(channelName)
+          .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications'
+          }, handleRealtimeNotification)
+          .subscribe();
+
+        channelRef.current = channel;
+      } catch (error) {
+        console.error('Error initializing notifications:', error);
+      } finally {
+        if (!isCancelled) {
+          setIsLoading(false);
         }
-      })
-      .subscribe();
+      }
+    };
+
+    initializeNotifications();
 
     return () => {
-      supabase.removeChannel(channel);
+      isCancelled = true;
+      cleanupChannel();
     };
-  }, [user]);
+  }, [user?.id, loading, cleanupChannel, fetchUserProfile, handleRealtimeNotification]);
 
-  const fetchPopupNotifications = async () => {
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false;
+      cleanupChannel();
+    };
+  }, [cleanupChannel]);
+
+  const fetchPopupNotifications = useCallback(async (profileData?: { profile: any; isAdmin: boolean }) => {
+    if (!user?.id) return;
+    
     try {
-      // Buscar perfil e role do usuário
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('user_id, plan, role')
-        .eq('user_id', user?.id)
-        .single();
-
+      const { profile, isAdmin } = profileData || profileCacheRef.current || {};
       if (!profile) return;
 
-      // Buscar role na tabela user_roles
-      const { data: userRole } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', user?.id)
-        .single();
-
-      const isAdmin = userRole?.role === 'admin';
-
-      // Buscar notificações que não foram visualizadas pelo admin
+      // Fetch viewed notifications
       const { data: viewedNotifications } = await supabase
         .from('admin_notification_views')
         .select('notification_id')
-        .eq('admin_id', user?.id);
+        .eq('admin_id', user.id);
 
       const viewedIds = viewedNotifications?.map(v => v.notification_id) || [];
 
+      // Build query with improved SQL syntax
       let query = supabase
         .from('notifications')
         .select('id, title, message, type, popup_duration, created_at, target_users, target_plans, is_popup, notification_metadata')
         .eq('is_active', true)
         .eq('is_popup', true);
 
-      // Only add the NOT IN condition if there are viewed notifications
+      // Use proper SQL syntax for NOT IN condition
       if (viewedIds.length > 0) {
-        query = query.not('id', 'in', `(${viewedIds.join(',')})`);
+        query = query.not('id', 'in', `(${viewedIds.map(id => `'${id}'`).join(',')})`);
       }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Filtrar notificações únicas e aplicar targeting
-      const uniqueNotifications = (data || []).reduce((acc: any[], notification: any) => {
-        const exists = acc.some(n => n.id === notification.id);
-        if (!exists && shouldShowNotification(notification, { ...profile, isAdmin })) {
-          acc.push({
-            ...notification,
-            notification_metadata: notification.notification_metadata as {
-              user_id?: string;
-              user_name?: string;
-              ticket_id?: string;
-              action_type?: string;
-            } | null
-          });
-        }
-        return acc;
-      }, []);
+      // Filter notifications with Set for better performance
+      const existingIds = new Set();
+      const uniqueNotifications = (data || []).filter((notification: any) => {
+        if (existingIds.has(notification.id)) return false;
+        existingIds.add(notification.id);
+        return shouldShowNotification(notification, { ...profile, isAdmin });
+      }).map((notification: any) => ({
+        ...notification,
+        notification_metadata: notification.notification_metadata as {
+          user_id?: string;
+          user_name?: string;
+          ticket_id?: string;
+          action_type?: string;
+        } | null
+      }));
 
-      setNotifications(uniqueNotifications);
+      if (mountedRef.current) {
+        setNotifications(uniqueNotifications);
+      }
     } catch (error) {
       console.error('Error fetching popup notifications:', error);
     }
-  };
+  }, [user?.id]);
 
-  const shouldShowNotification = (notification: any, profile?: any) => {
+  const shouldShowNotification = useCallback((notification: any, profile?: any) => {
+    if (!user?.id) return false;
+    
     // Check if notification targets specific users
     if (notification.target_users && Array.isArray(notification.target_users)) {
-      return notification.target_users.includes(user?.id);
+      return notification.target_users.includes(user.id);
     }
 
     // Check if notification targets specific plans
@@ -168,48 +232,55 @@ export const NotificationPopup = () => {
 
     // Show to everyone if no specific targeting
     return !notification.target_users && !notification.target_plans;
-  };
+  }, [user?.id]);
 
-  const handleNotificationClick = async (notification: PopupNotification) => {
+  const handleNotificationClick = useCallback(async (notification: PopupNotification) => {
+    if (!user?.id || !mountedRef.current) return;
+    
     try {
-      // Remover da lista local imediatamente para evitar múltiplos cliques
+      // Remove from local list immediately to prevent multiple clicks
       setNotifications(prev => prev.filter(n => n.id !== notification.id));
 
-      // Marcar como visualizada no banco
+      // Mark as viewed in database (upsert to prevent duplicates)
       await supabase
         .from('admin_notification_views')
-        .insert({
-          admin_id: user?.id,
+        .upsert({
+          admin_id: user.id,
           notification_id: notification.id
+        }, {
+          onConflict: 'admin_id,notification_id'
         });
 
-      // Redirecionar se for notificação de chat
+      // Redirect if it's a chat notification
       if (notification.notification_metadata?.action_type === 'chat_message' && 
           notification.notification_metadata?.user_id) {
-        // Navegar para o painel admin com o suporte ativo
         window.location.href = `/admin#support`;
       }
     } catch (error) {
       console.error('Error handling notification click:', error);
-      // Notificação já foi removida da lista, não reverter
+      // Notification was already removed from list, don't revert
     }
-  };
+  }, [user?.id]);
 
-  const removeNotification = async (id: string) => {
+  const removeNotification = useCallback(async (id: string) => {
+    if (!user?.id || !mountedRef.current) return;
+    
     setNotifications(prev => prev.filter(n => n.id !== id));
     
-    // Marcar como visualizada no banco também
+    // Mark as viewed in database
     try {
       await supabase
         .from('admin_notification_views')
-        .insert({
-          admin_id: user?.id,
+        .upsert({
+          admin_id: user.id,
           notification_id: id
+        }, {
+          onConflict: 'admin_id,notification_id'
         });
     } catch (error) {
       console.error('Error marking notification as viewed:', error);
     }
-  };
+  }, [user?.id]);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -239,13 +310,17 @@ export const NotificationPopup = () => {
 
   // Auto remove notifications after their duration (only if duration is set)
   useEffect(() => {
+    if (!mountedRef.current) return;
+    
     const timers: NodeJS.Timeout[] = [];
     
     notifications.forEach(notification => {
       const duration = notification.popup_duration;
       if (duration && duration > 0) {
         const timer = setTimeout(() => {
-          removeNotification(notification.id);
+          if (mountedRef.current) {
+            removeNotification(notification.id);
+          }
         }, duration);
         timers.push(timer);
       }
@@ -254,9 +329,9 @@ export const NotificationPopup = () => {
     return () => {
       timers.forEach(timer => clearTimeout(timer));
     };
-  }, [notifications]);
+  }, [notifications, removeNotification]);
 
-  if (notifications.length === 0) return null;
+  if (loading || isLoading || notifications.length === 0) return null;
 
   return (
     <div className="fixed top-4 right-4 z-50 space-y-3">
