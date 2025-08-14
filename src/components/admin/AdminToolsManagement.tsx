@@ -81,6 +81,23 @@ export const AdminToolsManagement = () => {
 
   const createTool = async () => {
     try {
+      // Verificar se existe um conteúdo correspondente
+      const { data: contentData, error: contentError } = await supabase
+        .from('content')
+        .select('title')
+        .eq('content_type', 'tool')
+        .eq('title', formData.tool_name)
+        .single();
+
+      if (contentError || !contentData) {
+        toast({
+          title: "Erro",
+          description: "Esta ferramenta não existe como conteúdo. Crie primeiro o conteúdo da ferramenta.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       const scheduled_maintenance = formData.maintenance_start && formData.maintenance_end ? {
         start: formData.maintenance_start,
         end: formData.maintenance_end,
@@ -100,7 +117,7 @@ export const AdminToolsManagement = () => {
 
       toast({
         title: "Sucesso",
-        description: "Ferramenta criada com sucesso",
+        description: "Status da ferramenta criado com sucesso",
       });
       
       setIsCreateDialogOpen(false);
@@ -110,7 +127,7 @@ export const AdminToolsManagement = () => {
       console.error('Error creating tool:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar ferramenta",
+        description: "Erro ao criar status da ferramenta",
         variant: "destructive",
       });
     }

@@ -34,25 +34,37 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
   const fetchTools = async () => {
     try {
       // Buscar conteúdo real criado pelo admin do tipo 'tool'
-      const { data, error } = await supabase
+      const { data: contentData, error: contentError } = await supabase
         .from('content')
         .select('*')
         .eq('content_type', 'tool')
         .eq('is_active', true)
         .order('title', { ascending: true });
 
-      if (error) throw error;
+      if (contentError) throw contentError;
 
-      // Map content to our Tool interface
-      const mappedTools: Tool[] = (data || []).map(item => ({
-        id: item.id,
-        name: item.title,
-        status: item.status === 'published' ? 'active' : 'maintenance',
-        message: item.description || null,
-        url: `#`, // URL pode ser configurada nos metadados do conteúdo
-        description: item.description,
-        required_plan: item.required_plan || 'free'
-      }));
+      // Buscar status das ferramentas
+      const { data: statusData, error: statusError } = await supabase
+        .from('tool_status')
+        .select('*');
+
+      if (statusError) throw statusError;
+
+      // Combinar dados do conteúdo com status
+      const mappedTools: Tool[] = (contentData || []).map(content => {
+        const status = statusData?.find(s => s.tool_name === content.title);
+        
+        return {
+          id: content.id,
+          name: content.title,
+          status: status?.status === 'maintenance' ? 'maintenance' : 
+                 status?.status === 'blocked' ? 'blocked' : 'active',
+          message: status?.message || content.description || null,
+          url: content.video_url || `#`,
+          description: content.description,
+          required_plan: content.required_plan || 'free'
+        };
+      });
 
       setTools(mappedTools);
     } catch (error) {
