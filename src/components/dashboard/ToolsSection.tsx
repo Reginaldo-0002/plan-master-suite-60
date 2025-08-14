@@ -33,22 +33,25 @@ export const ToolsSection = ({ userPlan }: ToolsSectionProps) => {
 
   const fetchTools = async () => {
     try {
+      // Buscar conteúdo real criado pelo admin do tipo 'tool'
       const { data, error } = await supabase
-        .from('tool_status')
+        .from('content')
         .select('*')
-        .order('tool_name', { ascending: true });
+        .eq('content_type', 'tool')
+        .eq('is_active', true)
+        .order('title', { ascending: true });
 
       if (error) throw error;
 
-      // Map tool_status to our Tool interface
+      // Map content to our Tool interface
       const mappedTools: Tool[] = (data || []).map(item => ({
         id: item.id,
-        name: item.tool_name,
-        status: item.status as 'active' | 'maintenance' | 'blocked',
-        message: item.message,
-        url: `#`, // Default URL - can be configured
-        description: `Ferramenta ${item.tool_name}`,
-        required_plan: 'free' // Default plan - can be configured per tool
+        name: item.title,
+        status: item.status === 'published' ? 'active' : 'maintenance',
+        message: item.description || null,
+        url: `#`, // URL pode ser configurada nos metadados do conteúdo
+        description: item.description,
+        required_plan: item.required_plan || 'free'
       }));
 
       setTools(mappedTools);
