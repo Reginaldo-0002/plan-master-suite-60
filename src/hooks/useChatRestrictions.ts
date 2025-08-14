@@ -58,7 +58,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
         .from('admin_settings')
         .select('*')
         .eq('key', 'global_chat_settings')
-        .single();
+        .maybeSingle();
 
       console.log('📊 [useChatRestrictions] Configurações globais:', globalSettings);
       if (globalError) {
@@ -74,7 +74,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
         console.log(`🔒 [useChatRestrictions] É maior que agora? ${blockUntil.getTime()} > ${currentTime.getTime()} = ${isGloballyBlocked}`);
         
         if (isGloballyBlocked) {
-          console.log('🚫 [useChatRestrictions] APLICANDO BLOQUEIO GLOBAL para usuário:', userId);
+          console.log('🚫 [useChatRestrictions] APLICANDO BLOQUEIO GLOBAL para usuário NON-ADMIN:', userId);
           setRestriction({
             isBlocked: true,
             reason: 'Chat bloqueado globalmente pelo administrador',

@@ -46,6 +46,7 @@ export const NotificationPopup = () => {
     
     console.log('🔍 [NotificationPopup] Verificando notificação:', {
       id: notification.id,
+      title: notification.title,
       actionType: notification.notification_metadata?.action_type,
       targetPlans: notification.target_plans,
       targetUsers: notification.target_users,
@@ -53,6 +54,22 @@ export const NotificationPopup = () => {
       isModerator,
       userId: user.id
     });
+
+    // CRITICAL: Block ALL admin-targeted notifications for non-admins
+    if (notification.target_plans && Array.isArray(notification.target_plans)) {
+      if (notification.target_plans.includes('admin')) {
+        const canViewAdminNotifications = isAdmin || isModerator;
+        console.log('👑 [NotificationPopup] Notificação admin - pode ver:', canViewAdminNotifications, 'isAdmin:', isAdmin, 'isModerator:', isModerator);
+        return canViewAdminNotifications;
+      }
+      
+      // Regular plan-based notifications
+      if (profile?.plan) {
+        const result = notification.target_plans.includes(profile.plan);
+        console.log('📋 [NotificationPopup] Verificação por plano:', result, 'plano:', profile.plan);
+        return result;
+      }
+    }
     
     // Check if notification targets specific users
     if (notification.target_users && Array.isArray(notification.target_users)) {
@@ -66,23 +83,6 @@ export const NotificationPopup = () => {
       const canViewChatNotifications = isAdmin || isModerator;
       console.log('💬 [NotificationPopup] Notificação de chat - pode ver:', canViewChatNotifications, 'isAdmin:', isAdmin, 'isModerator:', isModerator);
       return canViewChatNotifications;
-    }
-
-    // Check if notification targets specific plans
-    if (notification.target_plans && Array.isArray(notification.target_plans)) {
-      // Admin/moderator notifications ONLY for admins/moderators
-      if (notification.target_plans.includes('admin')) {
-        const canViewAdminNotifications = isAdmin || isModerator;
-        console.log('👑 [NotificationPopup] Notificação admin - pode ver:', canViewAdminNotifications);
-        return canViewAdminNotifications;
-      }
-      
-      // Regular notifications for user plans (check profile.plan if available)
-      if (profile?.plan) {
-        const result = notification.target_plans.includes(profile.plan);
-        console.log('📋 [NotificationPopup] Verificação por plano:', result, 'plano:', profile.plan);
-        return result;
-      }
     }
 
     // Show to everyone if no specific targeting and NOT a chat/admin message
@@ -267,6 +267,12 @@ export const NotificationPopup = () => {
       const uniqueNotifications = (data || []).filter((notification: any) => {
         if (existingIds.has(notification.id)) return false;
         existingIds.add(notification.id);
+        
+        // CRITICAL: Block admin notifications for non-admins
+        if (notification.target_plans && notification.target_plans.includes('admin') && !isAdmin && !isModerator) {
+          console.log('🚫 [NotificationPopup] BLOQUEANDO notificação admin para usuário comum:', notification.id, 'isAdmin:', isAdmin, 'isModerator:', isModerator);
+          return false;
+        }
         
         // Extra verificação CRÍTICA para chat_message - NUNCA mostrar para usuários comuns
         if (notification.notification_metadata?.action_type === 'chat_message' && !isAdmin && !isModerator) {
