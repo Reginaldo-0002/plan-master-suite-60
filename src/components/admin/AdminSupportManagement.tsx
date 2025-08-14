@@ -67,31 +67,45 @@ export const AdminSupportManagement = () => {
 
   // Check for notification redirect on component mount
   useEffect(() => {
-    const processNotificationRedirect = (notificationData?: any) => {
-      const data = notificationData || sessionStorage.getItem('adminChatNotification');
-      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+    const processNotificationRedirect = (eventData?: any) => {
+      let notificationData = eventData;
       
-      console.log('Processing notification redirect...', {
-        hasData: !!parsedData,
+      // If no event data, check sessionStorage
+      if (!notificationData) {
+        const storedData = sessionStorage.getItem('adminChatNotification');
+        if (storedData) {
+          try {
+            notificationData = JSON.parse(storedData);
+          } catch (error) {
+            console.error('Error parsing notification data:', error);
+            sessionStorage.removeItem('adminChatNotification');
+            return;
+          }
+        }
+      }
+      
+      console.log('🔄 Processing notification redirect...', {
+        hasData: !!notificationData,
         ticketsLength: tickets.length,
-        currentHash: window.location.hash
+        currentHash: window.location.hash,
+        eventData: !!eventData
       });
       
-      if (parsedData && tickets.length > 0) {
+      if (notificationData && tickets.length > 0) {
         try {
-          const { userId, userName, ticketId, timestamp, forceOpen } = parsedData;
+          const { userId, userName, ticketId, timestamp, forceOpen } = notificationData;
           
-          // Check if notification is not too old (within 10 minutes) or force open
-          const isRecent = forceOpen || (timestamp && (Date.now() - timestamp < 10 * 60 * 1000));
+          // Check if notification is not too old (within 15 minutes) or force open
+          const isRecent = forceOpen || (timestamp && (Date.now() - timestamp < 15 * 60 * 1000));
           
           if (!isRecent) {
-            console.log('Notification too old, ignoring...');
+            console.log('❌ Notification too old, ignoring...');
             sessionStorage.removeItem('adminChatNotification');
             return;
           }
           
-          console.log('✅ Processing notification redirect:', { userId, userName, ticketId });
-          console.log('Available tickets:', tickets.map(t => ({ 
+          console.log('✅ Processing chat notification:', { userId, userName, ticketId });
+          console.log('📋 Available tickets:', tickets.map(t => ({ 
             id: t.id, 
             subject: t.subject,
             user_id: t.user_id 
@@ -100,13 +114,13 @@ export const AdminSupportManagement = () => {
           // Find and select the ticket
           const ticket = tickets.find(t => t.id === ticketId);
           if (ticket) {
-            console.log('✅ Found ticket, opening chat:', ticket);
+            console.log('🎯 Found ticket, opening chat:', ticket);
             setSelectedTicket(ticket);
             
-            // Clear any previous dialog state
+            // Clear any previous dialog state and ensure clean state
             setIsTicketDialogOpen(false);
             
-            // Open the ticket dialog immediately
+            // Open the ticket dialog with delay for proper mounting
             setTimeout(() => {
               console.log('📱 Opening ticket dialog...');
               setIsTicketDialogOpen(true);
@@ -121,8 +135,8 @@ export const AdminSupportManagement = () => {
                   messagesContainer.scrollTop = messagesContainer.scrollHeight;
                   console.log('📜 Scrolled to bottom of messages');
                 }
-              }, 800);
-            }, 200);
+              }, 1000);
+            }, 300);
             
             toast({
               title: "Chat Aberto! 💬",
@@ -141,10 +155,11 @@ export const AdminSupportManagement = () => {
               description: "Ticket não encontrado. Atualize a página e tente novamente.",
               variant: "destructive"
             });
+            sessionStorage.removeItem('adminChatNotification');
           }
           
         } catch (error) {
-          console.error('Error processing notification data:', error);
+          console.error('❌ Error processing notification data:', error);
           sessionStorage.removeItem('adminChatNotification');
           toast({
             title: "Erro",
@@ -157,15 +172,14 @@ export const AdminSupportManagement = () => {
 
     // Process redirect when tickets are loaded
     if (tickets.length > 0) {
+      console.log('🎬 Tickets loaded, checking for notification...');
       processNotificationRedirect();
     }
     
-    // Listen for custom event from notification click
+    // Listen for custom event from notification click or dashboard
     const handleOpenAdminChat = (event: CustomEvent) => {
       console.log('🎯 Custom event received:', event.detail);
-      if (tickets.length > 0) {
-        processNotificationRedirect(event.detail);
-      }
+      processNotificationRedirect(event.detail);
     };
     
     window.addEventListener('openAdminChat', handleOpenAdminChat as EventListener);
@@ -174,29 +188,6 @@ export const AdminSupportManagement = () => {
       window.removeEventListener('openAdminChat', handleOpenAdminChat as EventListener);
     };
   }, [tickets, toast]);
-
-  // Handle hash changes for direct navigation
-  useEffect(() => {
-    const handleHashChange = () => {
-      console.log('🔗 Hash changed to:', window.location.hash);
-      if (window.location.hash === '#support' && tickets.length > 0) {
-        const notificationData = sessionStorage.getItem('adminChatNotification');
-        if (notificationData) {
-          console.log('🔄 Hash change with notification data, processing...');
-          setTimeout(() => {
-            // Force re-trigger the notification processing
-            setTickets(prev => [...prev]);
-          }, 100);
-        }
-      }
-    };
-    
-    window.addEventListener('hashchange', handleHashChange);
-    
-    return () => {
-      window.removeEventListener('hashchange', handleHashChange);
-    };
-  }, [tickets]);
 
   useEffect(() => {
     fetchTickets();

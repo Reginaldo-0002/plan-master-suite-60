@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminDashboardContent } from "@/components/admin/AdminDashboardContent";
 import { AdminUserManagement } from "@/components/admin/AdminUserManagement";
@@ -41,6 +41,54 @@ const AdminDashboard = () => {
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
 
   console.log('AdminDashboard - Rendering, activeSection:', activeSection);
+
+  // Handle hash-based navigation and notification redirects
+  useEffect(() => {
+    const processHash = () => {
+      const hash = window.location.hash.replace('#', '');
+      console.log('🔍 Processing hash:', hash);
+      
+      if (hash && hash !== activeSection) {
+        const validSections: ActiveAdminSection[] = [
+          'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
+          'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'security'
+        ];
+        
+        if (validSections.includes(hash as ActiveAdminSection)) {
+          console.log('✅ Valid hash section, changing to:', hash);
+          setActiveSection(hash as ActiveAdminSection);
+          
+          // Special handling for support section with notification
+          if (hash === 'support') {
+            const notificationData = sessionStorage.getItem('adminChatNotification');
+            if (notificationData) {
+              console.log('🎯 Support section with notification data, dispatching event...');
+              setTimeout(() => {
+                window.dispatchEvent(new CustomEvent('openAdminChat', {
+                  detail: JSON.parse(notificationData)
+                }));
+              }, 500);
+            }
+          }
+        }
+      }
+    };
+
+    // Process initial hash
+    processHash();
+
+    // Listen for hash changes
+    const handleHashChange = () => {
+      console.log('🔗 Hash change detected');
+      processHash();
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, [activeSection]);
 
   const handleSectionChange = (tab: string) => {
     console.log('AdminDashboard - Section change:', tab);
