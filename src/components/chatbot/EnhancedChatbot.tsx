@@ -330,78 +330,80 @@ Digite exatamente uma das palavras-chave acima para acessar o menu correspondent
   return (
     <div className="fixed bottom-4 left-4 z-50 w-72 sm:w-80 max-w-[calc(100vw-2rem)]">
       <Card className="flex flex-col h-96 max-h-[80vh] shadow-xl overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
-        <div className="flex items-center gap-2">
-          <Bot className="w-5 h-5 text-primary" />
-          <h3 className="font-semibold text-sm">Assistente Virtual</h3>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b px-3 py-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <Bot className="w-4 h-4 text-primary flex-shrink-0" />
+          <h3 className="font-semibold text-xs truncate">Assistente Virtual</h3>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-1 flex-shrink-0">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsMinimized(!isMinimized)}
             title={isMinimized ? "Expandir chat" : "Minimizar chat"}
+            className="h-6 w-6 p-0"
           >
-            <Minimize2 className="w-4 h-4" />
+            <Minimize2 className="w-3 h-3" />
           </Button>
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setIsOpen(false)}
             title="Fechar chat"
+            className="h-6 w-6 p-0"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3" />
           </Button>
         </div>
       </CardHeader>
 
       {!isMinimized && (
         <CardContent className="flex flex-col flex-1 p-0 min-h-0 overflow-hidden">
-          <ScrollArea className="flex-1 p-2 sm:p-4 min-h-0">
-            <div className="space-y-3">
+          <ScrollArea className="flex-1 p-2 min-h-0">
+            <div className="space-y-2">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-2 items-start w-full ${
+                  className={`flex gap-1 items-start w-full ${
                     message.is_bot ? 'justify-start' : 'justify-end'
                   }`}
                 >
                   {message.is_bot && (
-                    <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
-                      <AvatarFallback className="bg-primary/10">
-                        <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                    <Avatar className="w-5 h-5 flex-shrink-0 mt-0.5">
+                      <AvatarFallback className="bg-primary/10 text-[10px]">
+                        <Bot className="w-2.5 h-2.5 text-primary" />
                       </AvatarFallback>
                     </Avatar>
                   )}
                   
                   <div
-                    className={`rounded-lg p-2 sm:p-3 max-w-[85%] min-w-0 ${
+                    className={`rounded-lg p-2 max-w-[85%] min-w-0 overflow-hidden ${
                       message.is_bot
                         ? 'bg-muted/50 text-foreground'
                         : 'bg-primary text-primary-foreground'
                     }`}
                   >
                     {message.is_bot && message.message_type !== 'text' ? (
-                      <div className="w-full overflow-hidden">
+                      <div className="w-full min-w-0">
                         <RichMessageRenderer
                           type={message.message_type}
                           message={message.message}
                           richContent={message.rich_content}
                           onButtonClick={handleButtonClick}
-                          className="w-full"
+                          className="w-full min-w-0"
                         />
                       </div>
                     ) : (
-                      <div className="text-xs sm:text-sm whitespace-pre-wrap break-words">
+                      <div className="text-xs leading-relaxed whitespace-pre-wrap break-words word-wrap-anywhere">
                         {message.message}
                       </div>
                     )}
                   </div>
 
                   {!message.is_bot && (
-                    <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
-                      <AvatarFallback>
-                        <User className="w-3 h-3 sm:w-4 sm:h-4" />
+                    <Avatar className="w-5 h-5 flex-shrink-0 mt-0.5">
+                      <AvatarFallback className="text-[10px]">
+                        <User className="w-2.5 h-2.5" />
                       </AvatarFallback>
                     </Avatar>
                   )}
@@ -409,17 +411,17 @@ Digite exatamente uma das palavras-chave acima para acessar o menu correspondent
               ))}
 
               {botTyping && (
-                <div className="flex gap-2 items-start">
-                  <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
-                    <AvatarFallback className="bg-primary/10">
-                      <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
+                <div className="flex gap-1 items-start">
+                  <Avatar className="w-5 h-5 flex-shrink-0 mt-0.5">
+                    <AvatarFallback className="bg-primary/10 text-[10px]">
+                      <Bot className="w-2.5 h-2.5 text-primary" />
                     </AvatarFallback>
                   </Avatar>
-                  <div className="bg-muted/50 rounded-lg p-2 sm:p-3 max-w-[85%]">
+                  <div className="bg-muted/50 rounded-lg p-2 max-w-[85%]">
                     <div className="flex gap-1">
-                      <div className="w-1 h-1 sm:w-2 sm:h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
-                      <div className="w-1 h-1 sm:w-2 sm:h-2 bg-muted-foreground/50 rounded-full animate-bounce delay-100" />
-                      <div className="w-1 h-1 sm:w-2 sm:h-2 bg-muted-foreground/50 rounded-full animate-bounce delay-200" />
+                      <div className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-bounce" />
+                      <div className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-bounce delay-100" />
+                      <div className="w-1 h-1 bg-muted-foreground/50 rounded-full animate-bounce delay-200" />
                     </div>
                   </div>
                 </div>
@@ -429,26 +431,26 @@ Digite exatamente uma das palavras-chave acima para acessar o menu correspondent
             </div>
           </ScrollArea>
 
-          <div className="p-2 sm:p-4 border-t bg-background">
-            <div className="flex gap-2">
+          <div className="p-2 border-t bg-background">
+            <div className="flex gap-1">
               <Input
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Digite sua mensagem..."
                 disabled={loading}
-                className="flex-1 text-xs sm:text-sm min-w-0"
+                className="flex-1 text-xs h-8 min-w-0"
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={loading || !newMessage.trim()}
                 size="sm"
-                className="flex-shrink-0"
+                className="h-8 px-2 flex-shrink-0"
               >
-                <Send className="w-3 h-3 sm:w-4 sm:h-4" />
+                <Send className="w-3 h-3" />
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-1 text-center">
+            <p className="text-[10px] text-muted-foreground mt-1 text-center truncate">
               Digite "ola" para ver as opções disponíveis
             </p>
           </div>

@@ -78,17 +78,18 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
     if (!richContent?.buttons) return null;
     
     return (
-      <div className="flex flex-col sm:flex-row gap-2 mt-3">
+      <div className="grid gap-1 mt-2 w-full">
         {richContent.buttons.map((button, index) => (
           <Button
             key={index}
             variant={button.variant || 'outline'}
             size="sm"
             onClick={() => handleButtonClick(button)}
-            className="w-full sm:w-auto text-xs sm:text-sm"
+            className="w-full text-xs h-7 justify-start px-2"
+            title={button.text}
           >
-            <span className="truncate">{button.text}</span>
-            {button.url && <ExternalLink className="w-3 h-3 ml-1 flex-shrink-0" />}
+            <span className="truncate text-left">{button.text}</span>
+            {button.url && <ExternalLink className="w-3 h-3 ml-auto flex-shrink-0" />}
           </Button>
         ))}
       </div>
@@ -116,37 +117,39 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
     if (!cardData) return null;
     
     return (
-      <div className="space-y-2 mt-2 w-full">
+      <div className="space-y-1 mt-2 w-full">
         {cardData.map((item, index) => (
           <Card key={index} className="border border-border/50 w-full overflow-hidden">
-            <CardContent className="p-2 sm:p-3">
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
-                  <h4 className="font-medium text-foreground text-xs sm:text-sm break-words flex-1">
-                    {item.title}
-                  </h4>
-                  <div className="flex gap-1 flex-wrap">
-                    {item.badge && (
-                      <Badge variant="secondary" className="text-xs">
-                        {item.badge}
-                      </Badge>
-                    )}
-                    {item.price && (
-                      <Badge variant="outline" className="text-xs font-bold">
-                        {item.price}
-                      </Badge>
-                    )}
+            <CardContent className="p-2">
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-start justify-between gap-1">
+                    <h4 className="font-medium text-foreground text-xs break-words flex-1 leading-tight">
+                      {item.title}
+                    </h4>
+                    <div className="flex gap-1 flex-shrink-0">
+                      {item.badge && (
+                        <Badge variant="secondary" className="text-[10px] px-1 py-0">
+                          {item.badge}
+                        </Badge>
+                      )}
+                      {item.price && (
+                        <Badge variant="outline" className="text-[10px] px-1 py-0 font-bold">
+                          {item.price}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
+                  <p className="text-[10px] text-muted-foreground break-words leading-tight">
+                    {item.description}
+                  </p>
                 </div>
-                <p className="text-xs text-muted-foreground break-words">
-                  {item.description}
-                </p>
                 {item.features && (
-                  <ul className="text-xs text-muted-foreground space-y-1">
+                  <ul className="text-[10px] text-muted-foreground space-y-0.5">
                     {item.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start">
-                        <span className="w-1 h-1 rounded-full bg-primary mr-2 mt-1.5 flex-shrink-0"></span>
-                        <span className="break-words">{feature}</span>
+                      <li key={idx} className="flex items-start gap-1">
+                        <span className="w-1 h-1 rounded-full bg-primary mt-1 flex-shrink-0"></span>
+                        <span className="break-words leading-tight">{feature}</span>
                       </li>
                     ))}
                   </ul>
@@ -156,10 +159,11 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
                     size="sm"
                     variant="outline"
                     onClick={() => handleButtonClick(item.button!)}
-                    className="w-full text-xs mt-2"
+                    className="w-full text-[10px] h-6 mt-1"
+                    title={item.button.text}
                   >
                     <span className="truncate">{item.button.text}</span>
-                    <ArrowRight className="w-3 h-3 ml-2 flex-shrink-0" />
+                    <ArrowRight className="w-2.5 h-2.5 ml-1 flex-shrink-0" />
                   </Button>
                 )}
               </div>
@@ -192,19 +196,19 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
   };
 
   return (
-    <div className={`space-y-2 max-w-full overflow-hidden ${className}`}>
+    <div className={`space-y-1 max-w-full min-w-0 overflow-hidden ${className}`}>
       {title && (
-        <h3 className="font-semibold text-foreground text-sm break-words">
+        <h3 className="font-semibold text-foreground text-xs break-words leading-tight">
           {title}
         </h3>
       )}
       
-      <div className="text-sm text-foreground whitespace-pre-wrap break-words">
+      <div className="text-xs text-foreground whitespace-pre-wrap break-words leading-relaxed word-wrap-anywhere">
         {message}
       </div>
       
       {richContent?.description && (
-        <p className="text-xs text-muted-foreground mt-1 break-words">
+        <p className="text-[10px] text-muted-foreground mt-1 break-words leading-tight">
           {richContent.description}
         </p>
       )}
@@ -220,9 +224,10 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
           variant="link"
           size="sm"
           onClick={() => window.open(richContent.url, '_blank')}
-          className="p-0 h-auto text-primary hover:text-primary/80 mt-3 text-xs sm:text-sm"
+          className="p-0 h-auto text-primary hover:text-primary/80 mt-2 text-xs w-full justify-start"
+          title={richContent.text}
         >
-          <span className="break-words">{richContent.text}</span>
+          <span className="break-words truncate">{richContent.text}</span>
           <ExternalLink className="w-3 h-3 ml-1 flex-shrink-0" />
         </Button>
       )}
