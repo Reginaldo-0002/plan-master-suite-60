@@ -59,6 +59,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     console.log('🔄 [SupportChat] Forçando verificação de restrições...');
     console.log('🔄 [SupportChat] Profile:', profile?.user_id);
     console.log('🔄 [SupportChat] checkRestrictions função:', !!checkRestrictions);
+    console.log('🔄 [SupportChat] isAdmin:', isAdmin, 'isModerator:', isModerator);
     
     if (checkRestrictions) {
       checkRestrictions();
@@ -68,7 +69,17 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       console.log('🔄 [SupportChat] Chat aberto - forçando verificação de restrições');
       setTimeout(() => checkRestrictions(), 1000);
     }
-  }, [isOpen, checkRestrictions, profile?.user_id]);
+    
+    // Forçar uma nova verificação a cada 10 segundos para garantir que mudanças sejam detectadas
+    const interval = setInterval(() => {
+      if (checkRestrictions) {
+        console.log('⏰ [SupportChat] Verificação periódica de restrições');
+        checkRestrictions();
+      }
+    }, 10000);
+    
+    return () => clearInterval(interval);
+  }, [isOpen, checkRestrictions, profile?.user_id, isAdmin, isModerator]);
 
   useEffect(() => {
     if (isOpen && !ticketId) {

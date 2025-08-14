@@ -117,7 +117,13 @@ export const NotificationPopup = () => {
       const profile = profileCacheRef.current?.profile;
       
       const shouldShow = shouldShowNotification(newNotification, profile);
-      console.log('Should show realtime notification:', shouldShow, { isAdmin, isModerator, actionType: newNotification.notification_metadata?.action_type });
+      console.log('🔔 [NotificationPopup] Should show realtime notification:', shouldShow, { 
+        isAdmin, 
+        isModerator, 
+        actionType: newNotification.notification_metadata?.action_type,
+        targetPlans: newNotification.target_plans,
+        title: newNotification.title 
+      });
       
       if (shouldShow) {
         const formattedNotification: PopupNotification = {

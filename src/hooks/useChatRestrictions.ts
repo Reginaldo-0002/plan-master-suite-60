@@ -50,6 +50,8 @@ export const useChatRestrictions = (userId: string | undefined) => {
         });
         setLoading(false);
         return;
+      } else {
+        console.log('👤 [useChatRestrictions] Usuário comum - verificando restrições globais');
       }
 
       // ===== VERIFICAR BLOQUEIO GLOBAL PRIMEIRO (PRIORITÁRIO) =====
