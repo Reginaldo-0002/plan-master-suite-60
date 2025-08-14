@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -1579,8 +1579,8 @@ export type Database = {
       admin_create_user: {
         Args: {
           user_email: string
-          user_password: string
           user_full_name: string
+          user_password: string
           user_plan?: Database["public"]["Enums"]["user_plan"]
           user_role?: Database["public"]["Enums"]["app_role"]
         }
@@ -1589,8 +1589,8 @@ export type Database = {
       admin_create_user_safe: {
         Args: {
           user_email: string
-          user_password: string
           user_full_name: string
+          user_password: string
           user_plan?: Database["public"]["Enums"]["user_plan"]
           user_role?: Database["public"]["Enums"]["app_role"]
         }
@@ -1602,9 +1602,9 @@ export type Database = {
       }
       admin_toggle_user_chat_visibility: {
         Args: {
-          target_user_id: string
           hide_chat: boolean
           hide_reason?: string
+          target_user_id: string
         }
         Returns: Json
       }
@@ -1614,18 +1614,18 @@ export type Database = {
       }
       award_loyalty_points: {
         Args: {
-          user_uuid: string
-          points_amount: number
           activity_type: string
+          points_amount: number
+          user_uuid: string
         }
         Returns: undefined
       }
       calculate_referral_commission: {
-        Args: { referrer_user_id: string; referred_plan: string }
+        Args: { referred_plan: string; referrer_user_id: string }
         Returns: number
       }
       check_ip_limit: {
-        Args: { target_user_id: string; current_ip: unknown }
+        Args: { current_ip: unknown; target_user_id: string }
         Returns: Json
       }
       check_user_role: {
@@ -1643,19 +1643,19 @@ export type Database = {
       get_all_users_for_admin: {
         Args: Record<PropertyKey, never>
         Returns: {
-          id: string
-          user_id: string
-          full_name: string
-          avatar_url: string
-          plan: Database["public"]["Enums"]["user_plan"]
-          pix_key: string
-          total_session_time: number
           areas_accessed: number
+          avatar_url: string
+          created_at: string
+          full_name: string
+          id: string
+          pix_key: string
+          plan: Database["public"]["Enums"]["user_plan"]
           referral_code: string
           referral_earnings: number
-          created_at: string
-          updated_at: string
           role: Database["public"]["Enums"]["app_role"]
+          total_session_time: number
+          updated_at: string
+          user_id: string
         }[]
       }
       get_current_user_role: {
@@ -1665,21 +1665,21 @@ export type Database = {
       get_user_security_stats: {
         Args: Record<PropertyKey, never>
         Returns: {
+          is_blocked: boolean
+          is_currently_active: boolean
+          last_session_start: string
+          total_sessions: number
+          total_time_minutes: number
+          unique_ips: number
           user_id: string
           user_name: string
           user_plan: string
-          total_sessions: number
-          unique_ips: number
-          last_session_start: string
-          total_time_minutes: number
-          is_currently_active: boolean
-          is_blocked: boolean
         }[]
       }
       has_role: {
         Args: {
-          _user_id: string
           _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
         }
         Returns: boolean
       }
@@ -1697,8 +1697,8 @@ export type Database = {
       }
       notify_admins: {
         Args: {
-          notification_title: string
           notification_message: string
+          notification_title: string
           notification_type?: string
         }
         Returns: undefined
