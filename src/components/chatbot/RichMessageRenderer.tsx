@@ -60,6 +60,9 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
       window.open(button.url, '_blank');
     } else if (button.value && onButtonClick) {
       onButtonClick(button.value);
+    } else if (button.text?.toLowerCase().includes('upgrade') || button.text?.toLowerCase().includes('plano')) {
+      // Redirecionar para página de planos quando houver menção a upgrade ou planos
+      window.location.href = '/dashboard?tab=plans';
     }
   };
 
@@ -67,17 +70,17 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
     if (!richContent?.buttons) return null;
     
     return (
-      <div className="flex flex-wrap gap-2 mt-3">
+      <div className="flex flex-col sm:flex-row gap-2 mt-3">
         {richContent.buttons.map((button, index) => (
           <Button
             key={index}
             variant={button.variant || 'outline'}
             size="sm"
             onClick={() => handleButtonClick(button)}
-            className="min-w-0 flex-1 sm:flex-none"
+            className="w-full sm:w-auto text-xs sm:text-sm"
           >
-            {button.text}
-            {button.url && <ExternalLink className="w-3 h-3 ml-1" />}
+            <span className="truncate">{button.text}</span>
+            {button.url && <ExternalLink className="w-3 h-3 ml-1 flex-shrink-0" />}
           </Button>
         ))}
       </div>
@@ -105,32 +108,34 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
     if (!cardData) return null;
     
     return (
-      <div className="grid gap-3 mt-3">
+      <div className="grid gap-2 mt-3 max-w-full">
         {cardData.map((item, index) => (
-          <Card key={index} className="border border-border/50">
-            <CardContent className="p-4">
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-medium text-foreground">{item.title}</h4>
-                {item.badge && (
-                  <Badge variant="secondary" className="text-xs">
-                    {item.badge}
-                  </Badge>
-                )}
-                {item.price && (
-                  <Badge variant="outline" className="text-xs font-bold">
-                    {item.price}
-                  </Badge>
-                )}
+          <Card key={index} className="border border-border/50 max-w-full overflow-hidden">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
+                <h4 className="font-medium text-foreground text-sm break-words">{item.title}</h4>
+                <div className="flex gap-1 flex-wrap">
+                  {item.badge && (
+                    <Badge variant="secondary" className="text-xs">
+                      {item.badge}
+                    </Badge>
+                  )}
+                  {item.price && (
+                    <Badge variant="outline" className="text-xs font-bold">
+                      {item.price}
+                    </Badge>
+                  )}
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mb-3">
+              <p className="text-xs sm:text-sm text-muted-foreground mb-3 break-words">
                 {item.description}
               </p>
               {item.features && (
                 <ul className="text-xs text-muted-foreground mb-3 space-y-1">
                   {item.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-center">
-                      <span className="w-1 h-1 rounded-full bg-primary mr-2"></span>
-                      {feature}
+                    <li key={idx} className="flex items-start">
+                      <span className="w-1 h-1 rounded-full bg-primary mr-2 mt-1.5 flex-shrink-0"></span>
+                      <span className="break-words">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -140,10 +145,10 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => handleButtonClick(item.button!)}
-                  className="w-full"
+                  className="w-full text-xs sm:text-sm"
                 >
-                  {item.button.text}
-                  <ArrowRight className="w-3 h-3 ml-2" />
+                  <span className="truncate">{item.button.text}</span>
+                  <ArrowRight className="w-3 h-3 ml-2 flex-shrink-0" />
                 </Button>
               )}
             </CardContent>
@@ -175,19 +180,19 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
   };
 
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`space-y-2 max-w-full overflow-hidden ${className}`}>
       {title && (
-        <h3 className="font-semibold text-foreground text-sm">
+        <h3 className="font-semibold text-foreground text-sm break-words">
           {title}
         </h3>
       )}
       
-      <div className="text-sm text-foreground whitespace-pre-wrap">
+      <div className="text-sm text-foreground whitespace-pre-wrap break-words">
         {message}
       </div>
       
       {richContent?.description && (
-        <p className="text-xs text-muted-foreground mt-1">
+        <p className="text-xs text-muted-foreground mt-1 break-words">
           {richContent.description}
         </p>
       )}
@@ -203,10 +208,10 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
           variant="link"
           size="sm"
           onClick={() => window.open(richContent.url, '_blank')}
-          className="p-0 h-auto text-primary hover:text-primary/80 mt-3"
+          className="p-0 h-auto text-primary hover:text-primary/80 mt-3 text-xs sm:text-sm"
         >
-          {richContent.text}
-          <ExternalLink className="w-3 h-3 ml-1" />
+          <span className="break-words">{richContent.text}</span>
+          <ExternalLink className="w-3 h-3 ml-1 flex-shrink-0" />
         </Button>
       )}
       
