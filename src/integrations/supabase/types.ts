@@ -2287,6 +2287,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      process_auto_status_schedules: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       process_webhook_event: {
         Args: { event_id: string }
         Returns: Json

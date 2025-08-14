@@ -12,6 +12,7 @@ import { ContentSection } from "@/components/dashboard/ContentSection";
 import { RulesSection } from "@/components/dashboard/RulesSection";
 import { PlansSection } from "@/components/dashboard/PlansSection";
 import { ToolsSection } from "@/components/dashboard/ToolsSection";
+import { EnhancedChatbot } from "@/components/chatbot/EnhancedChatbot";
 import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { CarouselSection } from "@/components/dashboard/CarouselSection";
 import { TopicsRouter } from "@/components/navigation/TopicsRouter";
