@@ -321,7 +321,19 @@ export default function Dashboard() {
       <main className="flex-1 overflow-auto">
         {renderActiveSection()}
       </main>
-      <SupportChat profile={currentProfile} />
+      
+      {/* Support Chat - Only on non-admin sections */}
+      {!['topics'].includes(activeSection) && currentProfile && (
+        <SupportChat profile={currentProfile} />
+      )}
+      
+      {/* Enhanced Chatbot - Active in all sections */}
+      {currentProfile && (
+        <EnhancedChatbot 
+          userId={currentProfile.user_id}
+          className="fixed bottom-20 right-4 z-40"
+        />
+      )}
     </div>
   );
 }
