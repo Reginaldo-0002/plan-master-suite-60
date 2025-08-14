@@ -59,6 +59,11 @@ export const AdminSupportManagement = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [ticketMessages, setTicketMessages] = useState<TicketMessage[]>([]);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
+  const [newMessage, setNewMessage] = useState("");
+  const [newOption, setNewOption] = useState({ title: "", response: "" });
+  const [userVisibilityStates, setUserVisibilityStates] = useState<Record<string, boolean>>({});
+  const { toast } = useToast();
 
   // Check for notification redirect on component mount
   useEffect(() => {
@@ -67,17 +72,30 @@ export const AdminSupportManagement = () => {
       if (notificationData && tickets.length > 0) {
         try {
           const { userId, userName, ticketId } = JSON.parse(notificationData);
-          console.log('Opening chat from notification:', { userId, userName, ticketId });
+          console.log('Processing notification redirect:', { userId, userName, ticketId });
+          console.log('Available tickets:', tickets.map(t => ({ id: t.id, subject: t.subject })));
           
           // Find and select the ticket
           const ticket = tickets.find(t => t.id === ticketId);
           if (ticket) {
+            console.log('Found ticket, opening chat:', ticket);
             setSelectedTicket(ticket);
             // Open the ticket dialog automatically
             setIsTicketDialogOpen(true);
-            console.log('Ticket selected and dialog opened:', ticket);
+            // Scroll to the bottom of messages when opening
+            setTimeout(() => {
+              const messagesContainer = document.querySelector('[data-messages-container]');
+              if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+              }
+            }, 500);
           } else {
-            console.warn('Ticket not found:', ticketId);
+            console.warn('Ticket not found in available tickets:', ticketId);
+            toast({
+              title: "Erro",
+              description: "Ticket não encontrado",
+              variant: "destructive"
+            });
           }
           
           // Clear the notification data
@@ -90,12 +108,23 @@ export const AdminSupportManagement = () => {
     };
 
     // Check immediately if tickets are already loaded
-    checkNotificationRedirect();
-    
-    // Also listen for hash changes in case of redirect
+    if (tickets.length > 0) {
+      checkNotificationRedirect();
+    }
+  }, [tickets, toast]);
+
+  // Separate useEffect for hash change listening
+  useEffect(() => {
     const handleHashChange = () => {
       if (window.location.hash === '#support') {
-        setTimeout(checkNotificationRedirect, 100);
+        // Give a moment for the component to mount and tickets to load
+        setTimeout(() => {
+          const notificationData = sessionStorage.getItem('adminChatNotification');
+          if (notificationData && tickets.length > 0) {
+            // Process the notification redirect
+            window.dispatchEvent(new Event('storage'));
+          }
+        }, 300);
       }
     };
     
@@ -105,11 +134,6 @@ export const AdminSupportManagement = () => {
       window.removeEventListener('hashchange', handleHashChange);
     };
   }, [tickets]);
-  const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
-  const [newMessage, setNewMessage] = useState("");
-  const [newOption, setNewOption] = useState({ title: "", response: "" });
-  const [userVisibilityStates, setUserVisibilityStates] = useState<Record<string, boolean>>({});
-  const { toast } = useToast();
 
   useEffect(() => {
     fetchTickets();
@@ -909,7 +933,7 @@ export const AdminSupportManagement = () => {
                     </Button>
                   </div>
                 </div>
-                <div className="max-h-60 overflow-y-auto space-y-3">
+                <div className="max-h-60 overflow-y-auto space-y-3" data-messages-container>
                   {ticketMessages.map((message) => (
                     <div key={message.id} className="p-3 border rounded-lg">
                       <div className="flex justify-between items-start mb-2">
