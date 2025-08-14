@@ -4,6 +4,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Activity, Database, Settings, Webhook, MessageSquare, TestTube } from 'lucide-react';
+import { IntegrationsStatsCards } from './IntegrationsStatsCards';
+import { PlatformStatusCard } from './PlatformStatusCard';
+import { SystemHealthCard } from './SystemHealthCard';
 import { PlansManagement } from './PlansManagement';
 import { WebhookEndpoints } from './WebhookEndpoints';
 import { WebhookEvents } from './WebhookEvents';
@@ -20,7 +23,10 @@ export function IntegrationsSettings({ onSectionChange }: IntegrationsSettingsPr
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    onSectionChange(value);
+    // Only call onSectionChange for non-overview tabs to prevent navigation conflict
+    if (value !== 'overview') {
+      onSectionChange(`integrations-${value}`);
+    }
   };
 
   return (
@@ -62,87 +68,14 @@ export function IntegrationsSettings({ onSectionChange }: IntegrationsSettingsPr
 
         <TabsContent value="overview" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Status Cards */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Conexões Ativas</CardTitle>
-                <Webhook className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">4</div>
-                <p className="text-xs text-muted-foreground">
-                  +2 desde ontem
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Eventos Processados</CardTitle>
-                <MessageSquare className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">1,234</div>
-                <p className="text-xs text-muted-foreground">
-                  +180 nas últimas 24h
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Taxa de Sucesso</CardTitle>
-                <Activity className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">98.5%</div>
-                <p className="text-xs text-muted-foreground">
-                  +0.2% desde ontem
-                </p>
-              </CardContent>
-            </Card>
+            {/* Real Status Cards - Connected to Database */}
+            <IntegrationsStatsCards />
           </div>
 
           {/* Quick Actions */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Plataformas Conectadas</CardTitle>
-                <CardDescription>
-                  Status das integrações com plataformas de pagamento
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-orange-500" />
-                    <span>Hotmart</span>
-                  </div>
-                  <Badge variant="default">Conectado</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-green-500" />
-                    <span>Kiwify</span>
-                  </div>
-                  <Badge variant="default">Conectado</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-blue-500" />
-                    <span>Caktor</span>
-                  </div>
-                  <Badge variant="secondary">Não conectado</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-500" />
-                    <span>Genérico</span>
-                  </div>
-                  <Badge variant="default">Conectado</Badge>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Real Platform Status - Connected to Database */}
+            <PlatformStatusCard />
 
             <Card>
               <CardHeader>
@@ -188,35 +121,8 @@ export function IntegrationsSettings({ onSectionChange }: IntegrationsSettingsPr
             </Card>
           </div>
 
-          {/* System Health */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Saúde do Sistema</CardTitle>
-              <CardDescription>
-                Monitor de performance e disponibilidade
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Processamento de Webhooks</span>
-                  <Badge variant="default">Operacional</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Banco de Dados</span>
-                  <Badge variant="default">Operacional</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Meta Conversions API</span>
-                  <Badge variant="default">Operacional</Badge>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Webhooks de Saída</span>
-                  <Badge variant="default">Operacional</Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Real System Health - Connected to Database */}
+          <SystemHealthCard />
         </TabsContent>
 
         <TabsContent value="plans">
