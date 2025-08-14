@@ -94,11 +94,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
       console.log('Fetching resources for topicId:', topicId);
       
       const { data, error } = await supabase
-        .from('user_accessible_resources')
-        .select('*')
-        .eq('topic_id', topicId)
-        .eq('is_active', true)
-        .order('resource_order', { ascending: true });
+        .rpc('get_user_resources', { topic_id_param: topicId });
 
       if (error) {
         console.error('Error fetching resources:', error);
