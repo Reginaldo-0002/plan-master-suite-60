@@ -42,8 +42,22 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const [showOptions, setShowOptions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  const { restriction, loading: restrictionLoading } = useChatRestrictions(profile?.user_id);
+  const { restriction, loading: restrictionLoading, checkRestrictions } = useChatRestrictions(profile?.user_id);
   const { visibility, loading: visibilityLoading } = useChatVisibility(profile?.user_id);
+
+  // Debug logs para SupportChat
+  console.log('🔍 [SupportChat] Componente renderizado para usuário:', profile?.user_id);
+  console.log('🔒 [SupportChat] Restriction state:', restriction);
+  console.log('👁️ [SupportChat] Visibility state:', visibility);
+  console.log('⏳ [SupportChat] Loading states - restriction:', restrictionLoading, 'visibility:', visibilityLoading);
+
+  // Forçar verificação de restrições quando o componente for aberto
+  useEffect(() => {
+    if (isOpen && checkRestrictions) {
+      console.log('🔄 [SupportChat] Chat aberto - forçando verificação de restrições');
+      checkRestrictions();
+    }
+  }, [isOpen, checkRestrictions]);
 
   useEffect(() => {
     if (isOpen && !ticketId) {

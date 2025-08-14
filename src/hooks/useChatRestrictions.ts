@@ -28,8 +28,48 @@ export const useChatRestrictions = (userId: string | undefined) => {
 
     try {
       const currentTime = new Date();
+      console.log('🔍 [useChatRestrictions] Verificando restrições para usuário:', userId);
+      console.log('🕒 [useChatRestrictions] Hora atual:', currentTime.toISOString());
 
-      // ======= VERIFICAR BLOQUEIO ESPECÍFICO DO USUÁRIO PRIMEIRO =======
+      // ===== VERIFICAR BLOQUEIO GLOBAL PRIMEIRO (PRIORITÁRIO) =====
+      console.log('🌐 [useChatRestrictions] Verificando bloqueio global...');
+      const { data: globalSettings, error: globalError } = await supabase
+        .from('admin_settings')
+        .select('chat_blocked_until')
+        .eq('key', 'global_chat_settings')
+        .maybeSingle();
+
+      console.log('📊 [useChatRestrictions] Configurações globais:', globalSettings);
+      if (globalError) {
+        console.error('❌ [useChatRestrictions] Erro ao buscar configurações globais:', globalError);
+      }
+
+      if (globalSettings?.chat_blocked_until) {
+        const blockUntil = new Date(globalSettings.chat_blocked_until);
+        const isGloballyBlocked = blockUntil > currentTime;
+        
+        console.log(`⏰ [useChatRestrictions] Bloqueio global até: ${blockUntil.toISOString()}`);
+        console.log(`⏰ [useChatRestrictions] Agora: ${currentTime.toISOString()}`);
+        console.log(`🔒 [useChatRestrictions] É maior que agora? ${blockUntil.getTime()} > ${currentTime.getTime()} = ${isGloballyBlocked}`);
+        
+        if (isGloballyBlocked) {
+          console.log('🚫 [useChatRestrictions] APLICANDO BLOQUEIO GLOBAL para usuário:', userId);
+          setRestriction({
+            isBlocked: true,
+            reason: 'Chat bloqueado globalmente pelo administrador',
+            blockedUntil: blockUntil
+          });
+          setLoading(false);
+          return;
+        } else {
+          console.log('✅ [useChatRestrictions] Bloqueio global expirado');
+        }
+      } else {
+        console.log('✅ [useChatRestrictions] Nenhum bloqueio global encontrado');
+      }
+
+      // ===== VERIFICAR BLOQUEIO ESPECÍFICO DO USUÁRIO =====
+      console.log('👤 [useChatRestrictions] Verificando bloqueios específicos do usuário...');
       const { data: userRestrictions, error: userError } = await supabase
         .from('user_chat_restrictions')
         .select('id, blocked_until, reason, created_at')
@@ -37,16 +77,19 @@ export const useChatRestrictions = (userId: string | undefined) => {
         .order('created_at', { ascending: false });
 
       if (userError) {
-        console.error('❌ Error checking user restrictions:', userError);
+        console.error('❌ [useChatRestrictions] Erro ao verificar restrições do usuário:', userError);
       }
 
       // Verificar se há alguma restrição ativa
       let activeUserRestriction = null;
       if (userRestrictions && userRestrictions.length > 0) {
+        console.log(`📋 [useChatRestrictions] Encontradas ${userRestrictions.length} restrições do usuário`);
         for (const restriction of userRestrictions) {
           if (restriction.blocked_until) {
             const blockUntil = new Date(restriction.blocked_until);
             const isActive = blockUntil > currentTime;
+            
+            console.log(`📅 [useChatRestrictions] Restrição ${restriction.id}: até ${blockUntil.toISOString()}, ativa: ${isActive}`);
             
             if (isActive) {
               activeUserRestriction = restriction;
@@ -54,10 +97,13 @@ export const useChatRestrictions = (userId: string | undefined) => {
             }
           }
         }
+      } else {
+        console.log('✅ [useChatRestrictions] Nenhuma restrição específica encontrada');
       }
 
       if (activeUserRestriction) {
         const blockUntil = new Date(activeUserRestriction.blocked_until);
+        console.log('🚫 [useChatRestrictions] APLICANDO BLOQUEIO ESPECÍFICO para usuário:', userId);
         setRestriction({
           isBlocked: true,
           reason: activeUserRestriction.reason || 'Você foi temporariamente bloqueado do chat',
@@ -67,48 +113,21 @@ export const useChatRestrictions = (userId: string | undefined) => {
         return;
       }
 
-      // ======= VERIFICAR BLOQUEIO GLOBAL SEMPRE =======
-      console.log('🔍 Verificando bloqueio global para usuário:', userId);
-      const { data: globalSettings, error: globalError } = await supabase
-        .from('admin_settings')
-        .select('chat_blocked_until')
-        .eq('key', 'global_chat_settings')
-        .maybeSingle();
-
-      console.log('📊 Configurações globais:', globalSettings);
-      console.log('❓ Erro ao buscar configurações globais:', globalError);
-
-      if (globalSettings?.chat_blocked_until) {
-        const blockUntil = new Date(globalSettings.chat_blocked_until);
-        const isGloballyBlocked = blockUntil > currentTime;
-        
-        console.log(`⏰ Bloqueio global até: ${blockUntil.toISOString()}`);
-        console.log(`⏰ Agora: ${currentTime.toISOString()}`);
-        console.log(`🔒 Chat globalmente bloqueado? ${isGloballyBlocked}`);
-        
-        if (isGloballyBlocked) {
-          console.log('🚫 Aplicando bloqueio global para usuário:', userId);
-          setRestriction({
-            isBlocked: true,
-            reason: 'Chat bloqueado globalmente pelo administrador',
-            blockedUntil: blockUntil
-          });
-          setLoading(false);
-          return;
-        } else {
-          console.log('✅ Bloqueio global expirado');
-        }
-      } else {
-        console.log('✅ Nenhum bloqueio global encontrado');
-      }
-
+      // ===== NENHUM BLOQUEIO ATIVO =====
+      console.log('✅ [useChatRestrictions] NENHUM BLOQUEIO ATIVO - Chat liberado para usuário:', userId);
       setRestriction({
         isBlocked: false,
         reason: null,
         blockedUntil: null
       });
     } catch (error) {
-      console.error('💥 Error checking chat restrictions:', error);
+      console.error('💥 [useChatRestrictions] Erro ao verificar restrições:', error);
+      // Em caso de erro, bloquear por segurança
+      setRestriction({
+        isBlocked: true,
+        reason: 'Erro ao verificar permissões do chat',
+        blockedUntil: null
+      });
     } finally {
       setLoading(false);
     }
