@@ -16,6 +16,7 @@ import { AdminSecurityManagement } from "@/components/admin/AdminSecurityManagem
 import { ContentTopicsEditor } from "@/components/content/ContentTopicsEditor";
 import { ArrowLeft } from "lucide-react";
 import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagement";
+import { AdvancedChatbotManager } from "@/components/admin/AdvancedChatbotManager";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
 import { RequireRole } from "@/components/auth/RequireRole";
@@ -163,7 +164,7 @@ const AdminDashboard = () => {
       case 'notifications':
         return <AdminNotificationManagement />;
       case 'tools':
-        return <AdminToolsManagement />;
+        return <AdvancedChatbotManager />;
       case 'financial':
         return <AdminFinancialManagement />;
       case 'rules':

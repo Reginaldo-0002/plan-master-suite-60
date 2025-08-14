@@ -233,6 +233,86 @@ export type Database = {
           },
         ]
       }
+      chatbot_analytics: {
+        Row: {
+          created_at: string | null
+          id: string
+          interaction_type: string
+          metadata: Json | null
+          response_id: string | null
+          trigger_text: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          interaction_type: string
+          metadata?: Json | null
+          response_id?: string | null
+          trigger_text?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          interaction_type?: string
+          metadata?: Json | null
+          response_id?: string | null
+          trigger_text?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_analytics_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_rich_responses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_rich_responses: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          message: string
+          priority: number | null
+          response_type: string
+          rich_content: Json | null
+          title: string | null
+          trigger_text: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          message: string
+          priority?: number | null
+          response_type?: string
+          rich_content?: Json | null
+          title?: string | null
+          trigger_text: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          priority?: number | null
+          response_type?: string
+          rich_content?: Json | null
+          title?: string | null
+          trigger_text?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       content: {
         Row: {
           auto_hide_at: string | null
@@ -901,29 +981,38 @@ export type Database = {
       }
       support_messages: {
         Row: {
+          attachments: Json | null
           created_at: string
           id: string
           is_bot: boolean | null
           is_internal: boolean | null
           message: string
+          message_type: string | null
+          rich_content: Json | null
           sender_id: string
           ticket_id: string
         }
         Insert: {
+          attachments?: Json | null
           created_at?: string
           id?: string
           is_bot?: boolean | null
           is_internal?: boolean | null
           message: string
+          message_type?: string | null
+          rich_content?: Json | null
           sender_id: string
           ticket_id: string
         }
         Update: {
+          attachments?: Json | null
           created_at?: string
           id?: string
           is_bot?: boolean | null
           is_internal?: boolean | null
           message?: string
+          message_type?: string | null
+          rich_content?: Json | null
           sender_id?: string
           ticket_id?: string
         }
