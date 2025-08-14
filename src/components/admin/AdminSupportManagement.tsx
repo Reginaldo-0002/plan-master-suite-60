@@ -1090,6 +1090,12 @@ export const AdminSupportManagement = () => {
         <h3 className="text-2xl font-bold text-foreground">Chatbot Inteligente</h3>
         <AdvancedChatbotManager />
       </div>
+
+      {/* Chat Control Section */}
+      <div className="space-y-6">
+        <h3 className="text-2xl font-bold text-foreground">Controle Global do Chat</h3>
+        <AdminChatControl />
+      </div>
     </div>
   );
 };
