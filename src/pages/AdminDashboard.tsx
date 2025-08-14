@@ -99,8 +99,19 @@ const AdminDashboard = () => {
     
     if (validSections.includes(tab as ActiveAdminSection)) {
       setActiveSection(tab as ActiveAdminSection);
+      
+      // Update URL hash to keep navigation in sync
+      if (window.location.hash !== `#${tab}`) {
+        window.history.pushState(null, '', `/admin#${tab}`);
+      }
+      
       if (tab !== 'content-topics') {
         setSelectedContentId(null);
+      }
+      
+      // Clear any notification data when navigating away from support
+      if (tab !== 'support') {
+        sessionStorage.removeItem('adminChatNotification');
       }
     }
   };
