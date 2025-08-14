@@ -2168,6 +2168,10 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_delete_all_tickets: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       admin_delete_user_completely: {
         Args: { target_user_id: string }
         Returns: Json

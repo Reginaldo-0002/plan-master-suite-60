@@ -630,6 +630,47 @@ export const AdminSupportManagement = () => {
     }
   };
 
+  const deleteAllTickets = async () => {
+    if (!confirm('Tem certeza que deseja APAGAR TODOS OS TICKETS E MENSAGENS permanentemente? Esta ação não pode ser desfeita!')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const { data, error } = await supabase.rpc('admin_delete_all_tickets');
+
+      if (error) throw error;
+
+      // Type assertion para garantir que data tem as propriedades esperadas
+      const result = data as { deleted_tickets: number; deleted_messages: number; message: string };
+
+      toast({
+        title: "Sucesso",
+        description: `${result.deleted_tickets} tickets e ${result.deleted_messages} mensagens foram excluídos permanentemente`,
+      });
+
+      // Limpar estados locais
+      setTickets([]);
+      setTicketMessages([]);
+      setSelectedTicket(null);
+      setIsTicketDialogOpen(false);
+      
+      // Recarregar dados
+      fetchTickets();
+      
+    } catch (error) {
+      console.error('Error deleting all tickets:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao apagar todos os tickets",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openTicketDialog = (ticket: Ticket) => {
     setSelectedTicket(ticket);
     fetchTicketMessages(ticket.id);
@@ -792,10 +833,24 @@ export const AdminSupportManagement = () => {
       {/* Tickets Table */}
       <Card className="border-border">
         <CardHeader>
-          <CardTitle className="text-lg text-foreground">Tickets ({filteredTickets.length})</CardTitle>
-          <CardDescription>
-            Lista de todos os tickets de suporte
-          </CardDescription>
+          <div className="flex justify-between items-center">
+            <div>
+              <CardTitle className="text-lg text-foreground">Tickets ({filteredTickets.length})</CardTitle>
+              <CardDescription>
+                Lista de todos os tickets de suporte
+              </CardDescription>
+            </div>
+            <Button 
+              onClick={deleteAllTickets}
+              variant="destructive"
+              size="sm"
+              disabled={loading}
+              className="gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Apagar Todos os Tickets
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <Table>
