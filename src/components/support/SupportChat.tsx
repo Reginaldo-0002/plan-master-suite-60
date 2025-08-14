@@ -497,14 +497,21 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
               <ScrollArea className="h-64 p-3">
                 <div className="space-y-3">
                   {restriction.isBlocked ? (
-                    <ChatBlockCountdown 
-                      blockedUntil={restriction.blockedUntil!} 
-                      reason={restriction.reason}
-                    />
+                    <>
+                      {console.log('🚫 CHAT BLOQUEADO - Restriction:', restriction)}
+                      <ChatBlockCountdown 
+                        blockedUntil={restriction.blockedUntil!} 
+                        reason={restriction.reason}
+                      />
+                    </>
                   ) : (
-                    <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
-                      <p className="text-xs text-green-600">✅ Chat Liberado</p>
-                    </div>
+                    <>
+                      {console.log('✅ CHAT LIBERADO - Restriction:', restriction)}
+                      <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
+                        <p className="text-xs text-green-600">✅ Chat Liberado</p>
+                        <p className="text-xs text-muted-foreground">Debug: User {profile?.user_id}</p>
+                      </div>
+                    </>
                   )}
                   {messages.map((message) => {
                     const isUserMessage = message.sender_id === profile.user_id;
