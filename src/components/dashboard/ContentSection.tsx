@@ -80,14 +80,17 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
       let filteredData = data || [];
       
       if (currentUserId) {
-        const { data: visibilityRules } = await supabase
+        const { data: visibilityRules, error: visibilityError } = await supabase
           .from('content_visibility_rules')
-          .select('content_id')
-          .eq('user_id', currentUserId)
-          .eq('is_visible', false);
+          .select('content_id, is_visible')
+          .eq('user_id', currentUserId);
 
-        const hiddenContentIds = visibilityRules?.map(rule => rule.content_id) || [];
-        filteredData = filteredData.filter(content => !hiddenContentIds.includes(content.id));
+        if (!visibilityError && visibilityRules) {
+          const hiddenContentIds = visibilityRules
+            .filter(rule => rule.is_visible === false)
+            .map(rule => rule.content_id);
+          filteredData = filteredData.filter(content => !hiddenContentIds.includes(content.id));
+        }
       }
 
       const mappedData: Content[] = filteredData.map(item => ({
@@ -264,10 +267,8 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
                     variant="secondary" 
                     className="w-full"
                     onClick={() => {
-                      // Redirect to plans section
-                      const currentUrl = new URL(window.location.href);
-                      currentUrl.hash = '#plans';
-                      window.location.href = currentUrl.toString();
+                      // Navigate to plans section in sidebar
+                      window.location.href = '/dashboard?section=plans';
                     }}
                   >
                     <Lock className="w-4 h-4 mr-2" />

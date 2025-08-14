@@ -132,10 +132,8 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
           description: `Redirecionando para ${tool.name}...`,
         });
       } else if (!canAccess(tool)) {
-        // Redirect to plans section
-        const currentUrl = new URL(window.location.href);
-        currentUrl.hash = '#plans';
-        window.location.href = currentUrl.toString();
+        // Navigate to plans section in sidebar
+        window.location.href = '/dashboard?section=plans';
       } else {
         // Ferramenta indisponível
         toast({
