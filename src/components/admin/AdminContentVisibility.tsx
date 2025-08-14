@@ -169,7 +169,7 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
       });
 
       setSelectedUsers([]);
-      fetchVisibilityRules();
+      await fetchVisibilityRules(); // Use await para garantir que a atualização seja completa
     } catch (error) {
       console.error('Error hiding content:', error);
       toast({
@@ -194,7 +194,7 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
         description: "Conteúdo liberado para o usuário",
       });
 
-      fetchVisibilityRules();
+      await fetchVisibilityRules(); // Use await para garantir que a atualização seja completa
     } catch (error) {
       console.error('Error showing content:', error);
       toast({

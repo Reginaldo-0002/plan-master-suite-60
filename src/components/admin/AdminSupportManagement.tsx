@@ -14,7 +14,6 @@ import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2, Use
 import { useToast } from "@/hooks/use-toast";
 import { AdvancedChatbotManager } from "./AdvancedChatbotManager";
 import { AdminChatControl } from "./AdminChatControl";
-import { AdvancedChatbotManager } from "./AdvancedChatbotManager";
 
 interface Ticket {
   id: string;
@@ -1090,7 +1089,6 @@ export const AdminSupportManagement = () => {
       <div className="space-y-6">
         <h3 className="text-2xl font-bold text-foreground">Chatbot Inteligente</h3>
         <AdvancedChatbotManager />
-        <AdminChatControl />
       </div>
     </div>
   );
