@@ -244,6 +244,32 @@ export function PlansManagement() {
     }
   };
 
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este produto?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('platform_products')
+        .delete()
+        .eq('id', productId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso',
+        description: 'Produto excluído com sucesso!'
+      });
+      
+      loadData();
+    } catch (error: any) {
+      toast({
+        title: 'Erro',
+        description: 'Erro ao excluir produto: ' + error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
   const formatPrice = (cents: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -623,17 +649,24 @@ export function PlansManagement() {
                           {product.active ? 'Ativo' : 'Inativo'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex space-x-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleEditProduct(product)}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                       <TableCell>
+                         <div className="flex space-x-2">
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => handleEditProduct(product)}
+                           >
+                             <Edit2 className="h-4 w-4" />
+                           </Button>
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={() => handleDeleteProduct(product.id)}
+                           >
+                             <Trash2 className="h-4 w-4" />
+                           </Button>
+                         </div>
+                       </TableCell>
                     </TableRow>
                   );
                 })

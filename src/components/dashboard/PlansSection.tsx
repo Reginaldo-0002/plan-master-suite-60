@@ -35,6 +35,9 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
   const [platformProducts, setPlatformProducts] = useState<PlatformProduct[]>([]);
   const { toast } = useToast();
 
+  // Remove any admin-only restrictions for viewing plans
+  // All users should be able to see and interact with plans
+
   useEffect(() => {
     fetchPlatformProducts();
   }, []);

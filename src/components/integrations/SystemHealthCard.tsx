@@ -23,7 +23,7 @@ export function SystemHealthCard() {
     try {
       // Check database connectivity
       const { error: dbError } = await supabase
-        .from('webhook_endpoints')
+        .from('plans')
         .select('id')
         .limit(1);
       
@@ -50,16 +50,16 @@ export function SystemHealthCard() {
         lastCheck: new Date()
       });
 
-      // Check Meta Tracking (look for tracking_meta records)
-      const { data: metaConfig, error: metaError } = await supabase
-        .from('tracking_meta')
+      // Check platform checkout functionality
+      const { data: platformProducts, error: platformError } = await supabase
+        .from('platform_products')
         .select('id')
         .eq('active', true)
         .limit(1);
 
       checks.push({
-        service: 'Meta Conversions API',
-        status: metaError ? 'down' : 'operational',
+        service: 'Sistema de Checkout',
+        status: platformError ? 'down' : 'operational',
         lastCheck: new Date()
       });
 
@@ -76,14 +76,28 @@ export function SystemHealthCard() {
         lastCheck: new Date()
       });
 
+      // Check plan system
+      const { data: activePlans, error: plansError } = await supabase
+        .from('plans')
+        .select('id')
+        .eq('active', true)
+        .limit(1);
+
+      checks.push({
+        service: 'Sistema de Planos',
+        status: plansError ? 'down' : 'operational',
+        lastCheck: new Date()
+      });
+
     } catch (error) {
       console.error('Error performing health checks:', error);
       // Set all services as down on error
       checks.push(
         { service: 'Banco de Dados', status: 'down' },
         { service: 'Processamento de Webhooks', status: 'down' },
-        { service: 'Meta Conversions API', status: 'down' },
-        { service: 'Webhooks de Saída', status: 'down' }
+        { service: 'Sistema de Checkout', status: 'down' },
+        { service: 'Webhooks de Saída', status: 'down' },
+        { service: 'Sistema de Planos', status: 'down' }
       );
     }
 
