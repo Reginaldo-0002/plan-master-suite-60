@@ -17,9 +17,10 @@ import { ContentTopicsEditor } from "@/components/content/ContentTopicsEditor";
 import { ArrowLeft } from "lucide-react";
 import { AdvancedUserManagement } from "@/components/admin/AdvancedUserManagement";
 import { AdvancedChatbotManager } from "@/components/admin/AdvancedChatbotManager";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button } from "@/components/ui/button";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RequireRole } from "@/components/auth/RequireRole";
+import { IntegrationsDashboard } from "@/components/integrations/IntegrationsDashboard";
 
 type ActiveAdminSection = 
   | 'overview' 
@@ -35,6 +36,7 @@ type ActiveAdminSection =
   | 'referral-settings' 
   | 'upcoming-releases' 
   | 'carousel'
+  | 'integrations'
   | 'security';
 
 const AdminDashboard = () => {
@@ -52,7 +54,7 @@ const AdminDashboard = () => {
       if (hash && hash !== activeSection) {
         const validSections: ActiveAdminSection[] = [
           'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
-          'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'security'
+          'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'integrations', 'security'
         ];
         
         if (validSections.includes(hash as ActiveAdminSection)) {
@@ -95,7 +97,7 @@ const AdminDashboard = () => {
     console.log('AdminDashboard - Section change:', tab);
     const validSections: ActiveAdminSection[] = [
       'overview', 'users', 'content', 'content-topics', 'support', 'notifications', 'tools', 
-      'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'security'
+      'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'integrations', 'security'
     ];
     
     if (validSections.includes(tab as ActiveAdminSection)) {

@@ -21,13 +21,21 @@ export function PlansManagement() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    name: string;
+    slug: string;
+    price_cents: number;
+    interval: string;
+    description: string;
+    features: string[];
+    active: boolean;
+  }>({
     name: '',
     slug: '',
     price_cents: 0,
-    interval: 'monthly' as const,
+    interval: 'monthly',
     description: '',
-    features: [] as string[],
+    features: [],
     active: true
   });
 

@@ -21,8 +21,14 @@ export function WebhookEndpoints() {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const [formData, setFormData] = useState({
-    provider: 'hotmart' as const,
+  const [formData, setFormData] = useState<{
+    provider: 'hotmart' | 'kiwify' | 'caktor' | 'generic';
+    url: string;
+    secret: string;
+    description: string;
+    active: boolean;
+  }>({
+    provider: 'hotmart',
     url: '',
     secret: '',
     description: '',
