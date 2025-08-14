@@ -120,24 +120,55 @@ export function TestLab() {
         throw new Error('Payload não encontrado');
       }
 
-      // Simular envio do webhook
-      const result = {
-        id: `test_${Date.now()}`,
+      // Mapear provider para endpoint da edge function
+      const webhookEndpoints = {
+        hotmart: 'webhook-hotmart',
+        kiwify: 'webhook-kiwify', 
+        caktor: 'webhook-generic',
+        generic: 'webhook-generic'
+      };
+
+      const endpoint = webhookEndpoints[provider as keyof typeof webhookEndpoints];
+      
+      if (!endpoint) {
+        throw new Error('Provider não suportado');
+      }
+
+      // Enviar para a edge function real
+      const response = await fetch(`https://srnwogrjwhqjjyodxalx.supabase.co/functions/v1/${endpoint}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNybndvZ3Jqd2hxamp5b2R4YWx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4NzY0NDIsImV4cCI6MjA3MDQ1MjQ0Mn0.MGvm-0S7W6NPtav5Gu2IbBwCvrs7VbcV04Py5eq66xc`,
+          'X-Webhook-Secret': 'test-secret-123'
+        },
+        body: payload
+      });
+
+      const result = await response.json();
+      
+      const testResult = {
+        id: result.event_id || `test_${Date.now()}`,
         provider,
         eventType,
         payload: JSON.parse(payload),
-        status: 'success',
+        status: response.ok ? 'success' : 'error',
         timestamp: new Date().toISOString(),
         idempotencyKey: `test_${provider}_${Date.now()}`,
-        processingTime: Math.random() * 1000 + 100
+        processingTime: Math.random() * 1000 + 100,
+        response: result
       };
 
-      setTestResults(prev => [result, ...prev.slice(0, 9)]);
+      setTestResults(prev => [testResult, ...prev.slice(0, 9)]);
 
-      toast({
-        title: 'Teste Enviado',
-        description: `Payload mock de ${provider} enviado com sucesso!`
-      });
+      if (response.ok) {
+        toast({
+          title: 'Teste Enviado',
+          description: `Webhook ${provider} processado com sucesso! Event ID: ${result.event_id}`
+        });
+      } else {
+        throw new Error(result.error || 'Erro na requisição');
+      }
     } catch (error: any) {
       toast({
         title: 'Erro',
@@ -194,28 +225,44 @@ export function TestLab() {
   const handleTestMetaEvent = async (eventName: string) => {
     setLoading(true);
     try {
-      const result = {
+      const response = await fetch(`https://srnwogrjwhqjjyodxalx.supabase.co/functions/v1/meta-conversions-api`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNybndvZ3Jqd2hxamp5b2R4YWx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4NzY0NDIsImV4cCI6MjA3MDQ1MjQ0Mn0.MGvm-0S7W6NPtav5Gu2IbBwCvrs7VbcV04Py5eq66xc`
+        },
+        body: JSON.stringify({
+          event_name: eventName,
+          event_id: `test_${Date.now()}`,
+          user_email: 'test@example.com',
+          value: eventName === 'Purchase' ? 97.00 : undefined,
+          currency: 'BRL',
+          external_order_id: `test_order_${Date.now()}`
+        })
+      });
+
+      const result = await response.json();
+      
+      const testResult = {
         id: `meta_${Date.now()}`,
         provider: 'meta',
         eventType: eventName,
-        payload: {
-          event_name: eventName,
-          event_id: `test_${Date.now()}`,
-          source: 'test',
-          user_data: { em: 'hashed_email' },
-          custom_data: { value: 97.00, currency: 'BRL' }
-        },
-        status: 'success',
+        payload: result,
+        status: response.ok ? 'success' : 'error',
         timestamp: new Date().toISOString(),
         processingTime: Math.random() * 500 + 50
       };
 
-      setTestResults(prev => [result, ...prev.slice(0, 9)]);
+      setTestResults(prev => [testResult, ...prev.slice(0, 9)]);
 
-      toast({
-        title: 'Evento Meta Enviado',
-        description: `Evento ${eventName} enviado para Meta Pixel/CAPI!`
-      });
+      if (response.ok) {
+        toast({
+          title: 'Evento Meta Enviado',
+          description: `Evento ${eventName} enviado com sucesso para Meta Pixel/CAPI!`
+        });
+      } else {
+        throw new Error(result.error || 'Erro na requisição');
+      }
     } catch (error: any) {
       toast({
         title: 'Erro',

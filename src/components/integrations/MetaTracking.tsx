@@ -114,28 +114,27 @@ export function MetaTracking() {
 
   const handleTestEvent = async (eventType: string) => {
     try {
-      // Simular envio de evento de teste
-      const testEventData = {
-        event_name: eventType,
-        event_id: `test_${Date.now()}`,
-        source: 'server' as const,
-        user_id: null,
-        fb_response: { test: true },
-        success: true
-      };
-
-      const { error } = await supabase
-        .from('tracking_events')
-        .insert([testEventData]);
+      // Enviar evento real para a edge function
+      const { data, error } = await supabase.functions.invoke('meta-conversions-api', {
+        body: {
+          event_name: eventType,
+          event_id: `test_${Date.now()}`,
+          user_email: 'test@example.com',
+          value: eventType === 'Purchase' ? 99.99 : undefined,
+          currency: 'BRL',
+          external_order_id: `test_order_${Date.now()}`
+        }
+      });
 
       if (error) throw error;
 
       toast({
         title: 'Teste Enviado',
-        description: `Evento de teste "${eventType}" enviado com sucesso!`
+        description: `Evento de teste "${eventType}" enviado com sucesso para o Meta!`
       });
 
-      loadData();
+      // Recarregar eventos para mostrar o novo
+      setTimeout(() => loadData(), 1000);
     } catch (error: any) {
       toast({
         title: 'Erro',
