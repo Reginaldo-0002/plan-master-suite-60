@@ -168,9 +168,19 @@ export const useChatRestrictions = (userId: string | undefined) => {
       return;
     }
     
+    // Executar verificação inicial
     checkRestrictions();
 
-    if (!userId) return;
+    // Forçar verificação periódica a cada 3 segundos para garantir detecção em tempo real
+    const periodicCheck = setInterval(() => {
+      console.log('🔄 [useChatRestrictions] Verificação periódica automática');
+      checkRestrictions();
+    }, 3000);
+
+    if (!userId) {
+      clearInterval(periodicCheck);
+      return;
+    }
 
     // Real-time subscription para mudanças nas restrições do usuário
     const restrictionsChannel = supabase
@@ -184,7 +194,7 @@ export const useChatRestrictions = (userId: string | undefined) => {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('🔄 User restrictions change detected - rechecking...');
+          console.log('🔄 [useChatRestrictions] User restrictions change detected - rechecking...');
           setTimeout(checkRestrictions, 500);
         }
       )
@@ -202,13 +212,14 @@ export const useChatRestrictions = (userId: string | undefined) => {
           filter: 'key=eq.global_chat_settings'
         },
         (payload) => {
-          console.log('🔄 Admin settings change detected - rechecking...');
-          setTimeout(checkRestrictions, 500);
+          console.log('🔄 [useChatRestrictions] Admin settings change detected - rechecking immediately...');
+          setTimeout(checkRestrictions, 100);
         }
       )
       .subscribe();
 
     return () => {
+      clearInterval(periodicCheck);
       supabase.removeChannel(restrictionsChannel);
       supabase.removeChannel(adminChannel);
     };

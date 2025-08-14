@@ -70,13 +70,13 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
       setTimeout(() => checkRestrictions(), 1000);
     }
     
-    // Forçar uma nova verificação a cada 10 segundos para garantir que mudanças sejam detectadas
+    // Forçar uma nova verificação a cada 2 segundos para garantir que mudanças sejam detectadas rapidamente
     const interval = setInterval(() => {
       if (checkRestrictions) {
-        console.log('⏰ [SupportChat] Verificação periódica de restrições');
+        console.log('⏰ [SupportChat] Verificação periódica de restrições (forçada)');
         checkRestrictions();
       }
-    }, 10000);
+    }, 2000);
     
     return () => clearInterval(interval);
   }, [isOpen, checkRestrictions, profile?.user_id, isAdmin, isModerator]);
