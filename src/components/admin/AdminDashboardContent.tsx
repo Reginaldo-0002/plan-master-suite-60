@@ -221,24 +221,24 @@ export const AdminDashboardContent = () => {
               <div className="flex items-center gap-3 p-3 border rounded-lg">
                 <Users className="w-4 h-4 text-blue-600" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium">Novos usuários hoje</div>
-                  <div className="text-xs text-muted-foreground">Sistema em crescimento</div>
+                  <div className="text-sm font-medium">Usuários cadastrados</div>
+                  <div className="text-xs text-muted-foreground">{stats.totalUsers} usuários no sistema</div>
                 </div>
               </div>
               
               <div className="flex items-center gap-3 p-3 border rounded-lg">
                 <DollarSign className="w-4 h-4 text-green-600" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium">Ganhos em tempo real</div>
-                  <div className="text-xs text-muted-foreground">Sistema de afiliados ativo</div>
+                  <div className="text-sm font-medium">Programa de Afiliados</div>
+                  <div className="text-xs text-muted-foreground">R$ {stats.totalEarnings.toFixed(2)} em comissões</div>
                 </div>
               </div>
               
               <div className="flex items-center gap-3 p-3 border rounded-lg">
                 <MessageSquare className="w-4 h-4 text-yellow-600" />
                 <div className="flex-1">
-                  <div className="text-sm font-medium">Suporte ativo</div>
-                  <div className="text-xs text-muted-foreground">Chat em tempo real</div>
+                  <div className="text-sm font-medium">Tickets de suporte</div>
+                  <div className="text-xs text-muted-foreground">{stats.openTickets} tickets em aberto</div>
                 </div>
               </div>
             </div>

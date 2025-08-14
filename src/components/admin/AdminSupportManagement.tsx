@@ -12,7 +12,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2, UserX, EyeOff } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { ChatbotConfigManager } from "./ChatbotConfigManager";
+import { AdvancedChatbotManager } from "./AdvancedChatbotManager";
 import { AdminChatControl } from "./AdminChatControl";
 
 interface Ticket {
@@ -1085,10 +1085,10 @@ export const AdminSupportManagement = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Chatbot & Chat Control Section */}
+      {/* Advanced Chatbot Manager Section */}
       <div className="space-y-6">
-        <h3 className="text-2xl font-bold text-foreground">Configurações de Chat</h3>
-        <ChatbotConfigManager />
+        <h3 className="text-2xl font-bold text-foreground">Chatbot Inteligente</h3>
+        <AdvancedChatbotManager />
         <AdminChatControl />
       </div>
     </div>
