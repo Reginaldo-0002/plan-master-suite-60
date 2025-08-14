@@ -67,18 +67,27 @@ export const useChatRestrictions = (userId: string | undefined) => {
         return;
       }
 
-      // ======= VERIFICAR BLOQUEIO GLOBAL APENAS SE NÃO HÁ BLOQUEIO ESPECÍFICO =======
+      // ======= VERIFICAR BLOQUEIO GLOBAL SEMPRE =======
+      console.log('🔍 Verificando bloqueio global para usuário:', userId);
       const { data: globalSettings, error: globalError } = await supabase
         .from('admin_settings')
         .select('chat_blocked_until')
         .eq('key', 'global_chat_settings')
         .maybeSingle();
 
+      console.log('📊 Configurações globais:', globalSettings);
+      console.log('❓ Erro ao buscar configurações globais:', globalError);
+
       if (globalSettings?.chat_blocked_until) {
         const blockUntil = new Date(globalSettings.chat_blocked_until);
         const isGloballyBlocked = blockUntil > currentTime;
         
+        console.log(`⏰ Bloqueio global até: ${blockUntil.toISOString()}`);
+        console.log(`⏰ Agora: ${currentTime.toISOString()}`);
+        console.log(`🔒 Chat globalmente bloqueado? ${isGloballyBlocked}`);
+        
         if (isGloballyBlocked) {
+          console.log('🚫 Aplicando bloqueio global para usuário:', userId);
           setRestriction({
             isBlocked: true,
             reason: 'Chat bloqueado globalmente pelo administrador',
@@ -86,7 +95,11 @@ export const useChatRestrictions = (userId: string | undefined) => {
           });
           setLoading(false);
           return;
+        } else {
+          console.log('✅ Bloqueio global expirado');
         }
+      } else {
+        console.log('✅ Nenhum bloqueio global encontrado');
       }
 
       setRestriction({
