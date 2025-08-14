@@ -123,13 +123,18 @@ const AdminDashboard = () => {
   };
 
   const handleEditTopics = (contentId: string) => {
+    console.log('🎯 AdminDashboard - Editing topics for content:', contentId);
     setSelectedContentId(contentId);
     setActiveSection('content-topics');
+    // Update URL hash
+    window.history.pushState(null, '', `/admin#content-topics`);
   };
 
   const handleBackToContent = () => {
     setSelectedContentId(null);
     setActiveSection('content');
+    // Update URL hash
+    window.history.pushState(null, '', `/admin#content`);
   };
 
   const renderActiveSection = () => {

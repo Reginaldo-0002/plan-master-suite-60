@@ -169,7 +169,9 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
       });
 
       setSelectedUsers([]);
-      await fetchVisibilityRules(); // Use await para garantir que a atualização seja completa
+      await fetchVisibilityRules(); // Recarregar as regras após salvar
+      
+      console.log('✅ Regras de visibilidade salvas e recarregadas com sucesso');
     } catch (error) {
       console.error('Error hiding content:', error);
       toast({
@@ -194,7 +196,9 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
         description: "Conteúdo liberado para o usuário",
       });
 
-      await fetchVisibilityRules(); // Use await para garantir que a atualização seja completa
+      await fetchVisibilityRules(); // Recarregar as regras após deletar
+      
+      console.log('✅ Regra de visibilidade removida e lista recarregada');
     } catch (error) {
       console.error('Error showing content:', error);
       toast({

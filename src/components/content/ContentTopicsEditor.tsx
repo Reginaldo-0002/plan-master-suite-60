@@ -98,6 +98,8 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       let isValid = true;
       let message = "";
       
+      console.log('🔍 Validating URL:', url, 'for type:', type);
+      
       if (type === 'video') {
         const isYoutube = url.includes('youtube.com') || url.includes('youtu.be');
         const isVimeo = url.includes('vimeo.com');
