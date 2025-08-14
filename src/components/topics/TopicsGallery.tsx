@@ -94,7 +94,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
       console.log('Fetching resources for topicId:', topicId);
       
       const { data, error } = await supabase
-        .from('topic_resources')
+        .from('user_accessible_resources')
         .select('*')
         .eq('topic_id', topicId)
         .eq('is_active', true)

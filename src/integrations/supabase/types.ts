@@ -2137,7 +2137,62 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_accessible_resources: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string | null
+          is_active: boolean | null
+          is_premium: boolean | null
+          required_plan: string | null
+          resource_order: number | null
+          resource_type: string | null
+          resource_url: string | null
+          thumbnail_url: string | null
+          title: string | null
+          topic_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          required_plan?: string | null
+          resource_order?: number | null
+          resource_type?: string | null
+          resource_url?: never
+          thumbnail_url?: string | null
+          title?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          is_premium?: boolean | null
+          required_plan?: string | null
+          resource_order?: number | null
+          resource_type?: string | null
+          resource_url?: never
+          thumbnail_url?: string | null
+          title?: string | null
+          topic_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_resources_topic_id_fkey"
+            columns: ["topic_id"]
+            isOneToOne: false
+            referencedRelation: "content_topics"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       admin_clear_all_sessions: {
@@ -2237,6 +2292,10 @@ export type Database = {
           updated_at: string
           user_id: string
         }[]
+      }
+      get_authorized_resource_url: {
+        Args: { requesting_user_id?: string; resource_id: string }
+        Returns: string
       }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
