@@ -155,8 +155,13 @@ export const useChatRestrictions = (userId: string | undefined) => {
   }, [userId, isAdmin, isModerator, roleLoading]);
 
   useEffect(() => {
+    console.log('🔄 [useChatRestrictions] useEffect executado - userId:', userId, 'roleLoading:', roleLoading);
+    
     // Não executar se ainda está carregando roles
-    if (roleLoading) return;
+    if (roleLoading) {
+      console.log('⏳ [useChatRestrictions] Aguardando carregamento de roles...');
+      return;
+    }
     
     checkRestrictions();
 

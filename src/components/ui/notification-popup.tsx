@@ -267,8 +267,15 @@ export const NotificationPopup = () => {
       const uniqueNotifications = (data || []).filter((notification: any) => {
         if (existingIds.has(notification.id)) return false;
         existingIds.add(notification.id);
+        
+        // Extra verificação para chat_message - NUNCA mostrar para usuários comuns
+        if (notification.notification_metadata?.action_type === 'chat_message' && !isAdmin && !isModerator) {
+          console.log('🚫 [NotificationPopup] BLOQUEANDO notificação de chat na listagem para usuário comum:', notification.id);
+          return false;
+        }
+        
         const shouldShow = shouldShowNotification(notification, profile);
-        console.log('Notification filter:', {
+        console.log('📋 [NotificationPopup] Notification filter:', {
           id: notification.id,
           title: notification.title,
           actionType: notification.notification_metadata?.action_type,

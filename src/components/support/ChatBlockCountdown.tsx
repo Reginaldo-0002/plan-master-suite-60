@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Clock } from 'lucide-react';
+import { Clock, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 interface ChatBlockCountdownProps {
   blockedUntil: Date | null;
   reason?: string | null;
+  onClose?: () => void;
 }
 
-export const ChatBlockCountdown = ({ blockedUntil, reason }: ChatBlockCountdownProps) => {
+export const ChatBlockCountdown = ({ blockedUntil, reason, onClose }: ChatBlockCountdownProps) => {
   const [timeLeft, setTimeLeft] = useState({
     days: 0,
     hours: 0,
@@ -47,7 +49,17 @@ export const ChatBlockCountdown = ({ blockedUntil, reason }: ChatBlockCountdownP
 
   if (isExpired) {
     return (
-      <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center">
+      <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3 text-center relative">
+        {onClose && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute top-1 right-1 h-6 w-6 p-0"
+            onClick={onClose}
+          >
+            <X className="w-3 h-3" />
+          </Button>
+        )}
         <div className="flex items-center justify-center gap-2 text-green-600">
           <Clock className="w-4 h-4" />
           <span className="text-sm font-medium">✅ Bloqueio Expirado</span>
@@ -60,7 +72,17 @@ export const ChatBlockCountdown = ({ blockedUntil, reason }: ChatBlockCountdownP
   }
 
   return (
-    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center">
+    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-center relative">
+      {onClose && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="absolute top-1 right-1 h-6 w-6 p-0"
+          onClick={onClose}
+        >
+          <X className="w-3 h-3" />
+        </Button>
+      )}
       <div className="flex items-center justify-center gap-2 text-destructive">
         <Clock className="w-4 h-4" />
         <span className="text-sm font-medium">🚫 Chat Bloqueado</span>

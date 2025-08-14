@@ -53,11 +53,19 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
   // Forçar verificação de restrições quando o componente for aberto
   useEffect(() => {
-    if (isOpen && checkRestrictions) {
-      console.log('🔄 [SupportChat] Chat aberto - forçando verificação de restrições');
+    console.log('🔄 [SupportChat] Forçando verificação de restrições...');
+    console.log('🔄 [SupportChat] Profile:', profile?.user_id);
+    console.log('🔄 [SupportChat] checkRestrictions função:', !!checkRestrictions);
+    
+    if (checkRestrictions) {
       checkRestrictions();
     }
-  }, [isOpen, checkRestrictions]);
+    
+    if (isOpen && checkRestrictions) {
+      console.log('🔄 [SupportChat] Chat aberto - forçando verificação de restrições');
+      setTimeout(() => checkRestrictions(), 1000);
+    }
+  }, [isOpen, checkRestrictions, profile?.user_id]);
 
   useEffect(() => {
     if (isOpen && !ticketId) {
@@ -527,17 +535,26 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                   {restriction.isBlocked ? (
                     <>
                       {console.log('🚫 CHAT BLOQUEADO - Restriction:', restriction)}
-                       <ChatBlockCountdown 
+                      <ChatBlockCountdown 
                         blockedUntil={restriction.blockedUntil} 
                         reason={restriction.reason}
                       />
+                      <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-center">
+                        <p className="text-sm text-red-600 font-medium">🚫 Chat Bloqueado Globalmente</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          DEBUG: UserID: {profile?.user_id?.slice(0, 8)}... | Blocked: {restriction.isBlocked.toString()}
+                        </p>
+                        {restriction.reason && (
+                          <p className="text-xs text-red-600/80 mt-1">Motivo: {restriction.reason}</p>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <>
                       {console.log('✅ CHAT LIBERADO - Restriction:', restriction)}
                       <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-2 text-center">
                         <p className="text-xs text-green-600">✅ Chat Liberado</p>
-                        <p className="text-xs text-muted-foreground">Debug: User {profile?.user_id}</p>
+                        <p className="text-xs text-muted-foreground">Debug: User {profile?.user_id?.slice(0, 8)}...</p>
                       </div>
                     </>
                   )}
@@ -629,11 +646,14 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
             <div className="p-3 border-t">
               {restriction.isBlocked ? (
-                <div className="text-center py-2">
-                  <ChatBlockCountdown 
-                    blockedUntil={restriction.blockedUntil} 
-                    reason={restriction.reason}
-                  />
+                <div className="text-center py-4">
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                    <p className="text-sm text-red-600 font-medium mb-2">🚫 Não é possível enviar mensagens</p>
+                    <ChatBlockCountdown 
+                      blockedUntil={restriction.blockedUntil} 
+                      reason={restriction.reason}
+                    />
+                  </div>
                 </div>
               ) : (
                 <div className="flex gap-2">

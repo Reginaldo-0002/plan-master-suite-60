@@ -327,11 +327,10 @@ export default function Dashboard() {
         <SupportChat profile={currentProfile} />
       )}
       
-      {/* Enhanced Chatbot - Active in all sections */}
+      {/* Enhanced Chatbot - Agora self-contained */}
       {currentProfile && (
         <EnhancedChatbot 
           userId={currentProfile.user_id}
-          className="fixed bottom-20 right-4 z-40"
         />
       )}
     </div>

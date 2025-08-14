@@ -49,6 +49,7 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
   const [newMessage, setNewMessage] = useState('');
   const [loading, setLoading] = useState(false);
   const [botTyping, setBotTyping] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const [chatbotResponses, setChatbotResponses] = useState<ChatbotResponse[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -290,8 +291,24 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
     }
   };
 
+  // Se não está aberto, mostrar apenas o botão
+  if (!isOpen) {
+    return (
+      <div className="fixed bottom-4 left-4 z-50">
+        <Button
+          onClick={() => setIsOpen(true)}
+          className="rounded-full w-14 h-14 bg-secondary hover:bg-secondary/90 shadow-lg"
+          title="Abrir assistente virtual"
+        >
+          <Bot className="w-6 h-6" />
+        </Button>
+      </div>
+    );
+  }
+
   return (
-    <Card className={`flex flex-col h-full max-h-[600px] ${className}`}>
+    <div className="fixed bottom-4 left-4 z-50 w-80 h-96">
+      <Card className="flex flex-col h-full shadow-xl">{/* Removed max-h-[600px] and className prop */}
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-primary" />
@@ -302,8 +319,17 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
             variant="ghost"
             size="sm"
             onClick={() => setIsMinimized(!isMinimized)}
+            title={isMinimized ? "Expandir chat" : "Minimizar chat"}
           >
             <Minimize2 className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsOpen(false)}
+            title="Fechar chat"
+          >
+            <X className="w-4 h-4" />
           </Button>
         </div>
       </CardHeader>
@@ -404,5 +430,6 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
         </CardContent>
       )}
     </Card>
+    </div>
   );
 };
