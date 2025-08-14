@@ -513,7 +513,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   }
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 w-80 ${isMinimized ? 'h-12' : 'h-96'} transition-all duration-300`}>
+    <div className={`fixed bottom-4 right-4 z-50 w-72 sm:w-80 max-w-[calc(100vw-2rem)] ${isMinimized ? 'h-12' : 'h-80 sm:h-96'} transition-all duration-300`}>
       <Card className="h-full flex flex-col shadow-xl">
         <CardHeader className="p-3 border-b cursor-pointer" onClick={() => setIsMinimized(!isMinimized)}>
           <div className="flex items-center justify-between">
@@ -548,9 +548,9 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
         {!isMinimized && (
           <>
-            <CardContent className="flex-1 p-0">
-              <ScrollArea className="h-64 p-3">
-                <div className="space-y-3">
+            <CardContent className="flex-1 p-0 overflow-hidden">
+              <ScrollArea className="h-56 sm:h-64 p-2 sm:p-3">
+                <div className="space-y-2 sm:space-y-3">
                   {restriction.isBlocked ? (
                     <>
                       {console.log('🚫 CHAT BLOQUEADO - Restriction:', restriction)}
@@ -584,20 +584,20 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                     return (
                       <div
                         key={message.id}
-                        className={`flex gap-2 mb-3 ${
+                        className={`flex gap-2 mb-2 sm:mb-3 items-start ${
                           isUserMessage ? 'justify-end' : 'justify-start'
                         }`}
                       >
                         {!isUserMessage && (
-                          <Avatar className="w-6 h-6 flex-shrink-0">
+                          <Avatar className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0">
                             <AvatarFallback className="text-xs bg-primary text-primary-foreground">
                               {isAdminMessage ? 'A' : 'S'}
                             </AvatarFallback>
                           </Avatar>
                         )}
-                        <div className="flex flex-col max-w-[70%]">
+                        <div className="flex flex-col max-w-[80%] min-w-0">
                           <div
-                            className={`rounded-lg p-3 text-sm relative group ${
+                            className={`rounded-lg p-2 sm:p-3 text-xs sm:text-sm relative group ${
                               isUserMessage
                                 ? 'bg-primary text-primary-foreground ml-auto'
                                 : isAdminMessage
@@ -605,15 +605,17 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                                 : 'bg-muted text-foreground'
                             }`}
                           >
-                            {message.message}
+                            <div className="break-words whitespace-pre-wrap">
+                              {message.message}
+                            </div>
                             {isUserMessage && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity h-6 w-6 p-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                                className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity h-5 w-5 p-0 bg-destructive hover:bg-destructive/90 text-destructive-foreground"
                                 onClick={() => deleteMessage(message.id)}
                               >
-                                <Trash2 className="w-3 h-3" />
+                                <Trash2 className="w-2 h-2 sm:w-3 sm:h-3" />
                               </Button>
                             )}
                           </div>
@@ -628,7 +630,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
                           </div>
                         </div>
                         {isUserMessage && (
-                          <Avatar className="w-6 h-6 flex-shrink-0">
+                          <Avatar className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0">
                             <AvatarFallback className="text-xs bg-secondary text-secondary-foreground">
                               U
                             </AvatarFallback>
@@ -663,7 +665,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
               </ScrollArea>
             </CardContent>
 
-            <div className="p-3 border-t">
+            <div className="p-2 sm:p-3 border-t bg-background">
               {restriction.isBlocked ? (
                 <div className="text-center py-2">
                   <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 max-w-full">

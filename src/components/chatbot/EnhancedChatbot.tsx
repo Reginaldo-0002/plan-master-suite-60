@@ -307,8 +307,8 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
   }
 
   return (
-    <div className="fixed bottom-4 left-4 z-50 w-80 h-96">
-      <Card className="flex flex-col h-full shadow-xl">{/* Removed max-h-[600px] and className prop */}
+    <div className="fixed bottom-4 left-4 z-50 w-72 sm:w-80 max-w-[calc(100vw-2rem)]">
+      <Card className="flex flex-col h-96 max-h-[80vh] shadow-xl overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 border-b">
         <div className="flex items-center gap-2">
           <Bot className="w-5 h-5 text-primary" />
@@ -335,52 +335,52 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
       </CardHeader>
 
       {!isMinimized && (
-        <CardContent className="flex flex-col flex-1 p-0">
-          <ScrollArea className="flex-1 p-4 min-h-0">
-            <div className="space-y-4">
+        <CardContent className="flex flex-col flex-1 p-0 min-h-0 overflow-hidden">
+          <ScrollArea className="flex-1 p-2 sm:p-4 min-h-0">
+            <div className="space-y-3">
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-3 w-full ${
+                  className={`flex gap-2 items-start w-full ${
                     message.is_bot ? 'justify-start' : 'justify-end'
                   }`}
                 >
                   {message.is_bot && (
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
                       <AvatarFallback className="bg-primary/10">
-                        <Bot className="w-4 h-4 text-primary" />
+                        <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                       </AvatarFallback>
                     </Avatar>
                   )}
                   
                   <div
-                    className={`w-full max-w-full rounded-lg p-3 ${
+                    className={`rounded-lg p-2 sm:p-3 max-w-[85%] min-w-0 ${
                       message.is_bot
                         ? 'bg-muted/50 text-foreground'
-                        : 'bg-primary text-primary-foreground ml-auto'
+                        : 'bg-primary text-primary-foreground'
                     }`}
                   >
                     {message.is_bot && message.message_type !== 'text' ? (
-                      <div className="w-full max-w-full overflow-hidden">
+                      <div className="w-full overflow-hidden">
                         <RichMessageRenderer
                           type={message.message_type}
                           message={message.message}
                           richContent={message.rich_content}
                           onButtonClick={handleButtonClick}
-                          className="w-full max-w-full"
+                          className="w-full"
                         />
                       </div>
                     ) : (
-                      <div className="text-sm whitespace-pre-wrap break-words w-full">
+                      <div className="text-xs sm:text-sm whitespace-pre-wrap break-words">
                         {message.message}
                       </div>
                     )}
                   </div>
 
                   {!message.is_bot && (
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
                       <AvatarFallback>
-                        <User className="w-4 h-4" />
+                        <User className="w-3 h-3 sm:w-4 sm:h-4" />
                       </AvatarFallback>
                     </Avatar>
                   )}
@@ -388,17 +388,17 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
               ))}
 
               {botTyping && (
-                <div className="flex gap-3">
-                  <Avatar className="w-8 h-8">
+                <div className="flex gap-2 items-start">
+                  <Avatar className="w-6 h-6 sm:w-8 sm:h-8 flex-shrink-0">
                     <AvatarFallback className="bg-primary/10">
-                      <Bot className="w-4 h-4 text-primary" />
+                      <Bot className="w-3 h-3 sm:w-4 sm:h-4 text-primary" />
                     </AvatarFallback>
                   </Avatar>
-                  <div className="bg-muted/50 rounded-lg p-3 max-w-[80%]">
+                  <div className="bg-muted/50 rounded-lg p-2 sm:p-3 max-w-[85%]">
                     <div className="flex gap-1">
-                      <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce delay-100" />
-                      <div className="w-2 h-2 bg-muted-foreground/50 rounded-full animate-bounce delay-200" />
+                      <div className="w-1 h-1 sm:w-2 sm:h-2 bg-muted-foreground/50 rounded-full animate-bounce" />
+                      <div className="w-1 h-1 sm:w-2 sm:h-2 bg-muted-foreground/50 rounded-full animate-bounce delay-100" />
+                      <div className="w-1 h-1 sm:w-2 sm:h-2 bg-muted-foreground/50 rounded-full animate-bounce delay-200" />
                     </div>
                   </div>
                 </div>
@@ -408,7 +408,7 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
             </div>
           </ScrollArea>
 
-          <div className="p-4 border-t">
+          <div className="p-2 sm:p-4 border-t bg-background">
             <div className="flex gap-2">
               <Input
                 value={newMessage}
@@ -416,17 +416,18 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
                 onKeyPress={handleKeyPress}
                 placeholder="Digite sua mensagem..."
                 disabled={loading}
-                className="flex-1"
+                className="flex-1 text-xs sm:text-sm min-w-0"
               />
               <Button
                 onClick={handleSendMessage}
                 disabled={loading || !newMessage.trim()}
                 size="sm"
+                className="flex-shrink-0"
               >
-                <Send className="w-4 h-4" />
+                <Send className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground mt-2 text-center">
+            <p className="text-xs text-muted-foreground mt-1 text-center">
               Digite "ola" para ver as opções disponíveis
             </p>
           </div>

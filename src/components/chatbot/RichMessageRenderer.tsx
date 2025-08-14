@@ -116,49 +116,53 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
     if (!cardData) return null;
     
     return (
-      <div className="grid gap-2 mt-3 max-w-full">
+      <div className="space-y-2 mt-2 w-full">
         {cardData.map((item, index) => (
-          <Card key={index} className="border border-border/50 max-w-full overflow-hidden">
-            <CardContent className="p-3 sm:p-4">
-              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2 mb-2">
-                <h4 className="font-medium text-foreground text-sm break-words">{item.title}</h4>
-                <div className="flex gap-1 flex-wrap">
-                  {item.badge && (
-                    <Badge variant="secondary" className="text-xs">
-                      {item.badge}
-                    </Badge>
-                  )}
-                  {item.price && (
-                    <Badge variant="outline" className="text-xs font-bold">
-                      {item.price}
-                    </Badge>
-                  )}
+          <Card key={index} className="border border-border/50 w-full overflow-hidden">
+            <CardContent className="p-2 sm:p-3">
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
+                  <h4 className="font-medium text-foreground text-xs sm:text-sm break-words flex-1">
+                    {item.title}
+                  </h4>
+                  <div className="flex gap-1 flex-wrap">
+                    {item.badge && (
+                      <Badge variant="secondary" className="text-xs">
+                        {item.badge}
+                      </Badge>
+                    )}
+                    {item.price && (
+                      <Badge variant="outline" className="text-xs font-bold">
+                        {item.price}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
+                <p className="text-xs text-muted-foreground break-words">
+                  {item.description}
+                </p>
+                {item.features && (
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    {item.features.map((feature, idx) => (
+                      <li key={idx} className="flex items-start">
+                        <span className="w-1 h-1 rounded-full bg-primary mr-2 mt-1.5 flex-shrink-0"></span>
+                        <span className="break-words">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {item.button && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleButtonClick(item.button!)}
+                    className="w-full text-xs mt-2"
+                  >
+                    <span className="truncate">{item.button.text}</span>
+                    <ArrowRight className="w-3 h-3 ml-2 flex-shrink-0" />
+                  </Button>
+                )}
               </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 break-words">
-                {item.description}
-              </p>
-              {item.features && (
-                <ul className="text-xs text-muted-foreground mb-3 space-y-1">
-                  {item.features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start">
-                      <span className="w-1 h-1 rounded-full bg-primary mr-2 mt-1.5 flex-shrink-0"></span>
-                      <span className="break-words">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {item.button && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleButtonClick(item.button!)}
-                  className="w-full text-xs sm:text-sm"
-                >
-                  <span className="truncate">{item.button.text}</span>
-                  <ArrowRight className="w-3 h-3 ml-2 flex-shrink-0" />
-                </Button>
-              )}
             </CardContent>
           </Card>
         ))}
