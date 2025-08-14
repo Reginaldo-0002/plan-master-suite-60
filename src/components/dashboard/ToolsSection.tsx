@@ -51,230 +51,270 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
 
   const fetchTools = async () => {
     try {
-      // Buscar conteúdo real criado pelo admin do tipo 'tool'
-      const { data: contentData, error: contentError } = await supabase
+      console.log('🔄 Fetching tools data...');
+      
+      const { data: contentData, error } = await supabase
         .from('content')
         .select('*')
         .eq('content_type', 'tool')
-        .eq('is_active', true)
-        .eq('status', 'published')
-        .order('title', { ascending: true });
+        .eq('is_active', true);
 
-      if (contentError) throw contentError;
+      if (error) {
+        console.error('❌ Error fetching tools:', error);
+        return;
+      }
 
-      // Buscar status das ferramentas
-      const { data: statusData, error: statusError } = await supabase
+      console.log('📋 Content data fetched:', contentData);
+
+      // Fetch tool statuses
+      const { data: statusData } = await supabase
         .from('tool_status')
         .select('*');
 
-      if (statusError) throw statusError;
+      console.log('📊 Status data fetched:', statusData);
 
-      // Combinar dados do conteúdo com status
-      const mappedTools: Tool[] = (contentData || []).map(content => {
-        const status = statusData?.find(s => s.tool_name === content.title);
+      const toolsWithStatus = contentData.map(tool => {
+        const status = statusData?.find(s => s.tool_name === tool.title);
         
+        console.log(`🔧 Processing tool: ${tool.title}`, {
+          hero_image_url: tool.hero_image_url,
+          status: status?.status || 'active',
+          required_plan: tool.required_plan
+        });
+
         return {
-          id: content.id,
-          name: content.title,
-          status: status?.status === 'maintenance' ? 'maintenance' : 
-                 status?.status === 'blocked' ? 'blocked' : 'active',
-          message: status?.message || content.description || null,
-          url: content.video_url || `#`,
-          description: content.description,
-          required_plan: content.required_plan || 'free',
-          hero_image_url: content.hero_image_url
+          id: tool.id,
+          name: tool.title,
+          status: (status?.status || 'active') as 'active' | 'maintenance' | 'blocked',
+          message: status?.message || null,
+          url: tool.video_url,
+          description: tool.description,
+          required_plan: tool.required_plan,
+          hero_image_url: tool.hero_image_url // Usando diretamente o hero_image_url do content
         };
       });
 
-      setTools(mappedTools);
+      console.log('✅ Final tools with status:', toolsWithStatus);
+      setTools(toolsWithStatus);
     } catch (error) {
-      console.error('Error fetching tools:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao carregar ferramentas",
-        variant: "destructive",
-      });
+      console.error('💥 Error in fetchTools:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const canAccess = (toolPlan: string) => {
-    const userLevel = planHierarchy[userPlan] || 0;
-    const requiredLevel = planHierarchy[toolPlan as keyof typeof planHierarchy] || 0;
-    return userLevel >= requiredLevel;
+  const canAccess = (tool: Tool) => {
+    const userPlanLevel = planHierarchy[userPlan];
+    const requiredPlanLevel = planHierarchy[tool.required_plan || 'free'];
+    return userPlanLevel >= requiredPlanLevel;
   };
 
-  const handleAccessTool = async (tool: Tool, onContentSelect?: (contentId: string) => void) => {
-    if (!canAccess(tool.required_plan || 'free') || tool.status !== 'active') {
-      return;
-    }
-
+  const handleAccessTool = async (tool: Tool) => {
     try {
-      // Log tool access
+      // Log da tentativa de acesso à ferramenta
       await supabase
-        .from('user_interactions')
-        .insert([{
-          user_id: (await supabase.auth.getUser()).data.user?.id,
-          interaction_type: 'tool_access',
-          target_type: 'tool',
-          target_id: tool.id,
-          metadata: { tool_name: tool.name }
-        }]);
-
-      // Se a ferramenta tem callback para navegação, usar
-      if (onContentSelect) {
-        onContentSelect(tool.id);
-        toast({
-          title: "Ferramenta Acessada",
-          description: `Abrindo tópicos da ferramenta ${tool.name}`,
+        .from('content_analytics')
+        .insert({
+          content_id: tool.id,
+          interaction_type: 'tool_access'
         });
-      } else if (tool.url && tool.url !== '#') {
-        // Se tem URL externa, abrir
-        window.open(tool.url, '_blank');
+
+      // Se o usuário pode acessar e a ferramenta está ativa
+      if (canAccess(tool) && tool.status === 'active') {
+        if (onContentSelect) {
+          onContentSelect(tool.id);
+        } else if (tool.url) {
+          window.open(tool.url, '_blank');
+        }
+        
         toast({
-          title: "Ferramenta Acessada",
-          description: `Abrindo ${tool.name} em nova aba`,
+          title: "Ferramenta acessada",
+          description: `Redirecionando para ${tool.name}...`,
+        });
+      } else if (!canAccess(tool)) {
+        // Usuário precisa fazer upgrade
+        toast({
+          title: "Upgrade necessário",
+          description: `Esta ferramenta requer o plano ${tool.required_plan?.toUpperCase()}. Faça o upgrade para acessar.`,
+          variant: "destructive",
         });
       } else {
-        // Fallback para ferramentas sem configuração específica
+        // Ferramenta indisponível
         toast({
-          title: "Ferramenta Acessada",
-          description: `Acessando ${tool.name}...`,
+          title: "Ferramenta indisponível",
+          description: tool.message || "Esta ferramenta está temporariamente indisponível.",
+          variant: "destructive",
         });
       }
     } catch (error) {
       console.error('Error accessing tool:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao acessar ferramenta",
-        variant: "destructive",
-      });
     }
   };
 
-  const getPlanIcon = (plan: string) => {
+  const getPlanIcon = (plan?: string) => {
     switch (plan) {
-      case 'pro': return <Crown className="w-4 h-4" />;
-      case 'vip': return <Gem className="w-4 h-4" />;
-      default: return <Star className="w-4 h-4" />;
+      case 'free':
+        return <Star className="h-4 w-4 text-muted-foreground" />;
+      case 'vip':
+        return <Crown className="h-4 w-4 text-amber-500" />;
+      case 'pro':
+        return <Gem className="h-4 w-4 text-purple-500" />;
+      default:
+        return <Star className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const getPlanColor = (plan: string) => {
+  const getPlanColor = (plan?: string) => {
     switch (plan) {
-      case 'pro': return 'bg-plan-pro text-white';
-      case 'vip': return 'bg-plan-vip text-white';
-      default: return 'bg-plan-free text-white';
+      case 'free':
+        return 'text-muted-foreground';
+      case 'vip':
+        return 'text-amber-600';
+      case 'pro':
+        return 'text-purple-600';
+      default:
+        return 'text-muted-foreground';
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-success text-white';
-      case 'maintenance': return 'bg-warning text-white';
-      case 'blocked': return 'bg-destructive text-white';
-      default: return 'bg-muted text-muted-foreground';
+      case 'active':
+        return 'default';
+      case 'maintenance':
+        return 'secondary';
+      case 'blocked':
+        return 'destructive';
+      default:
+        return 'default';
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'active': return 'Ativo';
-      case 'maintenance': return 'Manutenção';
-      case 'blocked': return 'Bloqueado';
-      default: return status;
+      case 'active':
+        return 'Ativo';
+      case 'maintenance':
+        return 'Manutenção';
+      case 'blocked':
+        return 'Bloqueado';
+      default:
+        return 'Desconhecido';
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex items-center justify-center p-8">
+        <Loader2 className="h-8 w-8 animate-spin" />
+        <span className="ml-2">Carregando ferramentas...</span>
+      </div>
+    );
+  }
+
+  if (tools.length === 0) {
+    return (
+      <div className="text-center p-8">
+        <h3 className="text-lg font-medium mb-2">Nenhuma ferramenta disponível</h3>
+        <p className="text-muted-foreground">
+          Não há ferramentas configuradas no momento.
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <Wrench className="w-6 h-6" />
-        <h1 className="text-3xl font-bold text-foreground">Ferramentas</h1>
-        <Badge variant="outline" className="text-primary border-primary">
-          {tools.length} Disponíveis
-        </Badge>
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-3xl font-bold text-foreground mb-2">Ferramentas Disponíveis</h2>
+        <p className="text-muted-foreground">
+          Acesse nossas ferramentas exclusivas baseadas no seu plano atual
+        </p>
       </div>
 
-      {tools.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Wrench className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-            <p className="text-lg font-medium text-foreground mb-2">
-              Nenhuma ferramenta disponível
-            </p>
-            <p className="text-muted-foreground">
-              As ferramentas serão disponibilizadas em breve pelo administrador.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {tools.map((tool) => (
-            <Card key={tool.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-              {/* Imagem da ferramenta */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {tools.map((tool) => (
+          <Card key={tool.id} className="transition-all duration-200 hover:shadow-lg">
+            <CardHeader className="space-y-4">
+              {/* Hero Image Display */}
               {tool.hero_image_url && (
-                <div className="h-48 bg-cover bg-center bg-muted" 
-                     style={{ backgroundImage: `url(${tool.hero_image_url})` }} />
-              )}
-              <CardHeader>
-                <div className="flex justify-between items-start gap-2">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Wrench className="w-5 h-5" />
-                    {tool.name}
-                  </CardTitle>
-                  <div className="flex flex-col gap-2">
-                    <Badge className={getPlanColor(tool.required_plan || 'free')}>
-                      {getPlanIcon(tool.required_plan || 'free')}
-                      <span className="ml-1 uppercase">{tool.required_plan || 'free'}</span>
-                    </Badge>
-                    <Badge className={getStatusColor(tool.status)}>
-                      {getStatusText(tool.status)}
-                    </Badge>
-                  </div>
+                <div className="w-full h-48 rounded-lg overflow-hidden">
+                  <img 
+                    src={tool.hero_image_url} 
+                    alt={tool.name}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error(`❌ Failed to load image for ${tool.name}:`, tool.hero_image_url);
+                      e.currentTarget.style.display = 'none';
+                    }}
+                    onLoad={() => {
+                      console.log(`✅ Image loaded successfully for ${tool.name}:`, tool.hero_image_url);
+                    }}
+                  />
                 </div>
-                {tool.description && (
-                  <CardDescription>{tool.description}</CardDescription>
-                )}
-                {tool.message && (
-                  <div className="bg-muted/50 p-3 rounded-lg">
-                    <p className="text-sm text-foreground">{tool.message}</p>
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent>
-                {tool.status !== 'active' ? (
-                  <Button variant="outline" className="w-full" disabled>
+              )}
+              
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl font-bold text-foreground flex items-center gap-2">
+                  <Wrench className="h-5 w-5" />
+                  {tool.name}
+                </CardTitle>
+                <div className="flex gap-2">
+                  {getPlanIcon(tool.required_plan)}
+                  <Badge variant={getStatusColor(tool.status)}>
                     {getStatusText(tool.status)}
-                  </Button>
-                ) : !canAccess(tool.required_plan || 'free') ? (
-                  <Button variant="secondary" className="w-full">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Upgrade Necessário
-                  </Button>
-                ) : (
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleAccessTool(tool, onContentSelect)}
-                  >
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Acessar Ferramenta
-                  </Button>
+                  </Badge>
+                </div>
+              </div>
+              {tool.description && (
+                <CardDescription className="text-muted-foreground">
+                  {tool.description}
+                </CardDescription>
+              )}
+            </CardHeader>
+            
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className={`text-sm font-medium ${getPlanColor(tool.required_plan)}`}>
+                  Plano {tool.required_plan?.toUpperCase() || 'FREE'}
+                </span>
+                {!canAccess(tool) && (
+                  <Lock className="h-4 w-4 text-muted-foreground" />
                 )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              </div>
+
+              {tool.message && (
+                <p className="text-sm text-muted-foreground bg-muted p-2 rounded">
+                  {tool.message}
+                </p>
+              )}
+
+              <Button
+                onClick={() => handleAccessTool(tool)}
+                className="w-full"
+                variant={canAccess(tool) && tool.status === 'active' ? 'default' : 'outline'}
+                disabled={tool.status === 'blocked' || tool.status === 'maintenance'}
+              >
+                {tool.status === 'blocked' ? (
+                  'Bloqueado'
+                ) : tool.status === 'maintenance' ? (
+                  'Em Manutenção'
+                ) : !canAccess(tool) ? (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Upgrade Necessário
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Acessar
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
