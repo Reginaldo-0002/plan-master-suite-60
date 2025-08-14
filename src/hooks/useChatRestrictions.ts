@@ -56,9 +56,9 @@ export const useChatRestrictions = (userId: string | undefined) => {
       console.log('🌐 [useChatRestrictions] Verificando bloqueio global...');
       const { data: globalSettings, error: globalError } = await supabase
         .from('admin_settings')
-        .select('chat_blocked_until')
+        .select('*')
         .eq('key', 'global_chat_settings')
-        .maybeSingle();
+        .single();
 
       console.log('📊 [useChatRestrictions] Configurações globais:', globalSettings);
       if (globalError) {
