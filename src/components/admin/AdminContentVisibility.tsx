@@ -227,7 +227,11 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
   }
 
   return (
-    <div className="flex-1 space-y-6 p-6">
+    <div className="flex-1 space-y-6 p-6" data-content-visibility ref={(el) => {
+      if (el) {
+        (el as any).setSelectedContent = setSelectedContent;
+      }
+    }}>
       <div>
         <h2 className="text-2xl font-bold text-foreground">Visibilidade de Conteúdo</h2>
         <p className="text-muted-foreground">

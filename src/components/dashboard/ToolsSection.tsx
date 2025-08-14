@@ -14,6 +14,7 @@ interface Tool {
   url?: string;
   description?: string;
   required_plan?: 'free' | 'vip' | 'pro';
+  hero_image_url?: string;
 }
 
 interface ToolsSectionProps {
@@ -78,9 +79,10 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
           status: status?.status === 'maintenance' ? 'maintenance' : 
                  status?.status === 'blocked' ? 'blocked' : 'active',
           message: status?.message || content.description || null,
-          url: content.video_url || content.hero_image_url || `#`,
+          url: content.video_url || `#`,
           description: content.description,
-          required_plan: content.required_plan || 'free'
+          required_plan: content.required_plan || 'free',
+          hero_image_url: content.hero_image_url
         };
       });
 
@@ -220,9 +222,9 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
           {tools.map((tool) => (
             <Card key={tool.id} className="overflow-hidden hover:shadow-lg transition-shadow">
               {/* Imagem da ferramenta */}
-              {tool.url && tool.url !== '#' && tool.url.includes('http') && (
-                <div className="h-48 bg-cover bg-center" 
-                     style={{ backgroundImage: `url(${tool.url})` }} />
+              {tool.hero_image_url && (
+                <div className="h-48 bg-cover bg-center bg-muted" 
+                     style={{ backgroundImage: `url(${tool.hero_image_url})` }} />
               )}
               <CardHeader>
                 <div className="flex justify-between items-start gap-2">

@@ -270,7 +270,16 @@ export const AdminContentManagement = ({ onEditTopics }: AdminContentManagementP
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => window.open(`/admin#content-visibility?content=${content.id}`, '_blank')}
+                        onClick={() => {
+                          // Navigate to content visibility with selected content
+                          window.location.hash = 'content-visibility';
+                          setTimeout(() => {
+                            const visibilityComponent = document.querySelector('[data-content-visibility]') as any;
+                            if (visibilityComponent && visibilityComponent.setSelectedContent) {
+                              visibilityComponent.setSelectedContent(content.id);
+                            }
+                          }, 100);
+                        }}
                         title="Gerenciar visibilidade"
                         className="text-purple-600 hover:text-purple-700"
                       >

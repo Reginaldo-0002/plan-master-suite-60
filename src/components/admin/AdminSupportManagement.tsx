@@ -14,6 +14,7 @@ import { MessageSquare, Plus, Edit2, Search, Clock, User, Send, Eye, Trash2, Use
 import { useToast } from "@/hooks/use-toast";
 import { AdvancedChatbotManager } from "./AdvancedChatbotManager";
 import { AdminChatControl } from "./AdminChatControl";
+import { AdvancedChatbotManager } from "./AdvancedChatbotManager";
 
 interface Ticket {
   id: string;

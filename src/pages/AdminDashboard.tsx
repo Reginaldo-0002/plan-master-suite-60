@@ -167,12 +167,7 @@ const AdminDashboard = () => {
       case 'content-visibility':
         return <AdminContentVisibility />;
       case 'support':
-        return (
-          <div className="space-y-6">
-            <AdminSupportManagement />
-            <AdvancedChatbotManager />
-          </div>
-        );
+        return <AdminSupportManagement />;
       case 'notifications':
         return <AdminNotificationManagement />;
       case 'tools':
