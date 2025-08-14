@@ -498,19 +498,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     return null;
   }
 
-  // Se o chat deve ser bloqueado, mostrar bloqueio
-  if (shouldBlockChat() && !restrictionLoading) {
-    console.log('🚫 [SupportChat] Chat bloqueado - mostrando countdown');
-    return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <ChatBlockCountdown 
-          blockedUntil={restriction.blockedUntil} 
-          reason={restriction.reason}
-        />
-      </div>
-    );
-  }
-
+  // Sempre mostrar o ícone quando fechado, independente do bloqueio
   if (!isOpen) {
     return (
       <div className="fixed bottom-4 right-4 z-50">
