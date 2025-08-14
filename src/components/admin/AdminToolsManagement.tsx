@@ -104,30 +104,35 @@ export const AdminToolsManagement = () => {
         description: formData.maintenance_description
       } : null;
 
+      // Usar UPSERT para evitar conflitos de constraint única
       const { error } = await supabase
         .from('tool_status')
-        .insert([{
+        .upsert({
           tool_name: formData.tool_name,
           status: formData.status,
           message: formData.message || null,
-          scheduled_maintenance
-        }]);
+          scheduled_maintenance,
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'tool_name',
+          ignoreDuplicates: false
+        });
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: "Status da ferramenta criado com sucesso",
+        description: "Status da ferramenta salvo com sucesso",
       });
       
       setIsCreateDialogOpen(false);
       resetForm();
-      fetchTools();
+      // Real-time vai atualizar automaticamente
     } catch (error) {
-      console.error('Error creating tool:', error);
+      console.error('Error saving tool status:', error);
       toast({
         title: "Erro",
-        description: "Erro ao criar status da ferramenta",
+        description: "Erro ao salvar status da ferramenta",
         variant: "destructive",
       });
     }

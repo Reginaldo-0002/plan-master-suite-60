@@ -202,11 +202,14 @@ export const AdminAutoStatusControl = () => {
     try {
       const { error } = await supabase
         .from('tool_status')
-        .upsert({
-          tool_name: toolName,
+        .update({
           status: status,
-          message: status === 'maintenance' ? 'Manutenção programada' : null
-        });
+          message: status === 'maintenance' ? 'Manutenção programada' : 
+                  status === 'blocked' ? 'Ferramenta bloqueada' :
+                  'Ferramenta funcionando normalmente',
+          updated_at: new Date().toISOString()
+        })
+        .eq('tool_name', toolName);
 
       if (error) throw error;
 
