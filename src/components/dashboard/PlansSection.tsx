@@ -59,34 +59,65 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
   const handleUpgrade = async (planSlug: 'vip' | 'pro') => {
     setLoading(true);
     try {
-      // Chamar edge function para criar checkout
+      console.log('🚀 Starting upgrade process for plan:', planSlug);
+
+      // First fetch available platforms from the database
+      const { data: platformData, error: platformError } = await supabase
+        .from('platform_products')
+        .select(`
+          platform,
+          product_id,
+          checkout_url,
+          plans!inner(slug, name)
+        `)
+        .eq('plans.slug', planSlug)
+        .eq('active', true)
+        .limit(1);
+
+      if (platformError || !platformData?.length) {
+        console.error('❌ Platform error:', platformError);
+        throw new Error('Plataforma de pagamento não configurada para este plano');
+      }
+
+      const platform = platformData[0].platform;
+      console.log('📋 Using platform:', platform);
+
+      // Call edge function to create checkout
       const { data, error } = await supabase.functions.invoke('platform-checkout', {
         body: {
-          platform: 'kiwify', // ou 'hotmart' dependendo da plataforma ativa
+          platform: platform,
           plan_slug: planSlug
         }
       });
 
-      if (error) throw error;
-
-      if (data?.success && data.checkout_url) {
-        window.open(data.checkout_url, '_blank');
-        toast({
-          title: "Redirecionando",
-          description: `Redirecionando para pagamento do plano ${planSlug.toUpperCase()}`
-        });
-      } else {
-        throw new Error(data?.error || 'Erro ao gerar checkout');
+      if (error) {
+        console.error('❌ Function error:', error);
+        throw error;
       }
 
-      // Aqui você pode implementar lógica adicional para gerar checkout
-      // via webhook se necessário
+      console.log('✅ Function response:', data);
+
+      if (data?.success && data.checkout_url) {
+        console.log('🔗 Opening checkout:', data.checkout_url);
+        
+        // Show success message before redirect
+        toast({
+          title: "Redirecionando para Checkout",
+          description: `Abrindo página de pagamento para o plano ${planSlug.toUpperCase()} - ${data.plan_name}`,
+          variant: "default",
+        });
+
+        // Open checkout in new tab
+        window.open(data.checkout_url, '_blank');
+      } else {
+        throw new Error(data?.error || 'Falha ao gerar checkout');
+      }
       
     } catch (error) {
-      console.error('Error upgrading plan:', error);
+      console.error('❌ Upgrade error:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao processar upgrade. Tente novamente.",
+        title: "Erro no Upgrade",
+        description: error.message || "Erro ao processar upgrade. Verifique sua conexão e tente novamente.",
         variant: "destructive"
       });
     } finally {

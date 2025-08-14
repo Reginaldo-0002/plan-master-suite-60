@@ -18,8 +18,21 @@ export const RulesSection = () => {
 
   const fetchRules = async () => {
     try {
-      // Always use default content for now since admin_settings might not exist
-      setRulesContent(defaultRulesContent);
+      // Fetch rules from admin settings first
+      const { data, error } = await supabase
+        .from('admin_settings')
+        .select('value')
+        .eq('key', 'site_rules')
+        .single();
+
+      if (error || !data?.value) {
+        console.log('No admin rules found, using default');
+        setRulesContent(defaultRulesContent);
+      } else {
+        // Parse the JSON value that contains the rules content
+        const rulesData = typeof data.value === 'string' ? JSON.parse(data.value) : data.value;
+        setRulesContent(rulesData.content || defaultRulesContent);
+      }
     } catch (error) {
       console.error('Error fetching rules:', error);
       setRulesContent(defaultRulesContent);

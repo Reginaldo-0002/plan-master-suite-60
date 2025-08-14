@@ -11,10 +11,12 @@ import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { ContentSection } from "@/components/dashboard/ContentSection";
 import { RulesSection } from "@/components/dashboard/RulesSection";
 import { PlansSection } from "@/components/dashboard/PlansSection";
+import { ToolsSection } from "@/components/dashboard/ToolsSection";
 import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { CarouselSection } from "@/components/dashboard/CarouselSection";
 import { TopicsRouter } from "@/components/navigation/TopicsRouter";
 import { SupportChat } from "@/components/support/SupportChat";
+import { useWebhookIntegration } from "@/hooks/useWebhookIntegration";
 import { Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 
@@ -30,6 +32,9 @@ export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const { role: userRole, loading: roleLoading } = useRoleCheck();
   const { profile: realtimeProfile } = useProfileRealtime(user?.id);
+  
+  // Initialize webhook integration for real-time payment updates
+  const { isListening: webhookListening } = useWebhookIntegration(user?.email);
 
   // Usar o perfil em tempo real se disponível, senão usar o perfil local
   const currentProfile = realtimeProfile || profile;
@@ -267,15 +272,7 @@ export default function Dashboard() {
           />
         );
       case 'tools':
-        return (
-          <ContentSection 
-            contentType="tools" 
-            title="Ferramentas" 
-            description="Ferramentas poderosas para acelerar seus resultados"
-            userPlan={currentProfile.plan}
-            onContentSelect={handleContentSelection}
-          />
-        );
+        return <ToolsSection userPlan={currentProfile.plan} />;
       case 'courses':
         return (
           <ContentSection 
