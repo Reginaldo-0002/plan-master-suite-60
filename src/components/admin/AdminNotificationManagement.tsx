@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Edit2, Trash2, Bell } from "lucide-react";
+import { Plus, Edit2, Trash2, Bell, Trash } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Notification {
@@ -142,6 +142,36 @@ export const AdminNotificationManagement = () => {
     }
   };
 
+  const deleteAllNotifications = async () => {
+    if (!confirm("Tem certeza que deseja excluir TODAS as notificações? Esta ação não pode ser desfeita.")) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000'); // Delete all records
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Todas as notificações foram excluídas com sucesso",
+      });
+      
+      setNotifications([]); // Clear local state immediately
+      fetchNotifications(); // Refresh from database
+    } catch (error) {
+      console.error('Error deleting all notifications:', error);
+      toast({
+        title: "Erro",
+        description: "Erro ao excluir todas as notificações",
+        variant: "destructive",
+      });
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       title: "",
@@ -174,10 +204,25 @@ export const AdminNotificationManagement = () => {
             Gerencie notificações para usuários da plataforma
           </p>
         </div>
-        <Button onClick={() => setIsCreateDialogOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          Nova Notificação
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setIsCreateDialogOpen(true)}
+            className="bg-primary hover:bg-primary/90"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Nova Notificação
+          </Button>
+          {notifications.length > 0 && (
+            <Button 
+              onClick={deleteAllNotifications}
+              variant="destructive"
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              <Trash className="w-4 h-4 mr-2" />
+              Apagar Todas
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Notifications Table */}
