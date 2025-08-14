@@ -67,20 +67,22 @@ export const AdminSupportManagement = () => {
 
   // Check for notification redirect on component mount
   useEffect(() => {
-    const processNotificationRedirect = () => {
-      const notificationData = sessionStorage.getItem('adminChatNotification');
-      console.log('Checking for notification redirect...', {
-        hasNotificationData: !!notificationData,
+    const processNotificationRedirect = (notificationData?: any) => {
+      const data = notificationData || sessionStorage.getItem('adminChatNotification');
+      const parsedData = typeof data === 'string' ? JSON.parse(data) : data;
+      
+      console.log('Processing notification redirect...', {
+        hasData: !!parsedData,
         ticketsLength: tickets.length,
         currentHash: window.location.hash
       });
       
-      if (notificationData && tickets.length > 0) {
+      if (parsedData && tickets.length > 0) {
         try {
-          const { userId, userName, ticketId, timestamp } = JSON.parse(notificationData);
+          const { userId, userName, ticketId, timestamp, forceOpen } = parsedData;
           
-          // Check if notification is not too old (within 5 minutes)
-          const isRecent = timestamp && (Date.now() - timestamp < 5 * 60 * 1000);
+          // Check if notification is not too old (within 10 minutes) or force open
+          const isRecent = forceOpen || (timestamp && (Date.now() - timestamp < 10 * 60 * 1000));
           
           if (!isRecent) {
             console.log('Notification too old, ignoring...');
@@ -88,7 +90,7 @@ export const AdminSupportManagement = () => {
             return;
           }
           
-          console.log('Processing notification redirect:', { userId, userName, ticketId });
+          console.log('✅ Processing notification redirect:', { userId, userName, ticketId });
           console.log('Available tickets:', tickets.map(t => ({ 
             id: t.id, 
             subject: t.subject,
@@ -104,9 +106,9 @@ export const AdminSupportManagement = () => {
             // Clear any previous dialog state
             setIsTicketDialogOpen(false);
             
-            // Open the ticket dialog with proper timing
+            // Open the ticket dialog immediately
             setTimeout(() => {
-              console.log('Opening ticket dialog...');
+              console.log('📱 Opening ticket dialog...');
               setIsTicketDialogOpen(true);
               
               // Load messages for this ticket
@@ -117,28 +119,29 @@ export const AdminSupportManagement = () => {
                 const messagesContainer = document.querySelector('[data-messages-container]');
                 if (messagesContainer) {
                   messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                  console.log('Scrolled to bottom of messages');
+                  console.log('📜 Scrolled to bottom of messages');
                 }
-              }, 500);
-            }, 300);
+              }, 800);
+            }, 200);
             
             toast({
               title: "Chat Aberto! 💬",
               description: `Conversa com ${userName} aberta com sucesso!`,
             });
+            
+            // Clear the notification data from sessionStorage
+            sessionStorage.removeItem('adminChatNotification');
+            console.log('🧹 Notification data cleared from sessionStorage');
+            
           } else {
             console.error('❌ Ticket not found:', ticketId);
             console.log('Available ticket IDs:', tickets.map(t => t.id));
             toast({
               title: "Erro",
-              description: "Ticket não encontrado. Recarregue a página e tente novamente.",
+              description: "Ticket não encontrado. Atualize a página e tente novamente.",
               variant: "destructive"
             });
           }
-          
-          // Clear the notification data
-          sessionStorage.removeItem('adminChatNotification');
-          console.log('Notification data cleared from sessionStorage');
           
         } catch (error) {
           console.error('Error processing notification data:', error);
@@ -157,37 +160,36 @@ export const AdminSupportManagement = () => {
       processNotificationRedirect();
     }
     
-    // Also check when hash changes to support
-    if (window.location.hash === '#support' && tickets.length > 0) {
-      setTimeout(processNotificationRedirect, 200);
-    }
-  }, [tickets, toast]);
-
-  // Handle page load and hash changes
-  useEffect(() => {
-    const handlePageLoad = () => {
-      console.log('Page loaded, checking for notification redirect...');
-      if (window.location.hash === '#support') {
-        setTimeout(() => {
-          const notificationData = sessionStorage.getItem('adminChatNotification');
-          if (notificationData && tickets.length > 0) {
-            console.log('Processing notification on page load...');
-            // Force a re-render to trigger notification processing
-            setTickets(prev => [...prev]);
-          }
-        }, 500);
-      }
-    };
-
-    const handleHashChange = () => {
-      console.log('Hash changed to:', window.location.hash);
-      if (window.location.hash === '#support') {
-        handlePageLoad();
+    // Listen for custom event from notification click
+    const handleOpenAdminChat = (event: CustomEvent) => {
+      console.log('🎯 Custom event received:', event.detail);
+      if (tickets.length > 0) {
+        processNotificationRedirect(event.detail);
       }
     };
     
-    // Run on initial load
-    handlePageLoad();
+    window.addEventListener('openAdminChat', handleOpenAdminChat as EventListener);
+    
+    return () => {
+      window.removeEventListener('openAdminChat', handleOpenAdminChat as EventListener);
+    };
+  }, [tickets, toast]);
+
+  // Handle hash changes for direct navigation
+  useEffect(() => {
+    const handleHashChange = () => {
+      console.log('🔗 Hash changed to:', window.location.hash);
+      if (window.location.hash === '#support' && tickets.length > 0) {
+        const notificationData = sessionStorage.getItem('adminChatNotification');
+        if (notificationData) {
+          console.log('🔄 Hash change with notification data, processing...');
+          setTimeout(() => {
+            // Force re-trigger the notification processing
+            setTickets(prev => [...prev]);
+          }, 100);
+        }
+      }
+    };
     
     window.addEventListener('hashchange', handleHashChange);
     

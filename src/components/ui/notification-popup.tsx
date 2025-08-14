@@ -316,22 +316,26 @@ export const NotificationPopup = () => {
           userId: notification.notification_metadata.user_id,
           userName: notification.notification_metadata.user_name,
           ticketId: notification.notification_metadata.ticket_id,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          forceOpen: true
         };
         
         sessionStorage.setItem('adminChatNotification', JSON.stringify(notificationInfo));
         console.log('Stored notification info in sessionStorage:', notificationInfo);
         
-        // Force navigation to admin support section
+        // Navigate without reload - use proper navigation
         if (window.location.pathname !== '/admin') {
           console.log('Redirecting to admin panel...');
           window.location.href = `/admin#support`;
         } else {
-          console.log('Already on admin panel, updating hash...');
+          console.log('Already on admin panel, triggering chat open...');
+          // Trigger immediate processing without reload
           window.location.hash = 'support';
-          // Force page reload to ensure proper component mounting
+          // Dispatch custom event to force processing
           setTimeout(() => {
-            window.location.reload();
+            window.dispatchEvent(new CustomEvent('openAdminChat', {
+              detail: notificationInfo
+            }));
           }, 100);
         }
       }
