@@ -62,10 +62,6 @@ export const AdminContentVisibility = ({ contentId }: AdminContentVisibilityProp
     try {
       console.log('🚀 Iniciando fetchData...');
       
-      // Verificar se usuário é admin
-      const { data: adminCheck } = await supabase.rpc('is_current_user_admin');
-      console.log('👑 Usuário é admin?', adminCheck);
-      
       // Buscar conteúdos
       console.log('📖 Buscando conteúdos ativos...');
       const { data: contentData, error: contentError } = await supabase
