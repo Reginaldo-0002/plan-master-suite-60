@@ -341,7 +341,7 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
               {messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-3 ${
+                  className={`flex gap-3 w-full ${
                     message.is_bot ? 'justify-start' : 'justify-end'
                   }`}
                 >
@@ -354,21 +354,24 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
                   )}
                   
                   <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
+                    className={`w-full max-w-full rounded-lg p-3 ${
                       message.is_bot
                         ? 'bg-muted/50 text-foreground'
                         : 'bg-primary text-primary-foreground ml-auto'
                     }`}
                   >
                     {message.is_bot && message.message_type !== 'text' ? (
-                      <RichMessageRenderer
-                        type={message.message_type}
-                        message={message.message}
-                        richContent={message.rich_content}
-                        onButtonClick={handleButtonClick}
-                      />
+                      <div className="w-full max-w-full overflow-hidden">
+                        <RichMessageRenderer
+                          type={message.message_type}
+                          message={message.message}
+                          richContent={message.rich_content}
+                          onButtonClick={handleButtonClick}
+                          className="w-full max-w-full"
+                        />
+                      </div>
                     ) : (
-                      <div className="text-sm whitespace-pre-wrap">
+                      <div className="text-sm whitespace-pre-wrap break-words w-full">
                         {message.message}
                       </div>
                     )}

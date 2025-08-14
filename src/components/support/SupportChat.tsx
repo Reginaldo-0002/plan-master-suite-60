@@ -665,29 +665,32 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
 
             <div className="p-3 border-t">
               {restriction.isBlocked ? (
-                <div className="text-center py-4">
-                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-                    <p className="text-sm text-red-600 font-medium mb-2">🚫 Não é possível enviar mensagens</p>
-                    <ChatBlockCountdown 
-                      blockedUntil={restriction.blockedUntil} 
-                      reason={restriction.reason}
-                    />
+                <div className="text-center py-2">
+                  <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3 max-w-full">
+                    <p className="text-xs sm:text-sm text-red-600 font-medium mb-2 break-words">🚫 Não é possível enviar mensagens</p>
+                    <div className="max-w-full overflow-hidden">
+                      <ChatBlockCountdown 
+                        blockedUntil={restriction.blockedUntil} 
+                        reason={restriction.reason}
+                      />
+                    </div>
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-2">
+                <div className="flex gap-2 w-full">
                   <Input
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onKeyPress={handleKeyPress}
                     placeholder="Digite sua mensagem..."
-                    className="text-sm"
+                    className="text-sm flex-1 min-w-0"
                     disabled={loading || restriction.isBlocked}
                   />
                   <Button
                     onClick={sendMessage}
                     size="sm"
                     disabled={loading || !newMessage.trim() || restriction.isBlocked}
+                    className="flex-shrink-0"
                   >
                     <Send className="w-4 h-4" />
                   </Button>
