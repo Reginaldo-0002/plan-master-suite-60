@@ -59,6 +59,29 @@ export const AdminSupportManagement = () => {
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [ticketMessages, setTicketMessages] = useState<TicketMessage[]>([]);
   const [isConfigDialogOpen, setIsConfigDialogOpen] = useState(false);
+
+  // Check for notification redirect on component mount
+  useEffect(() => {
+    const notificationData = sessionStorage.getItem('adminChatNotification');
+    if (notificationData) {
+      try {
+        const { userId, userName, ticketId } = JSON.parse(notificationData);
+        console.log('Opening chat from notification:', { userId, userName, ticketId });
+        
+        // Find and select the ticket
+        const ticket = tickets.find(t => t.id === ticketId);
+        if (ticket) {
+          setSelectedTicket(ticket);
+        }
+        
+        // Clear the notification data
+        sessionStorage.removeItem('adminChatNotification');
+      } catch (error) {
+        console.error('Error processing notification data:', error);
+        sessionStorage.removeItem('adminChatNotification');
+      }
+    }
+  }, [tickets]);
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");
   const [newOption, setNewOption] = useState({ title: "", response: "" });

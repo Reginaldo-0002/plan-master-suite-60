@@ -214,7 +214,7 @@ export const NotificationPopup = () => {
   }, [user?.id]);
 
   const shouldShowNotification = useCallback((notification: any, profile?: any) => {
-    if (!user?.id) return false;
+    if (!user?.id || !profile) return false;
     
     // Check if notification targets specific users
     if (notification.target_users && Array.isArray(notification.target_users)) {
@@ -222,16 +222,31 @@ export const NotificationPopup = () => {
     }
 
     // Check if notification targets specific plans
-    if (notification.target_plans && Array.isArray(notification.target_plans) && profile) {
-      // Admin notifications should show for admins
-      if (notification.target_plans.includes('admin') && profile.isAdmin) {
-        return true;
+    if (notification.target_plans && Array.isArray(notification.target_plans)) {
+      // CRITICAL: Chat messages notifications ONLY for admins
+      if (notification.notification_metadata?.action_type === 'chat_message') {
+        return profile.isAdmin && notification.target_plans.includes('admin');
       }
+      
+      // Other admin notifications (new user, blocked user) ONLY for admins
+      if (notification.target_plans.includes('admin')) {
+        return profile.isAdmin;
+      }
+      
+      // Regular notifications for user plans (created by admin in panel)
       return notification.target_plans.includes(profile.plan);
     }
 
-    // Show to everyone if no specific targeting
-    return !notification.target_users && !notification.target_plans;
+    // Show to everyone if no specific targeting and NOT a chat message
+    if (!notification.target_users && !notification.target_plans) {
+      // Never show chat messages to non-admins even if no targeting
+      if (notification.notification_metadata?.action_type === 'chat_message') {
+        return profile.isAdmin;
+      }
+      return true;
+    }
+    
+    return false;
   }, [user?.id]);
 
   const handleNotificationClick = useCallback(async (notification: PopupNotification) => {
@@ -251,9 +266,16 @@ export const NotificationPopup = () => {
           onConflict: 'admin_id,notification_id'
         });
 
-      // Redirect if it's a chat notification
+      // Redirect if it's a chat notification with specific user and ticket
       if (notification.notification_metadata?.action_type === 'chat_message' && 
-          notification.notification_metadata?.user_id) {
+          notification.notification_metadata?.user_id && 
+          notification.notification_metadata?.ticket_id) {
+        // Store user and ticket info in sessionStorage for the admin chat
+        sessionStorage.setItem('adminChatNotification', JSON.stringify({
+          userId: notification.notification_metadata.user_id,
+          userName: notification.notification_metadata.user_name,
+          ticketId: notification.notification_metadata.ticket_id
+        }));
         window.location.href = `/admin#support`;
       }
     } catch (error) {
