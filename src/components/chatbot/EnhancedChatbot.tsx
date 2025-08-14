@@ -251,7 +251,7 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
         // Resposta padrão quando não encontra correspondência
         const defaultMsg: Message = {
           id: `bot-default-${Date.now()}`,
-          message: 'Desculpe, não entendi sua solicitação. Você pode tentar reformular ou digitar "ola" para ver as opções disponíveis.',
+          message: 'Desculpe, não entendi sua solicitação. Você pode tentar reformular ou digitar "ola" para ver as opções disponíveis.\n\nAlgumas palavras-chave que reconheço:\n• ola - Menu principal\n• planos - Nossos planos\n• suporte - Falar com suporte\n• contato - Informações de contato',
           message_type: 'text',
           sender_id: 'bot',
           is_bot: true,

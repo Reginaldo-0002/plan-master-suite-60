@@ -14,6 +14,8 @@ interface ButtonConfig {
 interface CardItem {
   title: string;
   description: string;
+  price?: string;
+  features?: string[];
   button?: ButtonConfig;
   badge?: string;
 }
@@ -28,9 +30,12 @@ interface ImageConfig {
 interface RichContent {
   buttons?: ButtonConfig[];
   items?: CardItem[];
+  cards?: CardItem[];
   image?: ImageConfig;
   description?: string;
   links?: Array<{text: string; url: string}>;
+  url?: string;
+  text?: string;
 }
 
 interface RichMessageProps {
@@ -96,11 +101,12 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
   };
 
   const renderCards = () => {
-    if (!richContent?.items) return null;
+    const cardData = richContent?.cards || richContent?.items;
+    if (!cardData) return null;
     
     return (
       <div className="grid gap-3 mt-3">
-        {richContent.items.map((item, index) => (
+        {cardData.map((item, index) => (
           <Card key={index} className="border border-border/50">
             <CardContent className="p-4">
               <div className="flex justify-between items-start mb-2">
@@ -110,10 +116,25 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
                     {item.badge}
                   </Badge>
                 )}
+                {item.price && (
+                  <Badge variant="outline" className="text-xs font-bold">
+                    {item.price}
+                  </Badge>
+                )}
               </div>
               <p className="text-sm text-muted-foreground mb-3">
                 {item.description}
               </p>
+              {item.features && (
+                <ul className="text-xs text-muted-foreground mb-3 space-y-1">
+                  {item.features.map((feature, idx) => (
+                    <li key={idx} className="flex items-center">
+                      <span className="w-1 h-1 rounded-full bg-primary mr-2"></span>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+              )}
               {item.button && (
                 <Button
                   size="sm"
@@ -175,6 +196,19 @@ export const RichMessageRenderer: React.FC<RichMessageProps> = ({
       {type === 'buttons' && renderButtons()}
       {type === 'card' && renderCards()}
       {type === 'link' && renderLinks()}
+      
+      {/* Special handling for 'link' type with single URL */}
+      {type === 'link' && richContent?.url && richContent?.text && (
+        <Button
+          variant="link"
+          size="sm"
+          onClick={() => window.open(richContent.url, '_blank')}
+          className="p-0 h-auto text-primary hover:text-primary/80 mt-3"
+        >
+          {richContent.text}
+          <ExternalLink className="w-3 h-3 ml-1" />
+        </Button>
+      )}
       
       {/* Render buttons for other types if they exist */}
       {type !== 'buttons' && richContent?.buttons && renderButtons()}

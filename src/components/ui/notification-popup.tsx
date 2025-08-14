@@ -64,7 +64,7 @@ export const NotificationPopup = () => {
     // CRITICAL: Chat messages notifications ONLY for admins/moderators
     if (notification.notification_metadata?.action_type === 'chat_message') {
       const canViewChatNotifications = isAdmin || isModerator;
-      console.log('💬 [NotificationPopup] Notificação de chat - pode ver:', canViewChatNotifications);
+      console.log('💬 [NotificationPopup] Notificação de chat - pode ver:', canViewChatNotifications, 'isAdmin:', isAdmin, 'isModerator:', isModerator);
       return canViewChatNotifications;
     }
 
@@ -268,9 +268,9 @@ export const NotificationPopup = () => {
         if (existingIds.has(notification.id)) return false;
         existingIds.add(notification.id);
         
-        // Extra verificação para chat_message - NUNCA mostrar para usuários comuns
+        // Extra verificação CRÍTICA para chat_message - NUNCA mostrar para usuários comuns
         if (notification.notification_metadata?.action_type === 'chat_message' && !isAdmin && !isModerator) {
-          console.log('🚫 [NotificationPopup] BLOQUEANDO notificação de chat na listagem para usuário comum:', notification.id);
+          console.log('🚫 [NotificationPopup] BLOQUEANDO notificação de chat na listagem para usuário comum:', notification.id, 'isAdmin:', isAdmin, 'isModerator:', isModerator);
           return false;
         }
         

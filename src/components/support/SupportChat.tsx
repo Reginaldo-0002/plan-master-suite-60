@@ -11,6 +11,7 @@ import { Send, MessageCircle, X, Minimize2, Bot, Trash2 } from "lucide-react";
 import { Profile } from "@/types/profile";
 import { useChatRestrictions } from "@/hooks/useChatRestrictions";
 import { useChatVisibility } from "@/hooks/useChatVisibility";
+import { useRoleCheck } from "@/hooks/useRoleCheck";
 import { ChatBlockCountdown } from "./ChatBlockCountdown";
 
 interface Message {
@@ -42,6 +43,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const [showOptions, setShowOptions] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { isAdmin, isModerator } = useRoleCheck();
   const { restriction, loading: restrictionLoading, checkRestrictions } = useChatRestrictions(profile?.user_id);
   const { visibility, loading: visibilityLoading } = useChatVisibility(profile?.user_id);
 
@@ -50,6 +52,7 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   console.log('🔒 [SupportChat] Restriction state:', restriction);
   console.log('👁️ [SupportChat] Visibility state:', visibility);
   console.log('⏳ [SupportChat] Loading states - restriction:', restrictionLoading, 'visibility:', visibilityLoading);
+  console.log('👑 [SupportChat] User roles - Admin:', isAdmin, 'Moderator:', isModerator);
 
   // Forçar verificação de restrições quando o componente for aberto
   useEffect(() => {
@@ -285,9 +288,9 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const handleOptionClick = async (option: ChatOption) => {
-    console.log('🎯 handleOptionClick called - isBlocked:', restriction.isBlocked, 'ticketId:', ticketId);
-    if (!ticketId || restriction.isBlocked) {
-      console.log('🚫 Option click blocked - ticketId:', ticketId, 'isBlocked:', restriction.isBlocked);
+    console.log('🎯 handleOptionClick called - shouldBlock:', shouldBlockChat(), 'ticketId:', ticketId);
+    if (!ticketId || shouldBlockChat()) {
+      console.log('🚫 Option click blocked - ticketId:', ticketId, 'shouldBlock:', shouldBlockChat());
       return;
     }
 
@@ -333,13 +336,13 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   };
 
   const sendMessage = async () => {
-    console.log('🎯 sendMessage called - isBlocked:', restriction.isBlocked, 'message:', newMessage.trim());
-    if (!newMessage.trim() || !ticketId || loading || restriction.isBlocked) {
+    console.log('🎯 sendMessage called - shouldBlock:', shouldBlockChat(), 'message:', newMessage.trim());
+    if (!newMessage.trim() || !ticketId || loading || shouldBlockChat()) {
       console.log('🚫 Send message blocked - conditions:', {
         hasMessage: !!newMessage.trim(),
         hasTicket: !!ticketId,
         isLoading: loading,
-        isBlocked: restriction.isBlocked
+        shouldBlock: shouldBlockChat()
       });
       return;
     }
@@ -461,15 +464,32 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
     }
   };
 
+  // CRITICAL: Verificar se o chat deve ser bloqueado
+  const shouldBlockChat = () => {
+    // Admins e moderadores sempre têm acesso
+    if (isAdmin || isModerator) {
+      console.log('👑 [SupportChat] Admin/Moderator - chat sempre liberado');
+      return false;
+    }
+
+    // Chat está bloqueado por restrições globais ou específicas
+    if (restriction.isBlocked) {
+      console.log('🚫 [SupportChat] Chat bloqueado por restrições:', restriction.reason);
+      return true;
+    }
+
+    return false;
+  };
+
   // Se o chat está oculto para este usuário, não mostrar o botão
   if (visibility.isHidden || visibilityLoading) {
     console.log('🚫 [SupportChat] Chat oculto por visibilidade');
     return null;
   }
 
-  // Se o chat está globalmente bloqueado E o usuário não é admin/moderator, mostrar bloqueio
-  if (restriction.isBlocked && !restrictionLoading) {
-    console.log('🚫 [SupportChat] Chat bloqueado globalmente para usuário não-admin');
+  // Se o chat deve ser bloqueado, mostrar bloqueio
+  if (shouldBlockChat() && !restrictionLoading) {
+    console.log('🚫 [SupportChat] Chat bloqueado - mostrando countdown');
     return (
       <div className="fixed bottom-4 right-4 z-50">
         <ChatBlockCountdown 
