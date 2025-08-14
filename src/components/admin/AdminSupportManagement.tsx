@@ -62,25 +62,48 @@ export const AdminSupportManagement = () => {
 
   // Check for notification redirect on component mount
   useEffect(() => {
-    const notificationData = sessionStorage.getItem('adminChatNotification');
-    if (notificationData) {
-      try {
-        const { userId, userName, ticketId } = JSON.parse(notificationData);
-        console.log('Opening chat from notification:', { userId, userName, ticketId });
-        
-        // Find and select the ticket
-        const ticket = tickets.find(t => t.id === ticketId);
-        if (ticket) {
-          setSelectedTicket(ticket);
+    const checkNotificationRedirect = () => {
+      const notificationData = sessionStorage.getItem('adminChatNotification');
+      if (notificationData && tickets.length > 0) {
+        try {
+          const { userId, userName, ticketId } = JSON.parse(notificationData);
+          console.log('Opening chat from notification:', { userId, userName, ticketId });
+          
+          // Find and select the ticket
+          const ticket = tickets.find(t => t.id === ticketId);
+          if (ticket) {
+            setSelectedTicket(ticket);
+            // Open the ticket dialog automatically
+            setIsTicketDialogOpen(true);
+            console.log('Ticket selected and dialog opened:', ticket);
+          } else {
+            console.warn('Ticket not found:', ticketId);
+          }
+          
+          // Clear the notification data
+          sessionStorage.removeItem('adminChatNotification');
+        } catch (error) {
+          console.error('Error processing notification data:', error);
+          sessionStorage.removeItem('adminChatNotification');
         }
-        
-        // Clear the notification data
-        sessionStorage.removeItem('adminChatNotification');
-      } catch (error) {
-        console.error('Error processing notification data:', error);
-        sessionStorage.removeItem('adminChatNotification');
       }
-    }
+    };
+
+    // Check immediately if tickets are already loaded
+    checkNotificationRedirect();
+    
+    // Also listen for hash changes in case of redirect
+    const handleHashChange = () => {
+      if (window.location.hash === '#support') {
+        setTimeout(checkNotificationRedirect, 100);
+      }
+    };
+    
+    window.addEventListener('hashchange', handleHashChange);
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, [tickets]);
   const [isTicketDialogOpen, setIsTicketDialogOpen] = useState(false);
   const [newMessage, setNewMessage] = useState("");

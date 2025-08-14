@@ -310,7 +310,18 @@ export const NotificationPopup = () => {
           userName: notification.notification_metadata.user_name,
           ticketId: notification.notification_metadata.ticket_id
         }));
-        window.location.href = `/admin#support`;
+        
+        // Force redirect to admin panel support section
+        if (window.location.pathname !== '/admin') {
+          window.location.href = `/admin#support`;
+        } else {
+          // If already on admin page, just change the hash
+          window.location.hash = 'support';
+          // Trigger a small delay to ensure component mounts
+          setTimeout(() => {
+            window.dispatchEvent(new Event('hashchange'));
+          }, 100);
+        }
       }
     } catch (error) {
       console.error('Error handling notification click:', error);
