@@ -139,10 +139,8 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
 
   const openResource = (resource: Resource) => {
     if (resource.is_premium && !hasAccess(resource)) {
-      // Redirect to plans section
-      const currentUrl = new URL(window.location.href);
-      currentUrl.hash = '#plans';
-      window.location.href = currentUrl.toString();
+      // Navigate to plans section
+      window.location.href = '/dashboard?section=plans';
       return;
     }
 
