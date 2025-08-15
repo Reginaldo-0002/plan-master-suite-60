@@ -154,10 +154,14 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
         }
       }
 
-      // Use callback function passed from parent instead of redirecting
+      // Navigate to topics - use callback if available, otherwise use programmatic navigation
       console.log('Navigating to topics with content ID:', contentItem.id);
       if (onContentSelect) {
         onContentSelect(contentItem.id);
+      } else {
+        const newUrl = `/dashboard?section=topics&content=${contentItem.id}`;
+        window.history.pushState({}, '', newUrl);
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
     } catch (error) {
       console.error('Error accessing content:', error);
