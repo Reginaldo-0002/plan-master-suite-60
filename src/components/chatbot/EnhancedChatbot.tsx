@@ -79,7 +79,50 @@ export const EnhancedChatbot: React.FC<EnhancedChatbotProps> = ({
         .order('priority', { ascending: false });
 
       if (error) throw error;
-      setChatbotResponses(data || []);
+      
+      // Buscar valores atuais dos planos para atualizar respostas dinamicamente
+      const { data: plansData } = await supabase
+        .from('plans')
+        .select('slug, name, price_cents')
+        .eq('active', true)
+        .order('price_cents', { ascending: true });
+
+      // Atualizar preços dos planos nas respostas do chatbot se necessário
+      if (data && plansData) {
+        const updatedResponses = data.map(response => {
+          if (response.trigger_text === 'planos' && response.response_type === 'card') {
+            const richContent = response.rich_content as any;
+            if (richContent && richContent.cards && Array.isArray(richContent.cards)) {
+              const vipPlan = plansData.find(p => p.slug === 'vip');
+              const proPlan = plansData.find(p => p.slug === 'pro');
+              
+              const updatedCards = richContent.cards.map((card: any, index: number) => {
+                if (index === 0 && vipPlan) {
+                  return { ...card, price: `R$ ${(vipPlan.price_cents / 100).toFixed(2).replace('.', ',')}/${card.price && card.price.includes('mês') ? 'mês' : 'ano'}` };
+                }
+                if (index === 1 && proPlan) {
+                  return { ...card, price: `R$ ${(proPlan.price_cents / 100).toFixed(2).replace('.', ',')}/${card.price && card.price.includes('mês') ? 'mês' : 'ano'}` };
+                }
+                return card;
+              });
+              
+              return {
+                ...response,
+                rich_content: {
+                  ...richContent,
+                  cards: updatedCards
+                }
+              };
+            }
+          }
+          return response;
+        });
+        
+        setChatbotResponses(updatedResponses);
+      } else {
+        setChatbotResponses(data || []);
+      }
+      
       console.log('✅ [EnhancedChatbot] Carregadas', data?.length || 0, 'respostas do chatbot');
     } catch (error) {
       console.error('❌ [EnhancedChatbot] Erro ao carregar respostas do chatbot:', error);
