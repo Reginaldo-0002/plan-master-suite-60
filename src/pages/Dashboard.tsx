@@ -301,7 +301,7 @@ export default function Dashboard() {
       case 'coming-soon':
         return <ComingSoonSection userPlan={currentProfile.plan} />;
       case 'carousel':
-        return <CarouselSection userPlan={currentProfile.plan} />;
+        return <CarouselSection userPlan={currentProfile.plan} onContentSelect={handleContentSelection} />;
       case 'profile':
       case 'settings':
         return <ProfileSettings profile={currentProfile} onProfileUpdate={handleProfileUpdate} />;

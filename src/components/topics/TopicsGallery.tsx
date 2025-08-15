@@ -147,7 +147,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
     }
 
     // Handle YouTube videos to embed them
-    if (resource.resource_type === 'video' && resource.resource_url.includes('youtube.com')) {
+    if (resource.resource_type === 'video' && resource.resource_url.includes('youtube.com') || resource.resource_url.includes('youtu.be')) {
       const videoId = extractYouTubeVideoId(resource.resource_url);
       if (videoId) {
         setSelectedVideo({
@@ -159,6 +159,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
       }
     }
     
+    // Para todos os outros tipos de recursos (PDFs, links, etc.) ou vídeos não-YouTube
     window.open(resource.resource_url, '_blank');
   };
 

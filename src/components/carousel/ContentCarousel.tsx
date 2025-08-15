@@ -177,6 +177,7 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
           metadata: { content_type: item.content_type }
         }]);
 
+      // Se tem callback para seleção de conteúdo, usa ele
       if (onContentClick) {
         onContentClick(item.id);
       } else if (item.video_url) {
@@ -194,10 +195,11 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
           window.open(item.video_url, '_blank');
         }
       } else {
-        toast({
-          title: "Conteúdo acessado",
-          description: `Acessando: ${item.title}`,
-        });
+        // Navegar para tópicos usando navegação programática
+        const newUrl = `/dashboard?section=topics&content=${item.id}`;
+        window.history.pushState({}, '', newUrl);
+        // Disparar evento de mudança de estado para atualizar o dashboard
+        window.dispatchEvent(new PopStateEvent('popstate'));
       }
     } catch (error) {
       console.error('Error accessing content:', error);

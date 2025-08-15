@@ -22,9 +22,10 @@ interface CarouselContent {
 
 interface CarouselSectionProps {
   userPlan: 'free' | 'vip' | 'pro';
+  onContentSelect?: (contentId: string) => void;
 }
 
-export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
+export const CarouselSection = ({ userPlan, onContentSelect }: CarouselSectionProps) => {
   const [carouselContent, setCarouselContent] = useState<CarouselContent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
@@ -88,9 +89,16 @@ export const CarouselSection = ({ userPlan }: CarouselSectionProps) => {
           metadata: { content_type: content.content_type }
         }]);
 
-      // Navigate to topics page
-      console.log('Carousel navigating to topics with content ID:', content.id);
-      window.location.href = `/?section=topics&content=${content.id}`;
+      // Use callback if available, otherwise use programmatic navigation
+      if (onContentSelect) {
+        onContentSelect(content.id);
+      } else {
+        console.log('Carousel navigating to topics with content ID:', content.id);
+        const newUrl = `/dashboard?section=topics&content=${content.id}`;
+        window.history.pushState({}, '', newUrl);
+        // Disparar evento de mudança de estado para atualizar o dashboard
+        window.dispatchEvent(new PopStateEvent('popstate'));
+      }
       
     } catch (error) {
       console.error('Error accessing content:', error);
