@@ -184,24 +184,38 @@ export const AdvancedUserManagement = () => {
         new Date(messageData.scheduled_at).toISOString() : 
         new Date().toISOString();
 
-      const { error } = await supabase
-        .from('scheduled_notifications')
-        .insert([{
-          title: messageData.subject,
-          message: messageData.message,
-          recipient_user_id: messageData.recipient_user_id,
-          scheduled_at: scheduledAt,
-          is_personal_message: true,
-          notification_type: 'info',
-          created_by: (await supabase.auth.getUser()).data.user?.id
-        }]);
+      const currentUser = await supabase.auth.getUser();
+      const isImmediate = !messageData.scheduled_at || new Date(messageData.scheduled_at) <= new Date();
 
-      if (error) throw error;
+      if (isImmediate) {
+        // Enviar mensagem imediatamente via chat
+        await sendImmediateMessage(messageData.recipient_user_id, messageData.message, currentUser.data.user?.id);
+        
+        toast({
+          title: "Mensagem enviada",
+          description: "Mensagem enviada com sucesso para o chat do usuário",
+        });
+      } else {
+        // Agendar para envio futuro
+        const { error } = await supabase
+          .from('scheduled_notifications')
+          .insert([{
+            title: messageData.subject,
+            message: messageData.message,
+            recipient_user_id: messageData.recipient_user_id,
+            scheduled_at: scheduledAt,
+            is_personal_message: true,
+            notification_type: 'chat_message', // Tipo especial para mensagens de chat
+            created_by: currentUser.data.user?.id
+          }]);
 
-      toast({
-        title: "Mensagem agendada",
-        description: "Mensagem agendada com sucesso",
-      });
+        if (error) throw error;
+
+        toast({
+          title: "Mensagem agendada",
+          description: "Mensagem agendada com sucesso para o chat do usuário",
+        });
+      }
 
       setIsMessageDialogOpen(false);
       setMessageData({
@@ -214,9 +228,64 @@ export const AdvancedUserManagement = () => {
       console.error('Error scheduling message:', error);
       toast({
         title: "Erro",
-        description: error.message || "Erro ao agendar mensagem",
+        description: error.message || "Erro ao enviar/agendar mensagem",
         variant: "destructive",
       });
+    }
+  };
+
+  const sendImmediateMessage = async (userId: string, message: string, adminId?: string) => {
+    try {
+      // Buscar ou criar ticket de suporte para o usuário
+      let ticketId;
+      
+      const { data: existingTicket } = await supabase
+        .from('support_tickets')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('status', 'open')
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+
+      if (existingTicket) {
+        ticketId = existingTicket.id;
+      } else {
+        // Criar novo ticket
+        const { data: newTicket, error: ticketError } = await supabase
+          .from('support_tickets')
+          .insert({
+            user_id: userId,
+            subject: 'Mensagem do Suporte',
+            description: 'Mensagem enviada pelo administrador',
+            status: 'open',
+            priority: 'normal',
+            assigned_to: adminId
+          })
+          .select()
+          .single();
+
+        if (ticketError) throw ticketError;
+        ticketId = newTicket.id;
+      }
+
+      // Enviar mensagem no chat
+      const { error: messageError } = await supabase
+        .from('support_messages')
+        .insert({
+          ticket_id: ticketId,
+          sender_id: adminId || 'admin',
+          message: message,
+          is_bot: false,
+          is_internal: false
+        });
+
+      if (messageError) throw messageError;
+
+      console.log(`Admin message sent to user ${userId} via chat`);
+    } catch (error) {
+      console.error('Error sending immediate message:', error);
+      throw error;
     }
   };
 
