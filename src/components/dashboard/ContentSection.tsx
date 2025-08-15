@@ -137,23 +137,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
           metadata: { content_type: contentItem.content_type }
         }]);
 
-      // Handle video content - check if it's a YouTube video
-      if (contentItem.video_url) {
-        const videoId = extractYouTubeVideoId(contentItem.video_url);
-        if (videoId) {
-          setSelectedVideo({
-            id: videoId,
-            title: contentItem.title,
-            description: contentItem.description
-          });
-          return;
-        } else {
-          // For non-YouTube videos, open in new tab
-          window.open(contentItem.video_url, '_blank');
-          return;
-        }
-      }
-
+      // Always navigate to topics first - user chooses video/materials inside topics
       // Navigate to topics - use callback if available, otherwise use programmatic navigation
       console.log('Navigating to topics with content ID:', contentItem.id);
       if (onContentSelect) {
