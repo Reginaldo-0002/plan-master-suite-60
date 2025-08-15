@@ -1,11 +1,11 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { supabase } from "@/integrations/supabase/client";
-import { Crown, Gem, Star, Play, ExternalLink, Loader2 } from "lucide-react";
+import { Crown, Gem, Star, Play, ExternalLink, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface ContentItem {
@@ -27,9 +27,16 @@ interface ContentCarouselProps {
   onContentClick?: (contentId: string) => void;
 }
 
+interface VideoPlayer {
+  id: string;
+  title: string;
+  description: string | null;
+}
+
 export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselProps) => {
   const [carouselContent, setCarouselContent] = useState<ContentItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
@@ -101,6 +108,19 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
     return planHierarchy[userPlan] >= planHierarchy[contentPlan as keyof typeof planHierarchy];
   };
 
+  const extractYouTubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
   const getPlanIcon = (plan: string) => {
     switch (plan) {
       case 'pro': return <Crown className="w-4 h-4" />;
@@ -160,7 +180,19 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
       if (onContentClick) {
         onContentClick(item.id);
       } else if (item.video_url) {
-        window.open(item.video_url, '_blank');
+        // Handle YouTube videos to embed them
+        const videoId = extractYouTubeVideoId(item.video_url);
+        if (videoId) {
+          setSelectedVideo({
+            id: videoId,
+            title: item.title,
+            description: item.description
+          });
+          return;
+        } else {
+          // For non-YouTube videos, open in new tab
+          window.open(item.video_url, '_blank');
+        }
       } else {
         toast({
           title: "Conteúdo acessado",
@@ -297,6 +329,40 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
         <CarouselPrevious className="hidden md:flex" />
         <CarouselNext className="hidden md:flex" />
       </Carousel>
+
+      {/* YouTube Video Player Dialog */}
+      <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <div className="relative">
+            <Button 
+              onClick={() => setSelectedVideo(null)}
+              className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white"
+              size="sm"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+            {selectedVideo && (
+              <div className="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${selectedVideo.id}?autoplay=1&rel=0`}
+                  title={selectedVideo.title}
+                  className="w-full h-full rounded-lg"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                />
+              </div>
+            )}
+            {selectedVideo && (
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2">{selectedVideo.title}</h3>
+                {selectedVideo.description && (
+                  <p className="text-sm text-muted-foreground">{selectedVideo.description}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

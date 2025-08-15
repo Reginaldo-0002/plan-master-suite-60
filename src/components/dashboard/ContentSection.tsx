@@ -3,8 +3,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink } from "lucide-react";
+import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Content {
@@ -29,9 +30,16 @@ interface ContentSectionProps {
   onContentSelect?: (contentId: string) => void;
 }
 
+interface VideoPlayer {
+  id: string;
+  title: string;
+  description: string | null;
+}
+
 export const ContentSection = ({ contentType, title, description, userPlan, onContentSelect }: ContentSectionProps) => {
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
@@ -129,6 +137,23 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
           metadata: { content_type: contentItem.content_type }
         }]);
 
+      // Handle video content - check if it's a YouTube video
+      if (contentItem.video_url) {
+        const videoId = extractYouTubeVideoId(contentItem.video_url);
+        if (videoId) {
+          setSelectedVideo({
+            id: videoId,
+            title: contentItem.title,
+            description: contentItem.description
+          });
+          return;
+        } else {
+          // For non-YouTube videos, open in new tab
+          window.open(contentItem.video_url, '_blank');
+          return;
+        }
+      }
+
       // Use callback function passed from parent instead of redirecting
       console.log('Navigating to topics with content ID:', contentItem.id);
       if (onContentSelect) {
@@ -201,6 +226,19 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
       return <Play className="w-4 h-4 mr-2" />;
     }
     return <ExternalLink className="w-4 h-4 mr-2" />;
+  };
+
+  const extractYouTubeVideoId = (url: string): string | null => {
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)/,
+      /youtube\.com\/watch\?.*v=([^&\n?#]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
   };
 
   if (loading) {
@@ -288,6 +326,40 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
           ))}
         </div>
       )}
+      
+      {/* YouTube Video Player Dialog */}
+      <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <div className="relative">
+            <Button 
+              onClick={() => setSelectedVideo(null)}
+              className="absolute top-2 right-2 z-10 bg-black/50 hover:bg-black/70 text-white"
+              size="sm"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+            {selectedVideo && (
+              <div className="aspect-video">
+                <iframe
+                  src={`https://www.youtube.com/embed/${selectedVideo.id}?autoplay=1&rel=0`}
+                  title={selectedVideo.title}
+                  className="w-full h-full rounded-lg"
+                  allowFullScreen
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                />
+              </div>
+            )}
+            {selectedVideo && (
+              <div className="p-4">
+                <h3 className="text-lg font-semibold mb-2">{selectedVideo.title}</h3>
+                {selectedVideo.description && (
+                  <p className="text-sm text-muted-foreground">{selectedVideo.description}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
