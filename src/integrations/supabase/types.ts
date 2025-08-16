@@ -2073,6 +2073,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_time_sessions: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          minutes: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          minutes?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          minutes?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_time_tracking: {
         Row: {
           created_at: string
@@ -2236,6 +2263,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_session_time: {
+        Args: { minutes_to_add?: number }
+        Returns: undefined
+      }
       admin_clear_all_sessions: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2360,6 +2391,15 @@ export type Database = {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_time_stats: {
+        Args: { target_user_id?: string }
+        Returns: {
+          month_minutes: number
+          today_minutes: number
+          week_minutes: number
+          year_minutes: number
+        }[]
       }
       get_user_resources: {
         Args: { topic_id_param: string }

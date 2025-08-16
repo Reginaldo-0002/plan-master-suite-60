@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -14,10 +14,12 @@ export const useAreaTracking = () => {
       });
 
       if (error) {
-        console.error('Error tracking area access:', error);
+        console.error('❌ Error tracking area access:', error);
+      } else {
+        console.log(`✅ Area access tracked: ${areaName}`);
       }
     } catch (error) {
-      console.error('Error tracking area access:', error);
+      console.error('❌ Error tracking area access:', error);
     }
   }, [user]);
 

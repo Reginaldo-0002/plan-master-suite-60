@@ -16,7 +16,7 @@ export const useUserStats = () => {
     if (!user) return;
 
     try {
-      // Buscar áreas acessadas
+      // Buscar áreas acessadas únicas
       const { data: areasData, error: areasError } = await supabase
         .from('user_area_tracking')
         .select('area_name')
@@ -34,12 +34,15 @@ export const useUserStats = () => {
 
       if (referralsError) throw referralsError;
 
-      setStats({
+      const newStats = {
         areas_accessed: uniqueAreas.size,
         total_referrals: referralsData?.length || 0
-      });
+      };
+
+      setStats(newStats);
+      console.log('📊 User stats updated:', newStats);
     } catch (error) {
-      console.error('Error fetching user stats:', error);
+      console.error('❌ Error fetching user stats:', error);
     } finally {
       setLoading(false);
     }
@@ -48,7 +51,7 @@ export const useUserStats = () => {
   useEffect(() => {
     fetchStats();
 
-    // Subscrever mudanças em tempo real
+    // Subscrever mudanças em tempo real nas áreas acessadas
     const areaChannel = supabase
       .channel('user-area-changes')
       .on(
@@ -59,10 +62,14 @@ export const useUserStats = () => {
           table: 'user_area_tracking',
           filter: `user_id=eq.${user?.id}`
         },
-        () => fetchStats()
+        () => {
+          console.log('📍 Area tracking changed, refetching stats...');
+          fetchStats();
+        }
       )
       .subscribe();
 
+    // Subscrever mudanças em tempo real nos referrals
     const referralChannel = supabase
       .channel('user-referral-changes')
       .on(
@@ -73,7 +80,10 @@ export const useUserStats = () => {
           table: 'referrals',
           filter: `referrer_id=eq.${user?.id}`
         },
-        () => fetchStats()
+        () => {
+          console.log('👥 Referral changed, refetching stats...');
+          fetchStats();
+        }
       )
       .subscribe();
 

@@ -7,6 +7,7 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAreaTracking } from "@/hooks/useAreaTracking";
 
 interface Content {
   id: string;
@@ -41,12 +42,14 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
+  const { trackAreaAccess } = useAreaTracking();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
   useEffect(() => {
     fetchContent();
-  }, [contentType]);
+    trackAreaAccess(`Content-${contentType}`);
+  }, [contentType, trackAreaAccess]);
 
   const getContentTypeForQuery = (type: string): 'product' | 'tool' | 'course' | 'tutorial' | null => {
     switch (type) {

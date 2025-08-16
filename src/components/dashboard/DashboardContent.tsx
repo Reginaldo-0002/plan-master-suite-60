@@ -10,6 +10,7 @@ import { useProfileRealtime } from "@/hooks/useProfileRealtime";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
 import { useTimeStats } from "@/hooks/useTimeStats";
 import { useUserStats } from "@/hooks/useUserStats";
+import { useSessionTimeTracking } from "@/hooks/useSessionTimeTracking";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 import { Profile } from "@/types/profile";
 import SessionInfo from "./SessionInfo";
@@ -29,6 +30,9 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   const { trackAreaAccess } = useAreaTracking();
   const { timeStats, formatTime } = useTimeStats();
   const { stats: userStats } = useUserStats();
+  
+  // Start session time tracking
+  useSessionTimeTracking();
 
   // Usar o perfil em tempo real se disponível, senão usar o perfil local
   const currentProfile = realtimeProfile || profile;

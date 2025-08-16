@@ -18,7 +18,7 @@ export const useTimeStats = (targetUserId?: string) => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase.rpc('get_user_time_stats', {
+      const { data, error } = await supabase.rpc('get_time_stats', {
         target_user_id: targetUserId || user.id
       });
 
@@ -26,9 +26,24 @@ export const useTimeStats = (targetUserId?: string) => {
 
       if (data && data.length > 0) {
         setTimeStats(data[0]);
+        console.log('⏰ Time stats loaded:', data[0]);
+      } else {
+        // Set zero stats if no data
+        setTimeStats({
+          today_minutes: 0,
+          week_minutes: 0,
+          month_minutes: 0,
+          year_minutes: 0
+        });
       }
     } catch (error) {
-      console.error('Error fetching time stats:', error);
+      console.error('❌ Error fetching time stats:', error);
+      setTimeStats({
+        today_minutes: 0,
+        week_minutes: 0,
+        month_minutes: 0,
+        year_minutes: 0
+      });
     } finally {
       setLoading(false);
     }
@@ -36,9 +51,33 @@ export const useTimeStats = (targetUserId?: string) => {
 
   useEffect(() => {
     fetchTimeStats();
+    
+    // Set up real-time listener for time session updates
+    const channel = supabase
+      .channel('user-time-sessions-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_time_sessions',
+          filter: `user_id=eq.${targetUserId || user?.id}`
+        },
+        () => {
+          console.log('⏰ Time session changed, refetching stats...');
+          fetchTimeStats();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user, targetUserId]);
 
   const formatTime = (minutes: number) => {
+    if (!minutes || minutes === 0) return '0m';
+    
     const hours = Math.floor(minutes / 60);
     const mins = minutes % 60;
     if (hours > 0) {

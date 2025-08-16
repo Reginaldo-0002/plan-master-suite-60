@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Crown, Gem, Star, CheckCircle, Loader2 } from "lucide-react";
 import { Profile } from "@/types/profile";
+import { useAreaTracking } from "@/hooks/useAreaTracking";
 
 interface PlansSectionProps {
   userPlan: 'free' | 'vip' | 'pro';
@@ -35,6 +36,7 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
   const [platformProducts, setPlatformProducts] = useState<PlatformProduct[]>([]);
   const [plansFromDB, setPlansFromDB] = useState<any[]>([]);
   const { toast } = useToast();
+  const { trackAreaAccess } = useAreaTracking();
 
   // Remove any admin-only restrictions for viewing plans
   // All users should be able to see and interact with plans
@@ -42,7 +44,8 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
   useEffect(() => {
     fetchPlatformProducts();
     fetchPlans();
-  }, []);
+    trackAreaAccess('Plans');
+  }, [trackAreaAccess]);
 
   const fetchPlans = async () => {
     try {
