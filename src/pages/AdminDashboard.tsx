@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { AdminSidebar } from "@/components/admin/AdminSidebar";
 import { AdminDashboardContent } from "@/components/admin/AdminDashboardContent";
+import { AdminUserAnalytics } from "@/components/admin/AdminUserAnalytics";
 import { AdminUserManagement } from "@/components/admin/AdminUserManagement";
 import { AdminContentManagement } from "@/components/admin/AdminContentManagement";
 import { AdminSupportManagement } from "@/components/admin/AdminSupportManagement";
@@ -26,6 +27,7 @@ import { AdminContentVisibility } from "@/components/admin/AdminContentVisibilit
 
 type ActiveAdminSection = 
   | 'overview' 
+  | 'analytics'
   | 'users' 
   | 'content' 
   | 'content-topics'
@@ -143,6 +145,8 @@ const AdminDashboard = () => {
     switch (activeSection) {
       case 'overview':
         return <AdminDashboardContent />;
+      case 'analytics':
+        return <AdminUserAnalytics />;
       case 'users':
         return <AdvancedUserManagement />;
       case 'content':

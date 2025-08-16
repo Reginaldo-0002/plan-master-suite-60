@@ -1690,6 +1690,33 @@ export type Database = {
           },
         ]
       }
+      user_area_tracking: {
+        Row: {
+          accessed_at: string
+          area_name: string
+          created_at: string
+          id: string
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          area_name: string
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          accessed_at?: string
+          area_name?: string
+          created_at?: string
+          id?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_chat_restrictions: {
         Row: {
           blocked_until: string | null
@@ -2046,6 +2073,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_time_tracking: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          minutes_spent: number
+          month_start: string
+          updated_at: string
+          user_id: string
+          week_start: string
+          year: number
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          minutes_spent?: number
+          month_start: string
+          updated_at?: string
+          user_id: string
+          week_start: string
+          year: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          minutes_spent?: number
+          month_start?: string
+          updated_at?: string
+          user_id?: string
+          week_start?: string
+          year?: number
+        }
+        Relationships: []
+      }
       webhook_endpoints: {
         Row: {
           active: boolean
@@ -2275,6 +2338,21 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_all_users_stats: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          last_activity: string
+          month_minutes: number
+          today_minutes: number
+          total_areas_accessed: number
+          total_referrals: number
+          user_id: string
+          user_name: string
+          user_plan: string
+          week_minutes: number
+          year_minutes: number
+        }[]
+      }
       get_authorized_resource_url: {
         Args: { requesting_user_id?: string; resource_id: string }
         Returns: string
@@ -2313,6 +2391,15 @@ export type Database = {
           user_id: string
           user_name: string
           user_plan: string
+        }[]
+      }
+      get_user_time_stats: {
+        Args: { target_user_id?: string }
+        Returns: {
+          month_minutes: number
+          today_minutes: number
+          week_minutes: number
+          year_minutes: number
         }[]
       }
       has_accepted_terms: {
@@ -2364,6 +2451,14 @@ export type Database = {
       }
       test_admin_notifications: {
         Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      track_area_access: {
+        Args: { area_name: string; session_uuid?: string }
+        Returns: undefined
+      }
+      track_daily_time: {
+        Args: { minutes_to_add: number }
         Returns: undefined
       }
       update_user_total_session_time: {

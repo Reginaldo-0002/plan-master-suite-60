@@ -7,6 +7,9 @@ import { Users, Clock, Target, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfileRealtime } from "@/hooks/useProfileRealtime";
+import { useAreaTracking } from "@/hooks/useAreaTracking";
+import { useTimeStats } from "@/hooks/useTimeStats";
+import { useUserStats } from "@/hooks/useUserStats";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 import { Profile } from "@/types/profile";
 import SessionInfo from "./SessionInfo";
@@ -23,6 +26,9 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   const { toast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const { profile: realtimeProfile } = useProfileRealtime(user?.id);
+  const { trackAreaAccess } = useAreaTracking();
+  const { timeStats, formatTime } = useTimeStats();
+  const { stats: userStats } = useUserStats();
 
   // Usar o perfil em tempo real se disponível, senão usar o perfil local
   const currentProfile = realtimeProfile || profile;
@@ -34,8 +40,11 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
       }
       fetchNotifications();
       fetchRecentContent();
+      
+      // Rastrear acesso ao dashboard
+      trackAreaAccess('Dashboard');
     }
-  }, [user, isAuthenticated, realtimeProfile]);
+  }, [user, isAuthenticated, realtimeProfile, trackAreaAccess]);
 
   useEffect(() => {
     if (currentProfile) {
@@ -131,11 +140,6 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
     }
   };
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = minutes % 60;
-    return `${hours}h ${mins}m`;
-  };
 
   if (!currentProfile) {
     return (
@@ -169,17 +173,17 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
         </div>
 
         {/* Stats Cards */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20 hover:shadow-lg hover:shadow-futuristic-primary/20 transition-all duration-300 animate-glow">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tempo Total</CardTitle>
+              <CardTitle className="text-sm font-medium">Tempo Hoje</CardTitle>
               <Clock className="h-4 w-4 text-futuristic-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-futuristic-electric">{formatTime(currentProfile.total_session_time || 0)}</div>
-              <p className="text-xs text-muted-foreground">
-                na plataforma
-              </p>
+              <div className="text-2xl font-bold text-futuristic-electric">
+                {timeStats ? formatTime(timeStats.today_minutes) : '0m'}
+              </div>
+              <p className="text-xs text-muted-foreground">hoje na plataforma</p>
             </CardContent>
           </Card>
           
@@ -189,10 +193,8 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
               <Target className="h-4 w-4 text-futuristic-accent" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-futuristic-accent">{currentProfile.areas_accessed || 0}</div>
-              <p className="text-xs text-muted-foreground">
-                diferentes seções
-              </p>
+              <div className="text-2xl font-bold text-futuristic-accent">{userStats.areas_accessed}</div>
+              <p className="text-xs text-muted-foreground">diferentes seções</p>
             </CardContent>
           </Card>
           
@@ -202,10 +204,69 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
               <Users className="h-4 w-4 text-futuristic-secondary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-futuristic-secondary">{referralStats.count}</div>
-              <p className="text-xs text-muted-foreground">
-                usuários indicados
-              </p>
+              <div className="text-2xl font-bold text-futuristic-secondary">{userStats.total_referrals}</div>
+              <p className="text-xs text-muted-foreground">usuários indicados</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-neon/20 hover:shadow-lg hover:shadow-futuristic-neon/20 transition-all duration-300">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Tempo Total</CardTitle>
+              <Clock className="h-4 w-4 text-futuristic-neon" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-futuristic-neon">
+                {timeStats ? formatTime(timeStats.year_minutes) : '0m'}
+              </div>
+              <p className="text-xs text-muted-foreground">este ano</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Time Period Stats */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
+            <CardHeader>
+              <CardTitle className="text-futuristic-primary flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Tempo Semanal
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-futuristic-primary">
+                {timeStats ? formatTime(timeStats.week_minutes) : '0m'}
+              </div>
+              <p className="text-muted-foreground">nesta semana</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-accent/20">
+            <CardHeader>
+              <CardTitle className="text-futuristic-accent flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Tempo Mensal
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-futuristic-accent">
+                {timeStats ? formatTime(timeStats.month_minutes) : '0m'}
+              </div>
+              <p className="text-muted-foreground">neste mês</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-secondary/20">
+            <CardHeader>
+              <CardTitle className="text-futuristic-secondary flex items-center gap-2">
+                <Clock className="h-4 w-4" />
+                Tempo Anual
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-futuristic-secondary">
+                {timeStats ? formatTime(timeStats.year_minutes) : '0m'}
+              </div>
+              <p className="text-muted-foreground">neste ano</p>
             </CardContent>
           </Card>
         </div>
