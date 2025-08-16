@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Shield, Users, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -14,6 +15,8 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [whatsapp, setWhatsapp] = useState("");
+  const [purchaseSource, setPurchaseSource] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -35,6 +38,13 @@ const Auth = () => {
     setLoading(true);
     setError("");
 
+    // Validação do nome completo
+    if (fullName.length < 14) {
+      setError("Coloque o nome completo (mínimo 14 caracteres)");
+      setLoading(false);
+      return;
+    }
+
     try {
       const redirectUrl = `${window.location.origin}/dashboard`;
       
@@ -45,6 +55,8 @@ const Auth = () => {
           emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
+            whatsapp: whatsapp,
+            purchase_source: purchaseSource,
           }
         }
       });
@@ -209,11 +221,14 @@ const Auth = () => {
                       <Input
                         id="fullName"
                         type="text"
-                        placeholder="Seu nome completo"
+                        placeholder="Seu nome completo (mínimo 14 caracteres)"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
                         required
                       />
+                      {fullName.length > 0 && fullName.length < 14 && (
+                        <p className="text-sm text-destructive">Coloque o nome completo (mínimo 14 caracteres)</p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="email">Email</Label>
@@ -237,6 +252,33 @@ const Auth = () => {
                         required
                         minLength={6}
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="whatsapp">WhatsApp</Label>
+                      <Input
+                        id="whatsapp"
+                        type="tel"
+                        placeholder="(11) 99999-9999"
+                        value={whatsapp}
+                        onChange={(e) => setWhatsapp(e.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="purchaseSource">Onde você comprou seu acesso?</Label>
+                      <Select value={purchaseSource} onValueChange={setPurchaseSource} required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione onde comprou" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mercado_pago">Mercado Pago</SelectItem>
+                          <SelectItem value="whatsapp">Pelo WhatsApp</SelectItem>
+                          <SelectItem value="kiwify">Kiwify</SelectItem>
+                          <SelectItem value="hotmart">Hotmart</SelectItem>
+                          <SelectItem value="caktor">Caktor</SelectItem>
+                          <SelectItem value="nenhuma">Nenhuma das opções</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                     <Button 
                       type="submit" 

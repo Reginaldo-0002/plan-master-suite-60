@@ -7,6 +7,8 @@ export interface Profile {
   plan: 'free' | 'vip' | 'pro';
   plan_end_date: string | null;
   pix_key: string | null;
+  whatsapp?: string | null;
+  purchase_source?: string | null;
   total_session_time: number;
   areas_accessed: number;
   referral_code: string;

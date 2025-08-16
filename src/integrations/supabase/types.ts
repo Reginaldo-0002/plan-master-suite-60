@@ -1018,6 +1018,7 @@ export type Database = {
           plan_start_date: string | null
           plan_status: string | null
           preferences: Json | null
+          purchase_source: string | null
           referral_code: string | null
           referral_earnings: number | null
           role: string | null
@@ -1025,6 +1026,7 @@ export type Database = {
           total_session_time: number | null
           updated_at: string | null
           user_id: string
+          whatsapp: string | null
         }
         Insert: {
           areas_accessed?: number | null
@@ -1041,6 +1043,7 @@ export type Database = {
           plan_start_date?: string | null
           plan_status?: string | null
           preferences?: Json | null
+          purchase_source?: string | null
           referral_code?: string | null
           referral_earnings?: number | null
           role?: string | null
@@ -1048,6 +1051,7 @@ export type Database = {
           total_session_time?: number | null
           updated_at?: string | null
           user_id: string
+          whatsapp?: string | null
         }
         Update: {
           areas_accessed?: number | null
@@ -1064,6 +1068,7 @@ export type Database = {
           plan_start_date?: string | null
           plan_status?: string | null
           preferences?: Json | null
+          purchase_source?: string | null
           referral_code?: string | null
           referral_earnings?: number | null
           role?: string | null
@@ -1071,6 +1076,7 @@ export type Database = {
           total_session_time?: number | null
           updated_at?: string | null
           user_id?: string
+          whatsapp?: string | null
         }
         Relationships: []
       }

@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +24,8 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
   const [formData, setFormData] = useState({
     full_name: profile.full_name || "",
     pix_key: profile.pix_key || "",
+    whatsapp: (profile as any).whatsapp || "",
+    purchase_source: (profile as any).purchase_source || "",
   });
   const { toast } = useToast();
   const { profile: realtimeProfile } = useProfileRealtime(profile.user_id);
@@ -34,17 +37,32 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
     setFormData({
       full_name: currentProfile.full_name || "",
       pix_key: currentProfile.pix_key || "",
+      whatsapp: (currentProfile as any).whatsapp || "",
+      purchase_source: (currentProfile as any).purchase_source || "",
     });
   }, [currentProfile]);
 
   const handleSave = async () => {
     setLoading(true);
     try {
+      // Validação do nome completo
+      if (formData.full_name.length < 14) {
+        toast({
+          title: "Erro",
+          description: "Nome completo deve ter pelo menos 14 caracteres",
+          variant: "destructive",
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
         .update({
           full_name: formData.full_name.trim() || null,
           pix_key: formData.pix_key.trim() || null,
+          whatsapp: formData.whatsapp.trim() || null,
+          purchase_source: formData.purchase_source || null,
           updated_at: new Date().toISOString()
         })
         .eq('user_id', currentProfile.user_id)
@@ -60,6 +78,8 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
       setFormData({
         full_name: data.full_name || "",
         pix_key: data.pix_key || "",
+        whatsapp: data.whatsapp || "",
+        purchase_source: data.purchase_source || "",
       });
       
       toast({
@@ -120,8 +140,38 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
                 id="full_name"
                 value={formData.full_name}
                 onChange={(e) => setFormData(prev => ({ ...prev, full_name: e.target.value }))}
-                placeholder="Digite seu nome completo"
+                placeholder="Digite seu nome completo (mínimo 14 caracteres)"
               />
+              {formData.full_name.length > 0 && formData.full_name.length < 14 && (
+                <p className="text-sm text-destructive">Nome completo deve ter pelo menos 14 caracteres</p>
+              )}
+            </div>
+
+            <div>
+              <Label htmlFor="whatsapp">WhatsApp</Label>
+              <Input
+                id="whatsapp"
+                value={formData.whatsapp}
+                onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="purchase_source">Onde você comprou seu acesso?</Label>
+              <Select value={formData.purchase_source} onValueChange={(value) => setFormData(prev => ({ ...prev, purchase_source: value }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione onde comprou" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mercado_pago">Mercado Pago</SelectItem>
+                  <SelectItem value="whatsapp">Pelo WhatsApp</SelectItem>
+                  <SelectItem value="kiwify">Kiwify</SelectItem>
+                  <SelectItem value="hotmart">Hotmart</SelectItem>
+                  <SelectItem value="caktor">Caktor</SelectItem>
+                  <SelectItem value="nenhuma">Nenhuma das opções</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
