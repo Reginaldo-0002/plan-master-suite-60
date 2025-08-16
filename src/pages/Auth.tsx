@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, Shield, Users, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import TermsOfService from "@/components/auth/TermsOfService";
+import { useTermsAcceptance } from "@/hooks/useTermsAcceptance";
 
 const Auth = () => {
   const [email, setEmail] = useState("");
@@ -19,19 +21,28 @@ const Auth = () => {
   const [purchaseSource, setPurchaseSource] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showTerms, setShowTerms] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasAcceptedTerms, loading: termsLoading } = useTermsAcceptance();
 
   useEffect(() => {
     // Check if user is already logged in
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/dashboard");
+        // Verificar se usuário aceitou os termos
+        if (!termsLoading) {
+          if (hasAcceptedTerms) {
+            navigate("/dashboard");
+          } else {
+            setShowTerms(true);
+          }
+        }
       }
     };
     checkUser();
-  }, [navigate]);
+  }, [navigate, hasAcceptedTerms, termsLoading]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,9 +82,9 @@ const Auth = () => {
       } else if (data.session) {
         toast({
           title: "Conta criada com sucesso!",
-          description: "Bem-vindo à nossa plataforma.",
+          description: "Redirecionando para aceitar os termos de uso.",
         });
-        navigate("/dashboard");
+        setShowTerms(true);
       }
     } catch (error: any) {
       setError(error.message || "Erro ao criar conta");
@@ -95,17 +106,41 @@ const Auth = () => {
 
       if (error) throw error;
 
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Redirecionando para o dashboard...",
-      });
-      navigate("/dashboard");
+      // Verificar se precisa aceitar termos
+      const { data: hasAccepted } = await supabase.rpc('has_accepted_terms');
+      if (hasAccepted) {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando para o dashboard...",
+        });
+        navigate("/dashboard");
+      } else {
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Você precisa aceitar os termos de uso.",
+        });
+        setShowTerms(true);
+      }
     } catch (error: any) {
       setError(error.message || "Erro ao fazer login");
     } finally {
       setLoading(false);
     }
   };
+
+  const handleTermsAccepted = () => {
+    setShowTerms(false);
+    toast({
+      title: "Termos aceitos com sucesso!",
+      description: "Bem-vindo à nossa plataforma.",
+    });
+    navigate("/dashboard");
+  };
+
+  // Mostrar tela de termos se necessário
+  if (showTerms) {
+    return <TermsOfService onAccept={handleTermsAccepted} />;
+  }
 
   return (
     <div className="min-h-screen bg-background-alt flex items-center justify-center p-4">

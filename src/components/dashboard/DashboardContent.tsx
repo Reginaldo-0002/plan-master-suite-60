@@ -9,6 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useProfileRealtime } from "@/hooks/useProfileRealtime";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 import { Profile } from "@/types/profile";
+import SessionInfo from "./SessionInfo";
 
 interface DashboardContentProps {
   onContentSelect?: (contentId: string) => void;
@@ -235,6 +236,9 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
             </div>
           </CardContent>
         </Card>
+
+        {/* Session Info */}
+        <SessionInfo />
 
         {/* Recent Content & Notifications */}
         <div className="grid gap-4 md:grid-cols-2">

@@ -1389,6 +1389,33 @@ export type Database = {
         }
         Relationships: []
       }
+      terms_acceptance: {
+        Row: {
+          accepted_at: string
+          created_at: string
+          id: string
+          ip_address: unknown | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          created_at?: string
+          id?: string
+          ip_address?: unknown | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       tool_status: {
         Row: {
           created_at: string
@@ -2287,6 +2314,10 @@ export type Database = {
           user_name: string
           user_plan: string
         }[]
+      }
+      has_accepted_terms: {
+        Args: { user_uuid?: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
