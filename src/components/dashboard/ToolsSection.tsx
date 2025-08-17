@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Wrench, Loader2, Crown, Gem, Star, Lock, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAreaTracking } from "@/hooks/useAreaTracking";
 
 interface Tool {
   id: string;
@@ -26,11 +27,15 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
   const [tools, setTools] = useState<Tool[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { trackAreaAccess } = useAreaTracking();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
   useEffect(() => {
     fetchTools();
+    
+    // Track area access when accessing tools section
+    trackAreaAccess('Tools');
     
     // Real-time updates para tool_status
     const channel = supabase
@@ -47,7 +52,7 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [trackAreaAccess]);
 
   const fetchTools = async () => {
     try {
@@ -111,6 +116,9 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
 
   const handleAccessTool = async (tool: Tool) => {
     try {
+      // Track area access when accessing tool
+      trackAreaAccess(`Tool-${tool.id}`);
+      
       // Log da tentativa de acesso à ferramenta
       await supabase
         .from('content_analytics')

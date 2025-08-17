@@ -148,6 +148,9 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
       return;
     }
 
+    // Track area access when opening a resource
+    trackAreaAccess(`Resource-${resource.id}`);
+
     // Handle YouTube videos to embed them
     if (resource.resource_type === 'video' && (resource.resource_url.includes('youtube.com') || resource.resource_url.includes('youtu.be'))) {
       const videoId = extractYouTubeVideoId(resource.resource_url);

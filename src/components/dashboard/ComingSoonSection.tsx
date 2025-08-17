@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Clock, Star, Bell, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAreaTracking } from "@/hooks/useAreaTracking";
 import { TopicsRouter } from "@/components/navigation/TopicsRouter";
 
 interface UpcomingRelease {
@@ -27,6 +28,7 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
   const [loading, setLoading] = useState(true);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const { toast } = useToast();
+  const { trackAreaAccess } = useAreaTracking();
 
   useEffect(() => {
     fetchUpcomingReleases();
@@ -102,6 +104,9 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
         return;
       }
 
+      // Track area access when accessing upcoming content
+      trackAreaAccess(`UpcomingContent-${content.id}`);
+      
       setSelectedContentId(content.id);
     } catch (error) {
       console.error('Error accessing content:', error);
