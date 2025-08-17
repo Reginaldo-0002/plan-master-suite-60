@@ -7,6 +7,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 import { supabase } from "@/integrations/supabase/client";
 import { Crown, Gem, Star, Play, ExternalLink, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAreaTracking } from "@/hooks/useAreaTracking";
 
 interface ContentItem {
   id: string;
@@ -38,6 +39,7 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
+  const { trackAreaAccess } = useAreaTracking();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
@@ -166,11 +168,16 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
     }
 
     try {
+      const currentUserId = (await supabase.auth.getUser()).data.user?.id;
+      
+      // Track area access when accessing content from carousel
+      trackAreaAccess(`Carousel-${item.id}`);
+      
       // Log user interaction
       await supabase
         .from('user_interactions')
         .insert([{
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: currentUserId,
           interaction_type: 'carousel_click',
           target_type: 'content',
           target_id: item.id,

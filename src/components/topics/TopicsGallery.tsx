@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Play, FileText, Link, Unlock, Eye, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAreaTracking } from "@/hooks/useAreaTracking";
 
 interface Topic {
   id: string;
@@ -48,6 +49,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
   const [resourcesLoading, setResourcesLoading] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
+  const { trackAreaAccess } = useAreaTracking();
 
   useEffect(() => {
     fetchTopics();
@@ -129,6 +131,8 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
 
   const openTopic = (topic: Topic) => {
     setSelectedTopic(topic);
+    // Track area access when opening a topic
+    trackAreaAccess(`Topic-${topic.id}`);
     fetchResources(topic.id);
   };
 

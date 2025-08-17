@@ -30,6 +30,9 @@ interface User {
   updated_at: string;
   is_blocked?: boolean;
   user_roles?: Array<{ role: string }>;
+  whatsapp?: string | null;
+  purchase_source?: string | null; 
+  user_email?: string | null;
 }
 
 export const AdminUserManagement = () => {
@@ -580,6 +583,15 @@ export const AdminUserManagement = () => {
                 </div>
                 <div>
                   <strong>Áreas Acessadas:</strong> {selectedUser.areas_accessed}
+                </div>
+                <div className="col-span-2">
+                  <strong>Email:</strong> {selectedUser.user_email || "Não informado"}
+                </div>
+                <div className="col-span-2">
+                  <strong>WhatsApp:</strong> {selectedUser.whatsapp || "Não informado"}
+                </div>
+                <div className="col-span-2">
+                  <strong>Plataforma de Compra:</strong> {selectedUser.purchase_source || "Não informado"}
                 </div>
                 <div className="col-span-2">
                   <strong>PIX:</strong> {selectedUser.pix_key || "Não informado"}

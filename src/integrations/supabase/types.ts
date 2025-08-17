@@ -2361,12 +2361,15 @@ export type Database = {
           id: string
           pix_key: string
           plan: Database["public"]["Enums"]["user_plan"]
+          purchase_source: string
           referral_code: string
           referral_earnings: number
           role: Database["public"]["Enums"]["app_role"]
           total_session_time: number
           updated_at: string
+          user_email: string
           user_id: string
+          whatsapp: string
         }[]
       }
       get_all_users_stats: {

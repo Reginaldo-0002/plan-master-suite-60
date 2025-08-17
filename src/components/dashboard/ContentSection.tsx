@@ -129,11 +129,16 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
     }
 
     try {
+      const currentUserId = (await supabase.auth.getUser()).data.user?.id;
+      
+      // Track area access when accessing content
+      trackAreaAccess(`Content-${contentItem.id}`);
+      
       // Log user interaction
       await supabase
         .from('user_interactions')
         .insert([{
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: currentUserId,
           interaction_type: 'content_access',
           target_type: 'content',
           target_id: contentItem.id,
