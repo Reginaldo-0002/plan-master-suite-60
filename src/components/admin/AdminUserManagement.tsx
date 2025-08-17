@@ -504,37 +504,50 @@ export const AdminUserManagement = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        onClick={() => openDetailsDialog(user)}
+                        onClick={() => {
+                          console.log('Opening details for user:', user);
+                          openDetailsDialog(user);
+                        }}
+                        className="bg-blue-50 hover:bg-blue-100 text-blue-600 border-blue-200"
+                        title="Ver detalhes do usuário"
                       >
-                        <Eye className="w-4 h-4" />
+                        <Eye className="w-4 h-4 mr-1" />
+                        Detalhes
                       </Button>
                       
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => openMessageDialog(user)}
+                        className="bg-green-50 hover:bg-green-100 text-green-600 border-green-200"
+                        title="Enviar mensagem"
                       >
-                        <MessageSquare className="w-4 h-4" />
+                        <MessageSquare className="w-4 h-4 mr-1" />
+                        Mensagem
                       </Button>
                       
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => blockUser(user.user_id)}
-                        className="text-orange-600 hover:text-orange-700"
+                        className="bg-orange-50 hover:bg-orange-100 text-orange-600 border-orange-200"
+                        title="Bloquear usuário"
                       >
-                        <Ban className="w-4 h-4" />
+                        <Ban className="w-4 h-4 mr-1" />
+                        Bloquear
                       </Button>
                       
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => deleteUser(user.user_id)}
-                        className="text-red-600 hover:text-red-700"
+                        className="bg-red-50 hover:bg-red-100 text-red-600 border-red-200"
+                        title="Excluir usuário"
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 mr-1" />
+                        Excluir
                       </Button>
                     </div>
                   </TableCell>
