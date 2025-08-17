@@ -27,12 +27,64 @@ export const AdminUserAnalytics = () => {
 
   const fetchUserStats = async () => {
     try {
-      const { data, error } = await supabase.rpc('get_all_users_stats');
+      setLoading(true);
+      
+      // Buscar perfis dos usuários
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setUserStats(data || []);
+      if (profilesError) throw profilesError;
+
+      // Para cada usuário, buscar estatísticas
+      const statsPromises = (profiles || []).map(async (profile) => {
+        // Buscar áreas acessadas
+        const { data: areas } = await supabase
+          .from('user_area_tracking')
+          .select('area_name')
+          .eq('user_id', profile.user_id);
+
+        const uniqueAreas = new Set(areas?.map(item => item.area_name) || []);
+
+        // Buscar indicações
+        const { data: referrals } = await supabase
+          .from('referrals')
+          .select('id')
+          .eq('referrer_id', profile.user_id);
+
+        // Buscar estatísticas de tempo usando a função RPC
+        const { data: timeStats } = await supabase.rpc('get_time_stats', {
+          target_user_id: profile.user_id
+        });
+
+        const stats = timeStats?.[0] || {
+          today_minutes: 0,
+          week_minutes: 0,
+          month_minutes: 0,
+          year_minutes: 0
+        };
+
+        return {
+          user_id: profile.user_id,
+          user_name: profile.full_name || 'Usuário sem nome',
+          user_plan: profile.plan || 'free',
+          total_areas_accessed: uniqueAreas.size,
+          total_referrals: referrals?.length || 0,
+          today_minutes: stats.today_minutes || 0,
+          week_minutes: stats.week_minutes || 0,
+          month_minutes: stats.month_minutes || 0,
+          year_minutes: stats.year_minutes || 0,
+          last_activity: profile.last_activity
+        };
+      });
+
+      const userStatsData = await Promise.all(statsPromises);
+      setUserStats(userStatsData);
+      
+      console.log('✅ User stats loaded:', userStatsData);
     } catch (error: any) {
-      console.error('Error fetching user stats:', error);
+      console.error('❌ Error fetching user stats:', error);
       toast({
         title: "Erro",
         description: "Erro ao carregar estatísticas dos usuários",
@@ -48,10 +100,39 @@ export const AdminUserAnalytics = () => {
 
     // Subscrever mudanças em tempo real
     const channel = supabase
-      .channel('admin-user-stats')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_time_tracking' }, fetchUserStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'user_area_tracking' }, fetchUserStats)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'referrals' }, fetchUserStats)
+      .channel('admin-user-stats-realtime')
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'user_time_sessions' 
+      }, () => {
+        console.log('📊 Time session changed, refreshing stats...');
+        fetchUserStats();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'user_area_tracking' 
+      }, () => {
+        console.log('📍 Area tracking changed, refreshing stats...');
+        fetchUserStats();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'referrals' 
+      }, () => {
+        console.log('👥 Referral changed, refreshing stats...');
+        fetchUserStats();
+      })
+      .on('postgres_changes', { 
+        event: '*', 
+        schema: 'public', 
+        table: 'profiles' 
+      }, () => {
+        console.log('👤 Profile changed, refreshing stats...');
+        fetchUserStats();
+      })
       .subscribe();
 
     return () => {
