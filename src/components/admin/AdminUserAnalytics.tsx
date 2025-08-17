@@ -28,61 +28,10 @@ export const AdminUserAnalytics = () => {
   const fetchUserStats = async () => {
     try {
       setLoading(true);
-      
-      // Buscar perfis dos usuários
-      const { data: profiles, error: profilesError } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (profilesError) throw profilesError;
-
-      // Para cada usuário, buscar estatísticas
-      const statsPromises = (profiles || []).map(async (profile) => {
-        // Buscar áreas acessadas
-        const { data: areas } = await supabase
-          .from('user_area_tracking')
-          .select('area_name')
-          .eq('user_id', profile.user_id);
-
-        const uniqueAreas = new Set(areas?.map(item => item.area_name) || []);
-
-        // Buscar indicações
-        const { data: referrals } = await supabase
-          .from('referrals')
-          .select('id')
-          .eq('referrer_id', profile.user_id);
-
-        // Buscar estatísticas de tempo usando a função RPC
-        const { data: timeStats } = await supabase.rpc('get_time_stats', {
-          target_user_id: profile.user_id
-        });
-
-        const stats = timeStats?.[0] || {
-          today_minutes: 0,
-          week_minutes: 0,
-          month_minutes: 0,
-          year_minutes: 0
-        };
-
-        return {
-          user_id: profile.user_id,
-          user_name: profile.full_name || 'Usuário sem nome',
-          user_plan: profile.plan || 'free',
-          total_areas_accessed: uniqueAreas.size,
-          total_referrals: referrals?.length || 0,
-          today_minutes: stats.today_minutes || 0,
-          week_minutes: stats.week_minutes || 0,
-          month_minutes: stats.month_minutes || 0,
-          year_minutes: stats.year_minutes || 0,
-          last_activity: profile.last_activity
-        };
-      });
-
-      const userStatsData = await Promise.all(statsPromises);
-      setUserStats(userStatsData);
-      
-      console.log('✅ User stats loaded:', userStatsData);
+      const { data, error } = await supabase.rpc('get_all_users_stats');
+      if (error) throw error;
+      setUserStats(data || []);
+      console.log('✅ User stats loaded:', data);
     } catch (error: any) {
       console.error('❌ Error fetching user stats:', error);
       toast({

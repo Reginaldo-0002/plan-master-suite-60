@@ -58,7 +58,7 @@ const AdminDashboard = () => {
       
       if (hash && hash !== activeSection) {
         const validSections: ActiveAdminSection[] = [
-          'overview', 'users', 'content', 'content-topics', 'content-visibility', 'support', 'notifications', 'tools', 
+          'overview', 'analytics', 'users', 'content', 'content-topics', 'content-visibility', 'support', 'notifications', 'tools', 
           'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'integrations', 'security'
         ];
         
@@ -101,7 +101,7 @@ const AdminDashboard = () => {
   const handleSectionChange = (tab: string) => {
     console.log('AdminDashboard - Section change:', tab);
     const validSections: ActiveAdminSection[] = [
-      'overview', 'users', 'content', 'content-topics', 'content-visibility', 'support', 'notifications', 'tools', 
+      'overview', 'analytics', 'users', 'content', 'content-topics', 'content-visibility', 'support', 'notifications', 'tools', 
       'financial', 'rules', 'team', 'referral-settings', 'upcoming-releases', 'carousel', 'integrations', 'security'
     ];
     
