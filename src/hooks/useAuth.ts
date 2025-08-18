@@ -32,7 +32,7 @@ export const useAuth = () => {
 
     // THEN check for existing session
     const getInitialSession = async () => {
-      await handleAsyncError(async () => {
+      try {
         const { data: { session } } = await supabase.auth.getSession();
         console.log('Initial session:', session?.user?.id);
         setAuthState({
@@ -40,24 +40,27 @@ export const useAuth = () => {
           session,
           loading: false
         });
-      }, {
-        title: "Erro ao verificar sessão",
-        showToast: false
-      });
+      } catch (error) {
+        console.error('Session check error:', error);
+        setAuthState({
+          user: null,
+          session: null,
+          loading: false
+        });
+      }
     };
 
     getInitialSession();
 
     return () => subscription.unsubscribe();
-  }, [handleAsyncError]);
+  }, []);
 
   const signOut = async () => {
-    await handleAsyncError(async () => {
+    try {
       await supabase.auth.signOut();
-    }, {
-      title: "Erro ao sair",
-      showToast: true
-    });
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
 
   return {
