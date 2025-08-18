@@ -106,21 +106,12 @@ const Auth = () => {
 
       if (error) throw error;
 
-      // Verificar se precisa aceitar termos
-      const { data: hasAccepted } = await supabase.rpc('has_accepted_terms');
-      if (hasAccepted) {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Redirecionando para o dashboard...",
-        });
-        navigate("/dashboard");
-      } else {
-        toast({
-          title: "Login realizado com sucesso!",
-          description: "Você precisa aceitar os termos de uso.",
-        });
-        setShowTerms(true);
-      }
+      // Navegar imediatamente; o Dashboard controla termos e perfil
+      toast({
+        title: "Login realizado com sucesso!",
+        description: "Redirecionando...",
+      });
+      navigate("/dashboard");
     } catch (error: any) {
       setError(error.message || "Erro ao fazer login");
     } finally {

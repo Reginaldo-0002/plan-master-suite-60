@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { useAreaTracking } from "@/hooks/useAreaTracking";
 import { useTimeStats } from "@/hooks/useTimeStats";
 import { useUserStats } from "@/hooks/useUserStats";
 import { useSessionTimeTracking } from "@/hooks/useSessionTimeTracking";
+import { useOptimizedQueries } from "@/hooks/useOptimizedQueries";
 import { MagneticBackground } from "@/components/background/MagneticBackground";
 import { Profile } from "@/types/profile";
 import SessionInfo from "./SessionInfo";
@@ -30,6 +31,7 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   const { trackAreaAccess } = useAreaTracking();
   const { timeStats, formatTime } = useTimeStats();
   const { stats: userStats } = useUserStats();
+  const { fetchWithErrorHandling } = useOptimizedQueries();
   
   // Start session time tracking
   useSessionTimeTracking();
@@ -37,13 +39,24 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   // Usar o perfil em tempo real se disponível, senão usar o perfil local
   const currentProfile = realtimeProfile || profile;
 
+  // Memoizar dados para cache
+  const memoizedData = useMemo(() => ({
+    notifications,
+    recentContent,
+    referralStats
+  }), [notifications, recentContent, referralStats]);
+
   useEffect(() => {
     if (user && isAuthenticated) {
       if (!realtimeProfile) {
         fetchProfile();
       }
-      fetchNotifications();
-      fetchRecentContent();
+      
+      // Buscar dados em paralelo com cache
+      Promise.all([
+        fetchNotifications(),
+        fetchRecentContent()
+      ]);
       
       // Rastrear acesso ao dashboard
       trackAreaAccess('Dashboard');
@@ -74,54 +87,61 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   };
 
   const fetchNotifications = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-      setNotifications(data || []);
-    } catch (error) {
-      console.error('Error fetching notifications:', error);
+    const data = await fetchWithErrorHandling(
+      async () => {
+        const result = await supabase
+          .from('notifications')
+          .select('id, title, message, type, created_at')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(5);
+        return { data: result.data, error: result.error };
+      },
+      'Erro ao carregar notificações'
+    );
+    
+    if (data) {
+      setNotifications(data);
     }
   };
 
   const fetchRecentContent = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('content')
-        .select('*')
-        .eq('is_active', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
-
-      if (error) throw error;
-      setRecentContent(data || []);
-    } catch (error) {
-      console.error('Error fetching recent content:', error);
+    const data = await fetchWithErrorHandling(
+      async () => {
+        const result = await supabase
+          .from('content')
+          .select('id, title, content_type, required_plan, created_at')
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(3);
+        return { data: result.data, error: result.error };
+      },
+      'Erro ao carregar conteúdo'
+    );
+    
+    if (data) {
+      setRecentContent(data);
     }
   };
 
   const fetchReferralStats = async () => {
     if (!currentProfile) return;
 
-    try {
-      const { data, error } = await supabase
-        .from('referrals')
-        .select('*')
-        .eq('referrer_id', currentProfile.user_id);
-
-      if (error) throw error;
-      
-      const count = data?.length || 0;
-      const earnings = data?.reduce((sum: number, ref: any) => sum + (ref.bonus_amount || 0), 0) || 0;
-      
+    const data = await fetchWithErrorHandling(
+      async () => {
+        const result = await supabase
+          .from('referrals')
+          .select('bonus_amount')
+          .eq('referrer_id', currentProfile.user_id);
+        return { data: result.data, error: result.error };
+      },
+      'Erro ao carregar estatísticas de indicação'
+    );
+    
+    if (data) {
+      const count = data.length || 0;
+      const earnings = data.reduce((sum: number, ref: any) => sum + (ref.bonus_amount || 0), 0) || 0;
       setReferralStats({ count, earnings });
-    } catch (error) {
-      console.error('Error fetching referral stats:', error);
     }
   };
 
