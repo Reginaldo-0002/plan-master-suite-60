@@ -5,8 +5,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useRoleCheck } from "@/hooks/useRoleCheck";
 import { useProfileRealtime } from "@/hooks/useProfileRealtime";
-import { useTermsAcceptance } from "@/hooks/useTermsAcceptance";
-import TermsOfService from "@/components/auth/TermsOfService";
 import { Sidebar } from "@/components/layout/Sidebar";
 import { DashboardContent } from "@/components/dashboard/DashboardContent";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
@@ -35,7 +33,6 @@ export default function Dashboard() {
   const { user, isAuthenticated } = useAuth();
   const { role: userRole, loading: roleLoading } = useRoleCheck();
   const { profile: realtimeProfile } = useProfileRealtime(user?.id);
-  const { hasAcceptedTerms, loading: termsLoading } = useTermsAcceptance();
   
   // Initialize webhook integration for real-time payment updates
   const { isListening: webhookListening } = useWebhookIntegration(user?.email);
@@ -43,9 +40,9 @@ export default function Dashboard() {
   // Usar o perfil em tempo real se disponível, senão usar o perfil local
   const currentProfile = realtimeProfile || profile;
 
-  // Check authentication and terms acceptance
+  // Check authentication
   useEffect(() => {
-    console.log('Dashboard useEffect - Auth state:', { user: !!user, isAuthenticated, hasAcceptedTerms, termsLoading });
+    console.log('Dashboard useEffect - Auth state:', { user: !!user, isAuthenticated });
     
     if (!isAuthenticated && !loading) {
       console.log('Not authenticated, redirecting to auth');
@@ -53,18 +50,10 @@ export default function Dashboard() {
       return;
     }
 
-    // Se o usuário está autenticado mas não aceitou os termos, apenas mostramos a tela de termos
-    if (isAuthenticated && !termsLoading && hasAcceptedTerms === false) {
-      console.log('User authenticated but has not accepted terms, showing TermsOfService');
-      // Garantir que o loading pare para renderizar os termos
-      setLoading(false);
-      return;
-    }
-
-    if (user && !profile && !realtimeProfile && hasAcceptedTerms === true) {
+    if (user && !profile && !realtimeProfile) {
       fetchProfile();
     }
-  }, [user, isAuthenticated, navigate, profile, realtimeProfile, hasAcceptedTerms, termsLoading]);
+  }, [user, isAuthenticated, navigate, profile, realtimeProfile]);
 
   // Get initial section from URL and handle content parameter
   useEffect(() => {
@@ -229,21 +218,7 @@ export default function Dashboard() {
     setProfile(updatedProfile);
   };
 
-  const handleTermsAccepted = () => {
-    toast({
-      title: "Termos aceitos com sucesso!",
-      description: "Bem-vindo à nossa plataforma.",
-    });
-    // Força uma nova verificação dos termos
-    window.location.reload();
-  };
-
-  // Mostrar termos se usuário não aceitou
-  if (isAuthenticated && !termsLoading && hasAcceptedTerms === false) {
-    return <TermsOfService onAccept={handleTermsAccepted} />;
-  }
-
-  if (loading || !user || roleLoading || termsLoading) {
+  if (loading || !user || roleLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex items-center gap-2">
