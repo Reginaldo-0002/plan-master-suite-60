@@ -28,21 +28,31 @@ const Auth = () => {
   const { hasAcceptedTerms, loading: termsLoading } = useTermsAcceptance();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkUser = async () => {
+    // Listener de autenticação para navegar assim que o Supabase confirmar o login
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session && !termsLoading) {
+        if (hasAcceptedTerms) {
+          navigate("/dashboard");
+        } else {
+          setShowTerms(true);
+        }
+      }
+    });
+
+    // Verifica sessão inicial (ordem após registrar o listener)
+    const checkInitialSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        // Verificar se usuário aceitou os termos
-        if (!termsLoading) {
-          if (hasAcceptedTerms) {
-            navigate("/dashboard");
-          } else {
-            setShowTerms(true);
-          }
+      if (session && !termsLoading) {
+        if (hasAcceptedTerms) {
+          navigate("/dashboard");
+        } else {
+          setShowTerms(true);
         }
       }
     };
-    checkUser();
+
+    checkInitialSession();
+    return () => subscription.unsubscribe();
   }, [navigate, hasAcceptedTerms, termsLoading]);
 
   const handleSignUp = async (e: React.FormEvent) => {
@@ -119,9 +129,25 @@ const Auth = () => {
     } catch (error: any) {
       const raw = error?.message || "Erro ao fazer login";
       if (/(timeout|retries|504|request failed)/i.test(raw)) {
-        setError(
-          "Serviço de autenticação temporariamente indisponível (504). Tente novamente em alguns segundos."
-        );
+        setError("Instabilidade detectada (504). Tentando novamente...");
+        try {
+          const { data, error: secondError } = await SupabaseWrapper.withTimeout(
+            () =>
+              supabase.auth.signInWithPassword({
+                email,
+                password,
+              }),
+            { timeout: 16000, retries: 1, retryDelay: 1400 }
+          );
+          if (secondError) throw secondError;
+          toast({ title: "Login realizado com sucesso!", description: "Redirecionando..." });
+          navigate("/dashboard");
+          return;
+        } catch (e2: any) {
+          setError(
+            "Serviço de autenticação temporariamente indisponível (504). Tente novamente em alguns segundos."
+          );
+        }
       } else if (/Invalid login credentials/i.test(raw)) {
         setError("Email ou senha inválidos. Verifique e tente novamente.");
       } else {
