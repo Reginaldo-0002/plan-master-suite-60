@@ -158,7 +158,7 @@ export const AdminTeamManagement = () => {
     try {
       console.log('Removing member from team:', userId);
       
-      // Remover da tabela user_roles ou definir como 'user'
+      // Usar upsert com onConflict corrigido
       const { error } = await supabase
         .from('user_roles')
         .upsert({ 

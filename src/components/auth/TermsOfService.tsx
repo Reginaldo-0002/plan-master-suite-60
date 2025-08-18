@@ -17,6 +17,55 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
   const [userIP, setUserIP] = useState<string>("");
   const { toast } = useToast();
 
+  // Desabilitar teclas de atalho que podem contornar a leitura
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Desabilitar F5, Ctrl+R, Ctrl+Z, Escape, etc.
+      if (
+        e.key === 'F5' ||
+        e.key === 'Escape' ||
+        (e.ctrlKey && (e.key === 'r' || e.key === 'z' || e.key === 'w')) ||
+        (e.altKey && e.key === 'F4')
+      ) {
+        e.preventDefault();
+        toast({
+          title: "Ação não permitida",
+          description: "Você deve ler e aceitar os termos para continuar.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Desabilitar botão voltar do navegador
+    const handlePopState = (e: PopStateEvent) => {
+      e.preventDefault();
+      window.history.pushState(null, '', window.location.href);
+      toast({
+        title: "Ação não permitida",
+        description: "Você deve aceitar os termos para continuar.",
+        variant: "destructive",
+      });
+    };
+
+    // Desabilitar context menu (botão direito)
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('popstate', handlePopState);
+    window.addEventListener('contextmenu', handleContextMenu);
+
+    // Adicionar estado ao histórico para bloquear volta
+    window.history.pushState(null, '', window.location.href);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [toast]);
+
   useEffect(() => {
     // Atualizar horário em tempo real
     const timer = setInterval(() => {
