@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { SupabaseWrapper } from "@/lib/supabaseWrapper";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -99,21 +100,33 @@ const Auth = () => {
     setError("");
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data, error } = await SupabaseWrapper.withTimeout(
+        () =>
+          supabase.auth.signInWithPassword({
+            email,
+            password,
+          }),
+        { timeout: 12000, retries: 2, retryDelay: 1200 }
+      );
 
       if (error) throw error;
 
-      // Navegar imediatamente; o Dashboard controla termos e perfil
       toast({
         title: "Login realizado com sucesso!",
         description: "Redirecionando...",
       });
       navigate("/dashboard");
     } catch (error: any) {
-      setError(error.message || "Erro ao fazer login");
+      const raw = error?.message || "Erro ao fazer login";
+      if (/(timeout|retries|504|request failed)/i.test(raw)) {
+        setError(
+          "Serviço de autenticação temporariamente indisponível (504). Tente novamente em alguns segundos."
+        );
+      } else if (/Invalid login credentials/i.test(raw)) {
+        setError("Email ou senha inválidos. Verifique e tente novamente.");
+      } else {
+        setError(raw);
+      }
     } finally {
       setLoading(false);
     }
