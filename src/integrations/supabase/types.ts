@@ -2497,7 +2497,7 @@ export type Database = {
         Returns: undefined
       }
       track_area_access: {
-        Args: { area_name: string; session_uuid?: string }
+        Args: { area_name_param: string; session_uuid?: string }
         Returns: undefined
       }
       track_daily_time: {

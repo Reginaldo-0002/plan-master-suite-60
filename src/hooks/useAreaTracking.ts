@@ -10,7 +10,7 @@ export const useAreaTracking = () => {
 
     try {
       const { error } = await supabase.rpc('track_area_access', {
-        area_name: areaName
+        area_name_param: areaName
       });
 
       if (error) {

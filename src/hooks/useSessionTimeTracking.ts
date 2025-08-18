@@ -14,41 +14,22 @@ export const useSessionTimeTracking = () => {
     startTimeRef.current = new Date();
     console.log('⏰ Starting session time tracking for user:', user.id);
 
-    // Track 1 minute immediately (for testing)
-    const trackInitialTime = async () => {
-      try {
-        const { error } = await supabase.rpc('add_session_time', {
-          minutes_to_add: 1
-        });
-        
-        if (error) {
-          console.error('❌ Error tracking initial session time:', error);
-        } else {
-          console.log('✅ Initial session time tracked: 1 minute');
-        }
-      } catch (error) {
-        console.error('❌ Error tracking initial session time:', error);
-      }
-    };
-
-    trackInitialTime();
-
-    // Set up interval to track time every minute
+    // Set up interval to track time every 5 minutes (mais realista)
     intervalRef.current = setInterval(async () => {
       try {
         const { error } = await supabase.rpc('add_session_time', {
-          minutes_to_add: 1
+          minutes_to_add: 5 // Adiciona 5 minutos a cada 5 minutos reais
         });
         
         if (error) {
           console.error('❌ Error adding session time:', error);
         } else {
-          console.log('✅ Session time tracked: +1 minute');
+          console.log('✅ Session time tracked: +5 minutes');
         }
       } catch (error) {
         console.error('❌ Error adding session time:', error);
       }
-    }, 60000); // Every minute
+    }, 300000); // Every 5 minutes (300000ms)
 
     // Cleanup on unmount or user change
     return () => {

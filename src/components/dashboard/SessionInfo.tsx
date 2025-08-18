@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Clock, Globe, Monitor } from "lucide-react";
+import { Clock, Globe, Monitor, MapPin, Users, Trophy } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTimeStats } from "@/hooks/useTimeStats";
+import { useAreasAccessedStats } from "@/hooks/useAreasAccessedStats";
+import { useReferralStats } from "@/hooks/useReferralStats";
 
 interface SessionData {
   ip_address: string | null;
@@ -17,6 +20,9 @@ const SessionInfo = () => {
   const { user } = useAuth();
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const { timeStats, formatTime } = useTimeStats();
+  const { areasAccessed } = useAreasAccessedStats();
+  const { referralStats } = useReferralStats();
 
   useEffect(() => {
     // Atualizar horário em tempo real
@@ -108,6 +114,56 @@ const SessionInfo = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Estatísticas de Tempo */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-blue-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Hoje</p>
+              <p className="text-sm font-medium">{timeStats ? formatTime(timeStats.today_minutes) : '0m'}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-green-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Semana</p>
+              <p className="text-sm font-medium">{timeStats ? formatTime(timeStats.week_minutes) : '0m'}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Clock className="w-4 h-4 text-purple-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Mês</p>
+              <p className="text-sm font-medium">{timeStats ? formatTime(timeStats.month_minutes) : '0m'}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-yellow-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Ano</p>
+              <p className="text-sm font-medium">{timeStats ? formatTime(timeStats.year_minutes) : '0m'}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Estatísticas de Atividade */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-orange-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Áreas Acessadas</p>
+              <p className="text-sm font-medium">{areasAccessed}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Users className="w-4 h-4 text-indigo-500" />
+            <div>
+              <p className="text-xs text-muted-foreground">Indicações</p>
+              <p className="text-sm font-medium">{referralStats.total_referrals}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Horário atual */}
         <div className="flex items-center gap-3">
           <Clock className="w-4 h-4 text-muted-foreground" />
