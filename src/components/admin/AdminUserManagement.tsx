@@ -441,7 +441,6 @@ export const AdminUserManagement = () => {
                 <TableHead>Usuário</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>WhatsApp</TableHead>
-                <TableHead>Plataforma</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead>Função</TableHead>
                 <TableHead>Tempo de Uso</TableHead>
@@ -478,11 +477,6 @@ export const AdminUserManagement = () => {
                   <TableCell>
                     <div className="text-sm text-foreground">
                       {user.whatsapp || "Não informado"}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="text-sm text-foreground">
-                      {user.purchase_source || "Não informado"}
                     </div>
                   </TableCell>
                   <TableCell>

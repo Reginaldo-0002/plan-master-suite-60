@@ -224,10 +224,7 @@ const SessionInfo = () => {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Tempo Online</span>
               <span className="text-sm text-muted-foreground">
-                {sessionData.is_active && sessionData.session_start 
-                  ? formatDuration(Math.max(sessionData.duration_minutes, Math.floor((Date.now() - new Date(sessionData.session_start).getTime()) / 1000 / 60)))
-                  : formatDuration(sessionData.duration_minutes)
-                }
+                {formatDuration(sessionData.duration_minutes)}
               </span>
             </div>
           </>
