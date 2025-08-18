@@ -107,29 +107,53 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
     setIsAccepting(true);
     
     try {
-      const { error } = await supabase
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      if (!userId) {
+        toast({ title: "Sessão expirada", description: "Faça login novamente para continuar.", variant: "destructive" });
+        return;
+      }
+
+      // Evitar duplicidade: verifica se já existe registro
+      const { data: existing, error: selectError } = await supabase
+        .from('terms_acceptance')
+        .select('id')
+        .eq('user_id', userId)
+        .limit(1)
+        .maybeSingle();
+
+      if (existing && !selectError) {
+        localStorage.setItem(`termsAccepted:${userId}`, 'true');
+        toast({ title: "Termos já aceitos", description: "Prosseguindo para a plataforma." });
+        onAccept();
+        return;
+      }
+
+      const { error: insertError } = await supabase
         .from('terms_acceptance')
         .insert({
-          user_id: (await supabase.auth.getUser()).data.user?.id,
+          user_id: userId,
           ip_address: userIP,
           user_agent: navigator.userAgent,
         });
 
-      if (error) throw error;
+      if (insertError) {
+        // Se houver conflito/duplicidade, prosseguir mesmo assim
+        const msg = String(insertError.message || '').toLowerCase();
+        if (msg.includes('duplicate') || msg.includes('unique')) {
+          localStorage.setItem(`termsAccepted:${userId}`, 'true');
+          onAccept();
+          return;
+        }
+        throw insertError;
+      }
 
-      toast({
-        title: "Termos aceitos com sucesso!",
-        description: "Bem-vindo à nossa plataforma.",
-      });
-
+      localStorage.setItem(`termsAccepted:${userId}`, 'true');
+      toast({ title: "Termos aceitos com sucesso!", description: "Bem-vindo à nossa plataforma." });
       onAccept();
     } catch (error: any) {
       console.error('Erro ao aceitar termos:', error);
-      toast({
-        title: "Erro ao aceitar termos",
-        description: "Tente novamente em alguns instantes.",
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao aceitar termos", description: "Tente novamente em alguns instantes.", variant: "destructive" });
     } finally {
       setIsAccepting(false);
     }

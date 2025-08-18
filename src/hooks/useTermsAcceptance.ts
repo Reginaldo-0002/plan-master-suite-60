@@ -15,13 +15,29 @@ export const useTermsAcceptance = () => {
       }
 
       try {
-        const { data, error } = await supabase.rpc('has_accepted_terms');
+        // Primeiro, tenta usar cache local para evitar flicker
+        const cacheKey = `termsAccepted:${user.id}`;
+        const cached = localStorage.getItem(cacheKey);
+        if (cached === 'true') {
+          setHasAcceptedTerms(true);
+        }
+
+        // Fallback robusto: consultar diretamente a tabela (evita depender de RPC inexistente)
+        const { data, error } = await supabase
+          .from('terms_acceptance')
+          .select('id')
+          .eq('user_id', user.id)
+          .limit(1)
+          .maybeSingle();
         
         if (error) {
-          console.error('Erro ao verificar aceitação de termos:', error);
-          setHasAcceptedTerms(false);
+          console.error('Erro ao verificar aceitação de termos (select):', error);
+          // Mantém estado do cache, se houver; caso contrário, assume false
+          setHasAcceptedTerms((prev) => (prev !== null ? prev : false));
         } else {
-          setHasAcceptedTerms(data || false);
+          const accepted = !!data;
+          setHasAcceptedTerms(accepted);
+          if (accepted) localStorage.setItem(cacheKey, 'true');
         }
       } catch (error) {
         console.error('Erro ao verificar aceitação de termos:', error);
@@ -46,8 +62,23 @@ export const useTermsAcceptance = () => {
             filter: `user_id=eq.${user.id}`
           },
           (payload) => {
-            console.log('Terms acceptance update received:', payload);
+            console.log('Terms acceptance INSERT received:', payload);
             setHasAcceptedTerms(true);
+            localStorage.setItem(`termsAccepted:${user.id}`, 'true');
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'terms_acceptance',
+            filter: `user_id=eq.${user.id}`
+          },
+          (payload) => {
+            console.log('Terms acceptance UPDATE received:', payload);
+            setHasAcceptedTerms(true);
+            localStorage.setItem(`termsAccepted:${user.id}`, 'true');
           }
         )
         .subscribe();
@@ -81,10 +112,16 @@ export const useTermsAcceptance = () => {
         });
 
       if (error) {
+        const msg = String(error.message || '').toLowerCase();
+        if (msg.includes('duplicate') || msg.includes('unique')) {
+          localStorage.setItem(`termsAccepted:${user.id}`, 'true');
+          setHasAcceptedTerms(true);
+          return true;
+        }
         console.error('Erro ao aceitar termos:', error);
         return false;
       }
-
+      localStorage.setItem(`termsAccepted:${user.id}`, 'true');
       setHasAcceptedTerms(true);
       return true;
     } catch (error) {
