@@ -439,6 +439,8 @@ export const AdminUserManagement = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Usuário</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>WhatsApp</TableHead>
                 <TableHead>Plano</TableHead>
                 <TableHead>Função</TableHead>
                 <TableHead>Tempo de Uso</TableHead>
@@ -465,6 +467,16 @@ export const AdminUserManagement = () => {
                           {user.user_id.slice(0, 8)}...
                         </div>
                       </div>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-foreground">
+                      {user.user_email || "Não informado"}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm text-foreground">
+                      {user.whatsapp || "Não informado"}
                     </div>
                   </TableCell>
                   <TableCell>

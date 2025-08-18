@@ -23,6 +23,8 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
     email: "",
     password: "",
     full_name: "",
+    whatsapp: "",
+    purchase_source: "",
     plan: "free" as "free" | "vip" | "pro",
     role: "user" as "user" | "admin" | "moderator"
   });
@@ -46,7 +48,7 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
 
       // Validate form
       if (!formData.email || !formData.password || !formData.full_name) {
-        throw new Error("Todos os campos são obrigatórios");
+        throw new Error("Email, senha e nome completo são obrigatórios");
       }
 
       // Validate email format
@@ -63,6 +65,8 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
       // Sanitize inputs
       const sanitizedFullName = sanitizeInput(formData.full_name);
       const sanitizedEmail = sanitizeInput(formData.email);
+      const sanitizedWhatsapp = formData.whatsapp ? sanitizeInput(formData.whatsapp) : null;
+      const sanitizedPurchaseSource = formData.purchase_source ? sanitizeInput(formData.purchase_source) : null;
 
       // Create user with regular signup (will be confirmed automatically)
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -70,7 +74,9 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
         password: formData.password,
         options: {
           data: {
-            full_name: sanitizedFullName
+            full_name: sanitizedFullName,
+            whatsapp: sanitizedWhatsapp,
+            purchase_source: sanitizedPurchaseSource
           }
         }
       });
@@ -89,6 +95,8 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
         .insert({
           user_id: authData.user.id,
           full_name: sanitizedFullName,
+          whatsapp: sanitizedWhatsapp,
+          purchase_source: sanitizedPurchaseSource,
           plan: formData.plan
         });
 
@@ -121,6 +129,8 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
         email: "",
         password: "",
         full_name: "",
+        whatsapp: "",
+        purchase_source: "",
         plan: "free",
         role: "user"
       });
@@ -190,6 +200,38 @@ export const CreateUserDialog = ({ isOpen, onClose, onUserCreated }: CreateUserD
               placeholder="Nome do usuário"
               required
             />
+          </div>
+
+          <div>
+            <Label htmlFor="whatsapp">WhatsApp</Label>
+            <Input
+              id="whatsapp"
+              type="text"
+              value={formData.whatsapp}
+              onChange={(e) => handleInputChange("whatsapp", e.target.value)}
+              placeholder="(11) 99999-9999"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="purchase_source">Onde você comprou</Label>
+            <Select value={formData.purchase_source} onValueChange={(value) => handleInputChange("purchase_source", value)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a plataforma" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Não informado</SelectItem>
+                <SelectItem value="hotmart">Hotmart</SelectItem>
+                <SelectItem value="kiwify">Kiwify</SelectItem>
+                <SelectItem value="monetizze">Monetizze</SelectItem>
+                <SelectItem value="eduzz">Eduzz</SelectItem>
+                <SelectItem value="braip">Braip</SelectItem>
+                <SelectItem value="perfectpay">PerfectPay</SelectItem>
+                <SelectItem value="mercadopago">Mercado Pago</SelectItem>
+                <SelectItem value="stripe">Stripe</SelectItem>
+                <SelectItem value="outro">Outro</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
