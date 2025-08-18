@@ -53,11 +53,12 @@ export default function Dashboard() {
       return;
     }
 
-    // Se o usuário está autenticado mas não aceitou os termos, apenas mostramos a tela de termos
+    // Se o usuário está autenticado mas não aceitou os termos, redirecionar para auth
     if (isAuthenticated && !termsLoading && hasAcceptedTerms === false) {
-      console.log('User authenticated but has not accepted terms, showing TermsOfService');
-      // Garantir que o loading pare para renderizar os termos
-      setLoading(false);
+      console.log('User authenticated but has not accepted terms, redirecting to auth');
+      // Fazer logout para forçar nova aceitação dos termos
+      supabase.auth.signOut();
+      navigate('/auth');
       return;
     }
 
