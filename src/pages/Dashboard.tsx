@@ -234,8 +234,8 @@ export default function Dashboard() {
       title: "Termos aceitos com sucesso!",
       description: "Bem-vindo à nossa plataforma.",
     });
-    // Força uma nova verificação dos termos
-    window.location.reload();
+    // Apenas navegar - os termos já foram aceitos
+    window.location.href = '/dashboard';
   };
 
   // Mostrar termos se usuário não aceitou

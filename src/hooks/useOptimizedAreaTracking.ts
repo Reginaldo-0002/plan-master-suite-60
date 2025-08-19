@@ -21,13 +21,28 @@ export const useOptimizedAreaTracking = () => {
       if ('requestIdleCallback' in window) {
         requestIdleCallback(async () => {
           try {
-            await supabase.rpc('track_area_access', {
-              area_name_param: areaName
-            });
-            console.log(`✅ Area access tracked: ${areaName}`);
+            // Otimizado: insert sem ON CONFLICT para melhor performance
+            const { error } = await supabase
+              .from('user_area_tracking')
+              .insert({
+                user_id: user.id,
+                area_name: areaName
+              });
+            
+            if (error) {
+              // Se for erro de duplicata, apenas logar sem retentar
+              if (error.code === '23505') { // Unique violation
+                console.log(`✅ Area already tracked: ${areaName}`);
+              } else {
+                console.error('❌ Error tracking area access:', error);
+                // Remove from tracked on non-duplicate error so it can be retried
+                trackedAreas.current.delete(areaName);
+              }
+            } else {
+              console.log(`✅ Area access tracked: ${areaName}`);
+            }
           } catch (error) {
             console.error('❌ Error tracking area access:', error);
-            // Remove from tracked on error so it can be retried
             trackedAreas.current.delete(areaName);
           } finally {
             pendingTrackingRef.current.delete(areaName);
@@ -37,10 +52,23 @@ export const useOptimizedAreaTracking = () => {
         // Fallback for browsers without requestIdleCallback
         setTimeout(async () => {
           try {
-            await supabase.rpc('track_area_access', {
-              area_name_param: areaName
-            });
-            console.log(`✅ Area access tracked: ${areaName}`);
+            const { error } = await supabase
+              .from('user_area_tracking')
+              .insert({
+                user_id: user.id,
+                area_name: areaName
+              });
+            
+            if (error) {
+              if (error.code === '23505') {
+                console.log(`✅ Area already tracked: ${areaName}`);
+              } else {
+                console.error('❌ Error tracking area access:', error);
+                trackedAreas.current.delete(areaName);
+              }
+            } else {
+              console.log(`✅ Area access tracked: ${areaName}`);
+            }
           } catch (error) {
             console.error('❌ Error tracking area access:', error);
             trackedAreas.current.delete(areaName);

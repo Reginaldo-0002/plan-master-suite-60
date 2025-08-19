@@ -47,40 +47,12 @@ export const SupportChat = ({ profile }: SupportChatProps) => {
   const { restriction, loading: restrictionLoading, checkRestrictions } = useChatRestrictions(profile?.user_id);
   const { visibility, loading: visibilityLoading } = useChatVisibility(profile?.user_id);
 
-  // Debug logs para SupportChat
-  console.log('🔍 [SupportChat] Componente renderizado para usuário:', profile?.user_id);
-  console.log('🔒 [SupportChat] Restriction state:', restriction);
-  console.log('👁️ [SupportChat] Visibility state:', visibility);
-  console.log('⏳ [SupportChat] Loading states - restriction:', restrictionLoading, 'visibility:', visibilityLoading);
-  console.log('👑 [SupportChat] User roles - Admin:', isAdmin, 'Moderator:', isModerator);
+  // Debug reduzido - apenas essencial
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🔍 [SupportChat] Admin:', isAdmin, 'Restriction:', restriction?.isBlocked, 'Visibility:', visibility?.isHidden);
+  }
 
-  // Forçar verificação de restrições quando o componente for aberto
-  useEffect(() => {
-    console.log('🔄 [SupportChat] Forçando verificação de restrições...');
-    console.log('🔄 [SupportChat] Profile:', profile?.user_id);
-    console.log('🔄 [SupportChat] checkRestrictions função:', !!checkRestrictions);
-    console.log('🔄 [SupportChat] isAdmin:', isAdmin, 'isModerator:', isModerator);
-    
-    if (checkRestrictions) {
-      checkRestrictions();
-    }
-    
-    if (isOpen && checkRestrictions) {
-      console.log('🔄 [SupportChat] Chat aberto - forçando verificação de restrições');
-      setTimeout(() => checkRestrictions(), 1000);
-    }
-    
-    // Forçar uma nova verificação a cada 2 segundos para garantir que mudanças sejam detectadas rapidamente
-    const interval = setInterval(() => {
-      if (checkRestrictions) {
-        console.log('⏰ [SupportChat] Verificação periódica de restrições (forçada)');
-        checkRestrictions();
-      }
-    }, 2000);
-    
-    return () => clearInterval(interval);
-  }, [isOpen, checkRestrictions, profile?.user_id, isAdmin, isModerator]);
-
+  // Remover verificações desnecessárias e otimizar performance
   useEffect(() => {
     if (isOpen && !ticketId) {
       createOrGetTicket();

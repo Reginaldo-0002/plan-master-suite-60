@@ -30,19 +30,14 @@ export const useChatRestrictions = (userId: string | undefined) => {
 
     // Se ainda está carregando roles, aguardar
     if (roleLoading) {
-      console.log('⏳ [useChatRestrictions] Aguardando carregamento de roles...');
       return;
     }
 
     try {
       const currentTime = new Date();
-      console.log('🔍 [useChatRestrictions] Verificando restrições para usuário:', userId);
-      console.log('👑 [useChatRestrictions] User roles - Admin:', isAdmin, 'Moderator:', isModerator);
-      console.log('🕒 [useChatRestrictions] Hora atual:', currentTime.toISOString());
 
       // ===== VERIFICAR SE É ADMIN/MODERATOR PRIMEIRO =====
       if (isAdmin || isModerator) {
-        console.log('👑 [useChatRestrictions] Usuário é admin/moderator - Chat sempre liberado');
         setRestriction({
           isBlocked: false,
           reason: null,
@@ -50,36 +45,25 @@ export const useChatRestrictions = (userId: string | undefined) => {
         });
         setLoading(false);
         return;
-      } else {
-        console.log('👤 [useChatRestrictions] Usuário comum - verificando restrições globais');
       }
 
       // ===== VERIFICAR BLOQUEIO GLOBAL PRIMEIRO (PRIORITÁRIO) =====
-      console.log('🌐 [useChatRestrictions] Verificando bloqueio global...');
       const { data: globalSettings, error: globalError } = await supabase
         .from('admin_settings')
         .select('*')
         .eq('key', 'global_chat_settings')
         .maybeSingle();
-
-      console.log('📊 [useChatRestrictions] Configurações globais raw:', globalSettings);
-      console.log('❌ [useChatRestrictions] Erro na consulta global:', globalError);
       
-      if (globalError) {
+      if (globalError && process.env.NODE_ENV === 'development') {
         console.error('❌ [useChatRestrictions] Erro ao buscar configurações globais:', globalError);
       }
 
-      // Forçar verificação do bloqueio global - agora que a configuração existe no BD
+      // Forçar verificação do bloqueio global
       if (globalSettings && globalSettings.chat_blocked_until) {
         const blockUntil = new Date(globalSettings.chat_blocked_until);
         const isGloballyBlocked = blockUntil > currentTime;
         
-        console.log(`⏰ [useChatRestrictions] Bloqueio global até: ${blockUntil.toISOString()}`);
-        console.log(`⏰ [useChatRestrictions] Agora: ${currentTime.toISOString()}`);
-        console.log(`🔒 [useChatRestrictions] É maior que agora? ${blockUntil.getTime()} > ${currentTime.getTime()} = ${isGloballyBlocked}`);
-        
         if (isGloballyBlocked) {
-          console.log('🚫 [useChatRestrictions] APLICANDO BLOQUEIO GLOBAL para usuário NON-ADMIN:', userId);
           setRestriction({
             isBlocked: true,
             reason: (globalSettings.value as any)?.reason || 'Chat bloqueado globalmente pelo administrador',
@@ -87,35 +71,27 @@ export const useChatRestrictions = (userId: string | undefined) => {
           });
           setLoading(false);
           return;
-        } else {
-          console.log('✅ [useChatRestrictions] Bloqueio global expirado');
         }
-      } else {
-        console.log('✅ [useChatRestrictions] Nenhum bloqueio global encontrado ou não configurado');
       }
 
       // ===== VERIFICAR BLOQUEIO ESPECÍFICO DO USUÁRIO =====
-      console.log('👤 [useChatRestrictions] Verificando bloqueios específicos do usuário...');
       const { data: userRestrictions, error: userError } = await supabase
         .from('user_chat_restrictions')
         .select('id, blocked_until, reason, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (userError) {
+      if (userError && process.env.NODE_ENV === 'development') {
         console.error('❌ [useChatRestrictions] Erro ao verificar restrições do usuário:', userError);
       }
 
       // Verificar se há alguma restrição ativa
       let activeUserRestriction = null;
       if (userRestrictions && userRestrictions.length > 0) {
-        console.log(`📋 [useChatRestrictions] Encontradas ${userRestrictions.length} restrições do usuário`);
         for (const restriction of userRestrictions) {
           if (restriction.blocked_until) {
             const blockUntil = new Date(restriction.blocked_until);
             const isActive = blockUntil > currentTime;
-            
-            console.log(`📅 [useChatRestrictions] Restrição ${restriction.id}: até ${blockUntil.toISOString()}, ativa: ${isActive}`);
             
             if (isActive) {
               activeUserRestriction = restriction;
@@ -123,13 +99,10 @@ export const useChatRestrictions = (userId: string | undefined) => {
             }
           }
         }
-      } else {
-        console.log('✅ [useChatRestrictions] Nenhuma restrição específica encontrada');
       }
 
       if (activeUserRestriction) {
         const blockUntil = new Date(activeUserRestriction.blocked_until);
-        console.log('🚫 [useChatRestrictions] APLICANDO BLOQUEIO ESPECÍFICO para usuário:', userId);
         setRestriction({
           isBlocked: true,
           reason: activeUserRestriction.reason || 'Você foi temporariamente bloqueado do chat',
@@ -140,14 +113,15 @@ export const useChatRestrictions = (userId: string | undefined) => {
       }
 
       // ===== NENHUM BLOQUEIO ATIVO =====
-      console.log('✅ [useChatRestrictions] NENHUM BLOQUEIO ATIVO - Chat liberado para usuário:', userId);
       setRestriction({
         isBlocked: false,
         reason: null,
         blockedUntil: null
       });
     } catch (error) {
-      console.error('💥 [useChatRestrictions] Erro ao verificar restrições:', error);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('💥 [useChatRestrictions] Erro ao verificar restrições:', error);
+      }
       // Em caso de erro, bloquear por segurança
       setRestriction({
         isBlocked: true,
@@ -160,29 +134,19 @@ export const useChatRestrictions = (userId: string | undefined) => {
   }, [userId, isAdmin, isModerator, roleLoading]);
 
   useEffect(() => {
-    console.log('🔄 [useChatRestrictions] useEffect executado - userId:', userId, 'roleLoading:', roleLoading);
-    
     // Não executar se ainda está carregando roles
     if (roleLoading) {
-      console.log('⏳ [useChatRestrictions] Aguardando carregamento de roles...');
       return;
     }
     
-    // Executar verificação inicial
+    // Executar verificação inicial apenas uma vez
     checkRestrictions();
 
-    // Forçar verificação periódica a cada 3 segundos para garantir detecção em tempo real
-    const periodicCheck = setInterval(() => {
-      console.log('🔄 [useChatRestrictions] Verificação periódica automática');
-      checkRestrictions();
-    }, 3000);
-
     if (!userId) {
-      clearInterval(periodicCheck);
       return;
     }
 
-    // Real-time subscription para mudanças nas restrições do usuário
+    // Real-time subscription para mudanças nas restrições do usuário (otimizado)
     const restrictionsChannel = supabase
       .channel(`user-restrictions-${userId}`)
       .on(
@@ -194,13 +158,12 @@ export const useChatRestrictions = (userId: string | undefined) => {
           filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('🔄 [useChatRestrictions] User restrictions change detected - rechecking...');
           setTimeout(checkRestrictions, 500);
         }
       )
       .subscribe();
 
-    // Real-time subscription para configurações globais
+    // Real-time subscription para configurações globais (otimizado)
     const adminChannel = supabase
       .channel(`admin-settings-${userId}`)
       .on(
@@ -212,14 +175,12 @@ export const useChatRestrictions = (userId: string | undefined) => {
           filter: 'key=eq.global_chat_settings'
         },
         (payload) => {
-          console.log('🔄 [useChatRestrictions] Admin settings change detected - rechecking immediately...');
           setTimeout(checkRestrictions, 100);
         }
       )
       .subscribe();
 
     return () => {
-      clearInterval(periodicCheck);
       supabase.removeChannel(restrictionsChannel);
       supabase.removeChannel(adminChannel);
     };
