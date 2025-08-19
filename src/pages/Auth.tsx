@@ -28,8 +28,9 @@ const Auth = () => {
   const { hasAcceptedTerms, loading: termsLoading } = useTermsAcceptance();
 
   useEffect(() => {
-    // Listener de autenticação para navegar assim que o Supabase confirmar o login
+    // Listener otimizado - evita duplicatas no useAuth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Aguarda termos carregarem antes de navegar
       if (session && !termsLoading) {
         if (hasAcceptedTerms) {
           navigate("/dashboard");
@@ -39,19 +40,6 @@ const Auth = () => {
       }
     });
 
-    // Verifica sessão inicial (ordem após registrar o listener)
-    const checkInitialSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session && !termsLoading) {
-        if (hasAcceptedTerms) {
-          navigate("/dashboard");
-        } else {
-          setShowTerms(true);
-        }
-      }
-    };
-
-    checkInitialSession();
     return () => subscription.unsubscribe();
   }, [navigate, hasAcceptedTerms, termsLoading]);
 

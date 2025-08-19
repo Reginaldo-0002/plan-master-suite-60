@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -6,38 +6,44 @@ export const useTermsAcceptance = () => {
   const { user, loading: authLoading } = useAuth();
   const [hasAcceptedTerms, setHasAcceptedTerms] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
+  const checkedRef = useRef(false);
+  const channelRef = useRef<any>(null);
 
   useEffect(() => {
     const checkTermsAcceptance = async () => {
-      if (!user || authLoading) {
+      if (!user || authLoading || checkedRef.current) {
         setLoading(false);
         return;
       }
 
+      checkedRef.current = true;
+
       try {
-        // Primeiro, tenta usar cache local para evitar flicker
+        // Cache otimizado para evitar queries desnecessárias
         const cacheKey = `termsAccepted:${user.id}`;
         const cached = localStorage.getItem(cacheKey);
         if (cached === 'true') {
           setHasAcceptedTerms(true);
+          setLoading(false);
+          return; // Para aqui se já tem no cache
         }
 
-        // Fallback robusto: consultar diretamente a tabela (evita depender de RPC inexistente)
+        // Query única com maybeSingle() - muito mais eficiente
         const { data, error } = await supabase
           .from('terms_acceptance')
           .select('id')
           .eq('user_id', user.id)
-          .limit(1)
           .maybeSingle();
         
         if (error) {
-          console.error('Erro ao verificar aceitação de termos (select):', error);
-          // Mantém estado do cache, se houver; caso contrário, assume false
-          setHasAcceptedTerms((prev) => (prev !== null ? prev : false));
+          console.error('Erro ao verificar termos:', error);
+          setHasAcceptedTerms(false);
         } else {
           const accepted = !!data;
           setHasAcceptedTerms(accepted);
-          if (accepted) localStorage.setItem(cacheKey, 'true');
+          if (accepted) {
+            localStorage.setItem(cacheKey, 'true');
+          }
         }
       } catch (error) {
         console.error('Erro ao verificar aceitação de termos:', error);
@@ -49,44 +55,32 @@ export const useTermsAcceptance = () => {
 
     checkTermsAcceptance();
 
-    // Configurar listener de realtime para atualizações de aceitação de termos
-    if (user) {
-      const channel = supabase
-        .channel('terms_acceptance_updates')
+    // Real-time listener otimizado - apenas 1 canal por usuário
+    if (user && !channelRef.current) {
+      channelRef.current = supabase
+        .channel(`terms_user_${user.id}`)
         .on(
           'postgres_changes',
           {
-            event: 'INSERT',
+            event: '*', // Escuta qualquer mudança
             schema: 'public',
             table: 'terms_acceptance',
             filter: `user_id=eq.${user.id}`
           },
-          (payload) => {
-            console.log('Terms acceptance INSERT received:', payload);
-            setHasAcceptedTerms(true);
-            localStorage.setItem(`termsAccepted:${user.id}`, 'true');
-          }
-        )
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'terms_acceptance',
-            filter: `user_id=eq.${user.id}`
-          },
-          (payload) => {
-            console.log('Terms acceptance UPDATE received:', payload);
+          () => {
             setHasAcceptedTerms(true);
             localStorage.setItem(`termsAccepted:${user.id}`, 'true');
           }
         )
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
+
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
   }, [user, authLoading]);
 
   const acceptTerms = async () => {

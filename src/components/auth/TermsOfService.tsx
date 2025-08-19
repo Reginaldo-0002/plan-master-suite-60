@@ -14,77 +14,40 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
   const [hasReadAll, setHasReadAll] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [userIP, setUserIP] = useState<string>("");
+  const [userIP, setUserIP] = useState<string>("Carregando...");
   const { toast } = useToast();
 
-  // Desabilitar teclas de atalho que podem contornar a leitura
+  // Cache do IP para evitar múltiplas requests à API externa
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Desabilitar F5, Ctrl+R, Ctrl+Z, Escape, etc.
-      if (
-        e.key === 'F5' ||
-        e.key === 'Escape' ||
-        (e.ctrlKey && (e.key === 'r' || e.key === 'z' || e.key === 'w')) ||
-        (e.altKey && e.key === 'F4')
-      ) {
-        e.preventDefault();
-        toast({
-          title: "Ação não permitida",
-          description: "Você deve ler e aceitar os termos para continuar.",
-          variant: "destructive",
-        });
+    const getCachedIP = async () => {
+      const cachedIP = localStorage.getItem('userIP');
+      const cacheTime = localStorage.getItem('userIPTime');
+      const now = Date.now();
+      
+      // Usar cache se tem menos de 1 hora
+      if (cachedIP && cacheTime && (now - parseInt(cacheTime)) < 3600000) {
+        setUserIP(cachedIP);
+        return;
       }
-    };
 
-    // Desabilitar botão voltar do navegador
-    const handlePopState = (e: PopStateEvent) => {
-      e.preventDefault();
-      window.history.pushState(null, '', window.location.href);
-      toast({
-        title: "Ação não permitida",
-        description: "Você deve aceitar os termos para continuar.",
-        variant: "destructive",
-      });
-    };
-
-    // Desabilitar context menu (botão direito)
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('popstate', handlePopState);
-    window.addEventListener('contextmenu', handleContextMenu);
-
-    // Adicionar estado ao histórico para bloquear volta
-    window.history.pushState(null, '', window.location.href);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('popstate', handlePopState);
-      window.removeEventListener('contextmenu', handleContextMenu);
-    };
-  }, [toast]);
-
-  useEffect(() => {
-    // Atualizar horário em tempo real
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-
-    // Obter IP do usuário
-    const getUserIP = async () => {
       try {
         const response = await fetch('https://api.ipify.org?format=json');
         const data = await response.json();
         setUserIP(data.ip);
+        localStorage.setItem('userIP', data.ip);
+        localStorage.setItem('userIPTime', now.toString());
       } catch (error) {
         console.error('Erro ao obter IP:', error);
         setUserIP('IP não disponível');
       }
     };
 
-    getUserIP();
+    getCachedIP();
+
+    // Timer otimizado - atualiza apenas quando necessário
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // 30 segundos é suficiente
 
     return () => clearInterval(timer);
   }, []);
@@ -114,21 +77,7 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
         return;
       }
 
-      // Evitar duplicidade: verifica se já existe registro
-      const { data: existing, error: selectError } = await supabase
-        .from('terms_acceptance')
-        .select('id')
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle();
-
-      if (existing && !selectError) {
-        localStorage.setItem(`termsAccepted:${userId}`, 'true');
-        toast({ title: "Termos já aceitos", description: "Prosseguindo para a plataforma." });
-        onAccept();
-        return;
-      }
-
+      // Insert otimizado com handling de duplicata via unique constraint
       const { error: insertError } = await supabase
         .from('terms_acceptance')
         .insert({
@@ -138,10 +87,11 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
         });
 
       if (insertError) {
-        // Se houver conflito/duplicidade, prosseguir mesmo assim
+        // Unique constraint violation significa que já foi aceito
         const msg = String(insertError.message || '').toLowerCase();
-        if (msg.includes('duplicate') || msg.includes('unique')) {
+        if (msg.includes('duplicate') || msg.includes('unique') || msg.includes('violates')) {
           localStorage.setItem(`termsAccepted:${userId}`, 'true');
+          toast({ title: "Termos já aceitos", description: "Prosseguindo para a plataforma." });
           onAccept();
           return;
         }
@@ -149,11 +99,11 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
       }
 
       localStorage.setItem(`termsAccepted:${userId}`, 'true');
-      toast({ title: "Termos aceitos com sucesso!", description: "Bem-vindo à nossa plataforma." });
+      toast({ title: "Termos aceitos!", description: "Bem-vindo à plataforma." });
       onAccept();
     } catch (error: any) {
       console.error('Erro ao aceitar termos:', error);
-      toast({ title: "Erro ao aceitar termos", description: "Tente novamente em alguns instantes.", variant: "destructive" });
+      toast({ title: "Erro", description: "Tente novamente.", variant: "destructive" });
     } finally {
       setIsAccepting(false);
     }
