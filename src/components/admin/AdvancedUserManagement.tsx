@@ -361,24 +361,24 @@ export const AdvancedUserManagement = () => {
     }
   };
 
-const openMessageDialog = (user: User) => {
-  setSelectedUser(user);
-  setMessageData({
-    ...messageData,
-    recipient_user_id: user.user_id
-  });
-  setIsMessageDialogOpen(true);
-};
+  const openMessageDialog = (user: User) => {
+    setSelectedUser(user);
+    setMessageData({
+      ...messageData,
+      recipient_user_id: user.user_id
+    });
+    setIsMessageDialogOpen(true);
+  };
 
-const openDetailsDialog = (user: User) => {
-  setSelectedUser(user);
-  setIsDetailsDialogOpen(true);
-};
+  const openDetailsDialog = (user: User) => {
+    setSelectedUser(user);
+    setIsDetailsDialogOpen(true);
+  };
 
-const openPlanDialog = (user: User) => {
-  setSelectedUser(user);
-  setIsPlanDialogOpen(true);
-};
+  const openPlanDialog = (user: User) => {
+    setSelectedUser(user);
+    setIsPlanDialogOpen(true);
+  };
 
   const filteredUsers = users.filter(user =>
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
