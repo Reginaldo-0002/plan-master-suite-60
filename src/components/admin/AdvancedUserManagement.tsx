@@ -38,6 +38,14 @@ interface User {
   auto_renewal: boolean;
   created_at: string;
   updated_at: string;
+  // Additional registration fields
+  whatsapp?: string | null;
+  purchase_source?: string | null;
+  pix_key?: string | null;
+  total_session_time?: number;
+  areas_accessed?: number;
+  referral_code?: string;
+  referral_earnings?: number;
 }
 
 interface MessageData {
@@ -63,6 +71,7 @@ export const AdvancedUserManagement = () => {
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
   const [isNewUserDialogOpen, setIsNewUserDialogOpen] = useState(false);
   const [isPlanDialogOpen, setIsPlanDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [messageData, setMessageData] = useState<MessageData>({
     subject: "",
     message: "",
@@ -352,29 +361,41 @@ export const AdvancedUserManagement = () => {
     }
   };
 
-  const openMessageDialog = (user: User) => {
-    setSelectedUser(user);
-    setMessageData({
-      ...messageData,
-      recipient_user_id: user.user_id
-    });
-    setIsMessageDialogOpen(true);
-  };
+const openMessageDialog = (user: User) => {
+  setSelectedUser(user);
+  setMessageData({
+    ...messageData,
+    recipient_user_id: user.user_id
+  });
+  setIsMessageDialogOpen(true);
+};
 
-  const openPlanDialog = (user: User) => {
-    setSelectedUser(user);
-    setIsPlanDialogOpen(true);
-  };
+const openDetailsDialog = (user: User) => {
+  setSelectedUser(user);
+  setIsDetailsDialogOpen(true);
+};
+
+const openPlanDialog = (user: User) => {
+  setSelectedUser(user);
+  setIsPlanDialogOpen(true);
+};
 
   const filteredUsers = users.filter(user =>
     user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     user.user_id.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Não definido";
-    return new Date(dateString).toLocaleDateString('pt-BR');
-  };
+const formatDate = (dateString: string | null) => {
+  if (!dateString) return "Não definido";
+  return new Date(dateString).toLocaleDateString('pt-BR');
+};
+
+const formatTime = (minutes?: number) => {
+  if (minutes === undefined || minutes === null) return '0h 0m';
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${h}h ${m}m`;
+};
 
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
@@ -482,37 +503,47 @@ export const AdvancedUserManagement = () => {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openMessageDialog(user)}
-                        title="Enviar/Agendar Mensagem"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                      </Button>
-                      
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openPlanDialog(user)}
-                        title="Editar Plano"
-                      >
-                        <CalendarDays className="w-4 h-4" />
-                      </Button>
-                      
-                      {user.plan !== 'free' && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => manualExpireUser(user.user_id)}
-                          className="text-red-600 hover:text-red-700"
-                          title="Expirar Manualmente"
-                        >
-                          <AlertTriangle className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
+<div className="flex items-center gap-2">
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => openDetailsDialog(user)}
+    title="Ver Detalhes"
+  >
+    <Eye className="w-4 h-4 mr-1" />
+    Detalhes
+  </Button>
+
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => openMessageDialog(user)}
+    title="Enviar/Agendar Mensagem"
+  >
+    <MessageSquare className="w-4 h-4" />
+  </Button>
+  
+  <Button
+    variant="ghost"
+    size="sm"
+    onClick={() => openPlanDialog(user)}
+    title="Editar Plano"
+  >
+    <CalendarDays className="w-4 h-4" />
+  </Button>
+  
+  {user.plan !== 'free' && (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={() => manualExpireUser(user.user_id)}
+      className="text-red-600 hover:text-red-700"
+      title="Expirar Manualmente"
+    >
+      <AlertTriangle className="w-4 h-4" />
+    </Button>
+  )}
+</div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -521,7 +552,115 @@ export const AdvancedUserManagement = () => {
         </CardContent>
       </Card>
 
-      {/* New User Dialog */}
+{/* Detalhes do Usuário */}
+<Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>Detalhes do Usuário</DialogTitle>
+      <DialogDescription>Visualize todas as informações cadastradas</DialogDescription>
+    </DialogHeader>
+    {selectedUser && (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+          <Avatar className="h-16 w-16">
+            <AvatarImage src={selectedUser.avatar_url || ""} />
+            <AvatarFallback className="text-xl">
+              {selectedUser.full_name ? selectedUser.full_name.charAt(0).toUpperCase() : "U"}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold">{selectedUser.full_name || "Sem nome"}</h3>
+            <p className="text-sm text-muted-foreground">ID: {selectedUser.user_id}</p>
+            <div className="flex gap-2 mt-2">
+              <Badge className={getPlanBadgeColor(selectedUser.plan)}>
+                {selectedUser.plan.toUpperCase()}
+              </Badge>
+              <Badge className={getStatusBadgeColor(selectedUser.plan_status)}>
+                {selectedUser.plan_status}
+              </Badge>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="font-semibold text-base border-b pb-2">📞 Contato</h4>
+          <div className="grid grid-cols-1 gap-3">
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">WhatsApp</label>
+              <p className="text-sm font-medium">{selectedUser.whatsapp || "Não informado"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="font-semibold text-base border-b pb-2">🛒 Compra</h4>
+          <div className="grid grid-cols-1 gap-3">
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Plataforma de Compra</label>
+              <p className="text-sm font-medium">{selectedUser.purchase_source || "Não informado"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="font-semibold text-base border-b pb-2">💰 Financeiro</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Chave PIX</label>
+              <p className="text-sm font-medium">{selectedUser.pix_key || "Não informado"}</p>
+            </div>
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Ganhos Indicação</label>
+              <p className="text-sm font-medium">R$ {(selectedUser.referral_earnings || 0).toFixed(2)}</p>
+            </div>
+            <div className="p-3 bg-background border rounded-lg md:col-span-2">
+              <label className="text-sm font-medium text-muted-foreground">Código de Indicação</label>
+              <p className="text-sm font-medium font-mono">{selectedUser.referral_code || "-"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="font-semibold text-base border-b pb-2">📊 Uso</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Tempo Total</label>
+              <p className="text-sm font-medium">{formatTime(selectedUser.total_session_time)}</p>
+            </div>
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Áreas Acessadas</label>
+              <p className="text-sm font-medium">{selectedUser.areas_accessed ?? 0}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <h4 className="font-semibold text-base border-b pb-2">📅 Datas</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Cadastro</label>
+              <p className="text-sm font-medium">{formatDate(selectedUser.created_at)}</p>
+            </div>
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Atualização</label>
+              <p className="text-sm font-medium">{formatDate(selectedUser.updated_at)}</p>
+            </div>
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Início do Plano</label>
+              <p className="text-sm font-medium">{formatDate(selectedUser.plan_start_date)}</p>
+            </div>
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">Fim do Plano</label>
+              <p className="text-sm font-medium">{formatDate(selectedUser.plan_end_date)}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
+  </DialogContent>
+</Dialog>
+
+{/* New User Dialog */}
       <Dialog open={isNewUserDialogOpen} onOpenChange={setIsNewUserDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
