@@ -578,60 +578,129 @@ export const AdminUserManagement = () => {
 
       {/* User Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Detalhes do Usuário</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">Detalhes Completos do Usuário</DialogTitle>
+            <DialogDescription>
+              Visualize todas as informações detalhadas do usuário cadastrado
+            </DialogDescription>
           </DialogHeader>
           {selectedUser && (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
+            <div className="space-y-6">
+              {/* Header com Avatar e Info Principal */}
+              <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
+                <Avatar className="h-16 w-16">
                   <AvatarImage src={selectedUser.avatar_url || ""} />
-                  <AvatarFallback>
+                  <AvatarFallback className="text-xl">
                     {selectedUser.full_name ? selectedUser.full_name.charAt(0).toUpperCase() : "U"}
                   </AvatarFallback>
                 </Avatar>
-                <div>
-                  <div className="font-medium">{selectedUser.full_name || "Sem nome"}</div>
-                  <div className="text-sm text-muted-foreground">{selectedUser.user_id}</div>
+                <div className="flex-1">
+                  <h3 className="text-lg font-semibold">{selectedUser.full_name || "Nome não informado"}</h3>
+                  <p className="text-sm text-muted-foreground">ID: {selectedUser.user_id}</p>
+                  <div className="flex gap-2 mt-2">
+                    <Badge className={getPlanBadgeColor(selectedUser.plan)}>
+                      {selectedUser.plan.toUpperCase()}
+                    </Badge>
+                    <Badge className={getRoleBadgeColor(selectedUser.role)}>
+                      {selectedUser.role}
+                    </Badge>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <strong>Plano:</strong> 
-                  <Badge className={getPlanBadgeColor(selectedUser.plan)}>
-                    {selectedUser.plan.toUpperCase()}
-                  </Badge>
+
+              {/* Informações de Contato */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-base border-b pb-2">📞 Informações de Contato</h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Email</label>
+                    <p className="text-sm font-medium">{selectedUser.user_email || "Não informado"}</p>
+                  </div>
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">WhatsApp</label>
+                    <p className="text-sm font-medium">{selectedUser.whatsapp || "Não informado"}</p>
+                  </div>
                 </div>
-                <div>
-                  <strong>Função:</strong>
-                  <Badge className={getRoleBadgeColor(selectedUser.role)}>
-                    {selectedUser.role}
-                  </Badge>
+              </div>
+
+              {/* Informações de Compra */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-base border-b pb-2">🛒 Informações de Compra</h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Plataforma de Compra</label>
+                    <p className="text-sm font-medium">{selectedUser.purchase_source || "Não informado"}</p>
+                  </div>
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Plano Atual</label>
+                    <p className="text-sm font-medium">{selectedUser.plan.toUpperCase()}</p>
+                  </div>
                 </div>
-                <div>
-                  <strong>Tempo de Uso:</strong> {formatTime(selectedUser.total_session_time)}
+              </div>
+
+              {/* Informações Financeiras */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-base border-b pb-2">💰 Informações Financeiras</h4>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Chave PIX</label>
+                    <p className="text-sm font-medium">{selectedUser.pix_key || "Não informado"}</p>
+                  </div>
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Ganhos por Indicação</label>
+                    <p className="text-sm font-medium text-green-600">R$ {selectedUser.referral_earnings.toFixed(2)}</p>
+                  </div>
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Código de Indicação</label>
+                    <p className="text-sm font-medium font-mono">{selectedUser.referral_code}</p>
+                  </div>
                 </div>
-                <div>
-                  <strong>Áreas Acessadas:</strong> {selectedUser.areas_accessed}
+              </div>
+
+              {/* Estatísticas de Uso */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-base border-b pb-2">📊 Estatísticas de Uso</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Tempo Total de Uso</label>
+                    <p className="text-sm font-medium">{formatTime(selectedUser.total_session_time)}</p>
+                  </div>
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Áreas Acessadas</label>
+                    <p className="text-sm font-medium">{selectedUser.areas_accessed}</p>
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <strong>Email:</strong> {selectedUser.user_email || "Não informado"}
-                </div>
-                <div className="col-span-2">
-                  <strong>WhatsApp:</strong> {selectedUser.whatsapp || "Não informado"}
-                </div>
-                <div className="col-span-2">
-                  <strong>Plataforma de Compra:</strong> {selectedUser.purchase_source || "Não informado"}
-                </div>
-                <div className="col-span-2">
-                  <strong>PIX:</strong> {selectedUser.pix_key || "Não informado"}
-                </div>
-                <div className="col-span-2">
-                  <strong>Ganhos:</strong> R$ {selectedUser.referral_earnings.toFixed(2)}
-                </div>
-                <div className="col-span-2">
-                  <strong>Código de Indicação:</strong> {selectedUser.referral_code}
+              </div>
+
+              {/* Datas Importantes */}
+              <div className="space-y-3">
+                <h4 className="font-semibold text-base border-b pb-2">📅 Datas Importantes</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Data de Cadastro</label>
+                    <p className="text-sm font-medium">
+                      {new Date(selectedUser.created_at).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit', 
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+                  <div className="p-3 bg-background border rounded-lg">
+                    <label className="text-sm font-medium text-muted-foreground">Última Atualização</label>
+                    <p className="text-sm font-medium">
+                      {new Date(selectedUser.updated_at).toLocaleDateString('pt-BR', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
