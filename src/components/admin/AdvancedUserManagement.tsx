@@ -96,9 +96,15 @@ export const AdvancedUserManagement = () => {
   const fetchUsers = async () => {
     try {
       const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+          .from('profiles')
+          .select(`
+            id, user_id, full_name, avatar_url, plan, role, 
+            plan_start_date, plan_end_date, plan_status, auto_renewal,
+            created_at, updated_at, whatsapp, purchase_source, 
+            pix_key, total_session_time, areas_accessed, 
+            referral_code, referral_earnings
+          `)
+          .order('created_at', { ascending: false });
 
       if (error) throw error;
       setUsers(data || []);
