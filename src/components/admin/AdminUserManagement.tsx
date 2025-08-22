@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Search, Eye, Ban, Trash2, UserPlus, MessageSquare, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateUserDialog } from "./CreateUserDialog";
+import { AdminDataReset } from "./AdminDataReset";
 
 interface User {
   id: string;
@@ -384,6 +385,18 @@ export const AdminUserManagement = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Data Reset Section */}
+      <AdminDataReset 
+        users={users.map(user => ({
+          user_id: user.user_id,
+          full_name: user.full_name || 'Nome não informado',
+          user_email: user.user_email || 'Email não informado',
+          plan: user.plan,
+          role: user.role
+        }))}
+        onUserReset={fetchUsers}
+      />
 
       {/* Filters */}
       <Card className="border-border">

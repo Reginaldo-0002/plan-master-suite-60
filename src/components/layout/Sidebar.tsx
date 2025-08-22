@@ -3,9 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
-import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 import {
   LayoutDashboard,
   Package,
@@ -33,7 +33,7 @@ interface SidebarProps {
 }
 
 export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: SidebarProps) => {
-  const navigate = useNavigate();
+  const { navigateTo } = useOptimizedNavigation();
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -44,7 +44,7 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso.",
       });
-      navigate("/auth");
+      navigateTo("/auth");
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -136,7 +136,7 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
             className="w-full justify-start text-orange-600 hover:bg-orange-50 hover:text-orange-700 border border-transparent hover:border-orange-200 transition-all duration-300"
             onClick={() => {
               console.log('Sidebar - Admin button clicked, navigating to /admin');
-              navigate('/admin');
+              navigateTo('/admin');
             }}
           >
             <Shield className="w-4 h-4 mr-3" />

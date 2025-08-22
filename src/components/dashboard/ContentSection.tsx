@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 
 interface Content {
   id: string;
@@ -43,6 +44,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
+  const { navigateToPlans } = useOptimizedNavigation();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
@@ -300,10 +302,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
                   <Button 
                     variant="secondary" 
                     className="w-full"
-                    onClick={() => {
-                      // Navigate to plans section in sidebar
-                      window.location.href = '/dashboard?section=plans';
-                    }}
+                     onClick={navigateToPlans}
                   >
                     <Lock className="w-4 h-4 mr-2" />
                     Upgrade Necessário

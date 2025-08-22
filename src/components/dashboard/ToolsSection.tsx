@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Wrench, Loader2, Crown, Gem, Star, Lock, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 
 interface Tool {
   id: string;
@@ -28,6 +29,7 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
+  const { navigateToPlans } = useOptimizedNavigation();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
@@ -140,8 +142,7 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
           description: `Redirecionando para ${tool.name}...`,
         });
       } else if (!canAccess(tool)) {
-        // Navigate to plans section in sidebar
-        window.location.href = '/dashboard?section=plans';
+        navigateToPlans();
       } else {
         // Ferramenta indisponível
         toast({

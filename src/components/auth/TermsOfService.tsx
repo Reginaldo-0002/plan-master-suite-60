@@ -15,11 +15,19 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
   const [isAccepting, setIsAccepting] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [userIP, setUserIP] = useState<string>("Carregando...");
+  const [browserInfo, setBrowserInfo] = useState<any>(null);
   const { toast } = useToast();
 
-  // Cache do IP para evitar múltiplas requests à API externa
+  // Função para obter informações do navegador de forma mais precisa
+  const getBrowserInfo = () => {
+    if (!browserInfo) return 'Detectando...';
+    return `${browserInfo.browser_name} ${browserInfo.browser_version} (${browserInfo.os_name})`;
+  };
+
+  // Cache do IP e detecção de navegador
   useEffect(() => {
-    const getCachedIP = async () => {
+    const initializeUserInfo = async () => {
+      // Cache do IP para evitar múltiplas requests à API externa
       const cachedIP = localStorage.getItem('userIP');
       const cacheTime = localStorage.getItem('userIPTime');
       const now = Date.now();
@@ -27,22 +35,34 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
       // Usar cache se tem menos de 1 hora
       if (cachedIP && cacheTime && (now - parseInt(cacheTime)) < 3600000) {
         setUserIP(cachedIP);
-        return;
+      } else {
+        try {
+          const response = await fetch('https://api.ipify.org?format=json');
+          const data = await response.json();
+          setUserIP(data.ip);
+          localStorage.setItem('userIP', data.ip);
+          localStorage.setItem('userIPTime', now.toString());
+        } catch (error) {
+          console.error('Erro ao obter IP:', error);
+          setUserIP('IP não disponível');
+        }
       }
 
+      // Obter informações detalhadas do navegador via Supabase
       try {
-        const response = await fetch('https://api.ipify.org?format=json');
-        const data = await response.json();
-        setUserIP(data.ip);
-        localStorage.setItem('userIP', data.ip);
-        localStorage.setItem('userIPTime', now.toString());
+        const { data, error } = await supabase.rpc('get_browser_info', {
+          user_agent_string: navigator.userAgent
+        });
+        
+        if (!error && data) {
+          setBrowserInfo(data);
+        }
       } catch (error) {
-        console.error('Erro ao obter IP:', error);
-        setUserIP('IP não disponível');
+        console.error('Erro ao obter info do navegador:', error);
       }
     };
 
-    getCachedIP();
+    initializeUserInfo();
 
     // Timer otimizado - atualiza apenas quando necessário
     const timer = setInterval(() => {
@@ -131,7 +151,7 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
                 <strong>Data/Hora:</strong> {currentTime.toLocaleString('pt-BR')}
               </div>
               <div className="md:col-span-2">
-                <strong>Navegador:</strong> {navigator.userAgent.split(' ')[0]}
+                <strong>Navegador:</strong> {getBrowserInfo()}
               </div>
             </div>
           </div>

@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Copy, Users, DollarSign, Gift } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Profile } from "@/types/profile";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 
 interface ReferralSystemProps {
   profile: Profile;
@@ -32,6 +33,7 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
     recent_referrals: []
   });
   const [loading, setLoading] = useState(true);
+  const { navigateToPlans } = useOptimizedNavigation();
   const { toast } = useToast();
 
   const referralLink = `${window.location.origin}?ref=${profile.referral_code}`;

@@ -103,10 +103,13 @@ export const ProfileSettings = ({ profile, onProfileUpdate }: ProfileSettingsPro
     const updatedProfile = { ...currentProfile, avatar_url: newAvatarUrl, updated_at: new Date().toISOString() };
     onProfileUpdate(updatedProfile);
     
-    // Force component re-render
-    setTimeout(() => {
-      window.location.reload();
-    }, 1000);
+    // Force state update without page reload
+    setFormData(prev => ({ ...prev }));
+    
+    toast({
+      title: "Avatar atualizado",
+      description: "Sua foto de perfil foi atualizada com sucesso!",
+    });
   };
 
   return (

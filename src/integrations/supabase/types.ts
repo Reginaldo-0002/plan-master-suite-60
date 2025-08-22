@@ -1856,6 +1856,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: Json
       }
+      admin_reset_user_data: {
+        Args: { target_user_id: string }
+        Returns: Json
+      }
       admin_toggle_user_chat_visibility: {
         Args: {
           hide_chat: boolean
@@ -1943,6 +1947,10 @@ export type Database = {
       get_authorized_resource_url: {
         Args: { requesting_user_id?: string; resource_id: string }
         Returns: string
+      }
+      get_browser_info: {
+        Args: { user_agent_string: string }
+        Returns: Json
       }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
