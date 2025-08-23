@@ -5,7 +5,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, UserX, RotateCcw, AlertTriangle } from "lucide-react";
+import { Trash2, UserX, RotateCcw, AlertTriangle, Database } from "lucide-react";
 
 interface User {
   user_id: string;
@@ -57,6 +57,59 @@ export const AdminDataReset = ({ users, onUserReset }: AdminDataResetProps) => {
       });
     } finally {
       setIsResetting(null);
+    }
+  };
+
+  const handleTestContentAccess = async () => {
+    try {
+      console.log('🧪 Testando acesso a conteúdo para todos os usuários...');
+      
+      // Buscar conteúdo de diferentes planos
+      const { data: content, error: contentError } = await supabase
+        .from('content')
+        .select('id, title, required_plan, status, is_active')
+        .eq('is_active', true)
+        .eq('status', 'published');
+
+      if (contentError) throw contentError;
+
+      const contentByPlan = {
+        free: content?.filter(c => c.required_plan === 'free') || [],
+        vip: content?.filter(c => c.required_plan === 'vip') || [],
+        pro: content?.filter(c => c.required_plan === 'pro') || []
+      };
+
+      console.log('📊 Análise de Conteúdo:', {
+        total: content?.length || 0,
+        porPlano: {
+          free: contentByPlan.free.length,
+          vip: contentByPlan.vip.length,
+          pro: contentByPlan.pro.length
+        },
+        usuarios: users.map(u => ({ 
+          nome: u.full_name, 
+          plano: u.plan,
+          podeVer: {
+            free: contentByPlan.free.length,
+            vip: ['vip', 'pro'].includes(u.plan) ? contentByPlan.vip.length : 0,
+            pro: u.plan === 'pro' ? contentByPlan.pro.length : 0
+          }
+        }))
+      });
+
+      toast({
+        title: "✅ Teste de Acesso Concluído",
+        description: `Analisados ${content?.length || 0} conteúdos. Verifique o console para detalhes completos.`,
+        duration: 7000,
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Erro no teste:', error);
+      toast({
+        title: "❌ Erro no Teste",
+        description: error.message || "Erro ao testar acesso a conteúdo",
+        variant: "destructive",
+      });
     }
   };
 
@@ -183,6 +236,22 @@ export const AdminDataReset = ({ users, onUserReset }: AdminDataResetProps) => {
             <p className="text-muted-foreground">Nenhum usuário encontrado</p>
           </div>
         )}
+        
+        <div className="mt-6 p-4 bg-info/10 border border-info/20 rounded-lg">
+          <h4 className="font-medium mb-2 text-info">🧪 Teste de Visualização de Conteúdo</h4>
+          <p className="text-sm text-muted-foreground mb-3">
+            Use este botão para verificar se todos os usuários conseguem visualizar conteúdo adequado ao seu plano.
+          </p>
+          <Button
+            onClick={handleTestContentAccess}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <Database className="w-4 h-4" />
+            Testar Acesso a Conteúdo
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );

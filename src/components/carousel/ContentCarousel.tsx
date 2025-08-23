@@ -49,11 +49,7 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
 
   const fetchCarouselContent = async () => {
     try {
-      console.log('Fetching carousel content...');
-      
-      // Get current user first
-      const { data: userData } = await supabase.auth.getUser();
-      const currentUserId = userData.user?.id;
+      console.log('🎠 Fetching carousel content...');
       
       const { data, error } = await supabase
         .from('content')
@@ -72,30 +68,24 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
         `)
         .eq('is_active', true)
         .eq('show_in_carousel', true)
+        .eq('status', 'published')
         .order('carousel_order', { ascending: true })
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-
-      // Filter out content that is hidden from the current user
-      let filteredData = data || [];
-      
-      if (currentUserId) {
-        const { data: visibilityRules } = await supabase
-          .from('content_visibility_rules')
-          .select('content_id')
-          .eq('user_id', currentUserId)
-          .eq('is_visible', false);
-
-        const hiddenContentIds = visibilityRules?.map(rule => rule.content_id) || [];
-        filteredData = filteredData.filter(content => !hiddenContentIds.includes(content.id));
+      if (error) {
+        console.error('❌ Carousel fetch error:', error);
+        throw error;
       }
 
-      console.log('Carousel content result:', { filteredData, error });
+      console.log('✅ Carousel content fetched:', { 
+        count: data?.length || 0,
+        items: data?.map(item => ({ id: item.id, title: item.title, required_plan: item.required_plan }))
+      });
 
-      setCarouselContent(filteredData);
+      // RLS agora cuida da filtragem de acesso automaticamente
+      setCarouselContent(data || []);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Carousel fetch error:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao carregar carrossel",

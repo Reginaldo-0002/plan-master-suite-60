@@ -68,9 +68,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
   const fetchContent = async () => {
     try {
-      // Get current user first
-      const { data: userData } = await supabase.auth.getUser();
-      const currentUserId = userData.user?.id;
+      console.log('🔄 Fetching content for type:', contentType, 'userPlan:', userPlan);
 
       let query = supabase
         .from('content')
@@ -87,26 +85,19 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
       const { data, error } = await query;
 
-      if (error) throw error;
-
-      // Filter out content that is hidden from the current user
-      let filteredData = data || [];
-      
-      if (currentUserId) {
-        const { data: visibilityRules, error: visibilityError } = await supabase
-          .from('content_visibility_rules')
-          .select('content_id, is_visible')
-          .eq('user_id', currentUserId);
-
-        if (!visibilityError && visibilityRules) {
-          const hiddenContentIds = visibilityRules
-            .filter(rule => rule.is_visible === false)
-            .map(rule => rule.content_id);
-          filteredData = filteredData.filter(content => !hiddenContentIds.includes(content.id));
-        }
+      if (error) {
+        console.error('❌ Error fetching content:', error);
+        throw error;
       }
 
-      const mappedData: Content[] = filteredData.map(item => ({
+      console.log('✅ Content fetched successfully:', { 
+        count: data?.length || 0, 
+        type: contentType,
+        items: data?.map(item => ({ id: item.id, title: item.title, required_plan: item.required_plan }))
+      });
+
+      // RLS agora cuida da filtragem de acesso, não precisamos filtrar manualmente
+      const mappedData: Content[] = (data || []).map(item => ({
         ...item,
         status: (item.status as 'active' | 'maintenance' | 'blocked' | 'published' | 'draft') || 'published',
         release_date: item.scheduled_publish_at
@@ -114,7 +105,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
       setContent(mappedData);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('💥 Error in fetchContent:', error);
       toast({
         title: "Erro",
         description: "Erro inesperado ao carregar conteúdo",
