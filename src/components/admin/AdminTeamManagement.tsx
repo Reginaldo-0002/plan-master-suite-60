@@ -150,41 +150,42 @@ export const AdminTeamManagement = () => {
     }
   };
 
-  const removeMember = async (userId: string) => {
-    if (!confirm("Tem certeza que deseja remover este membro da equipe?")) {
+  const removeMember = async (member: TeamMember) => {
+    if (!confirm(`Tem certeza que deseja EXCLUIR o usuário "${member.full_name || 'Sem nome'}" permanentemente?`)) {
       return;
     }
 
     try {
-      console.log('Removing member from team:', userId);
-      
-      // Usar upsert com onConflict corrigido
-      const { error } = await supabase
-        .from('user_roles')
-        .upsert({ 
-          user_id: userId,
-          role: 'user' as UserRole
-        }, {
-          onConflict: 'user_id'
-        });
+      console.log('Deleting user completely:', member.user_id);
+
+      // Chama função segura no banco que exclui todos os dados do usuário
+      const { data, error } = await supabase.rpc('admin_delete_user_completely', {
+        target_user_id: member.user_id
+      });
 
       if (error) {
-        console.error('Error removing member:', error);
+        console.error('Error deleting user via RPC:', error);
         throw error;
       }
 
+      console.log('Delete RPC result:', data);
+
       toast({
-        title: "Sucesso",
-        description: "Membro removido da equipe",
+        title: 'Usuário excluído',
+        description: `O usuário ${member.full_name || 'Sem nome'} foi removido do sistema`,
       });
-      
+
+      // Atualiza UI imediatamente
+      setTeamMembers((prev) => prev.filter((m) => m.user_id !== member.user_id));
+
+      // Recarrega lista para garantir consistência
       fetchTeamMembers();
-    } catch (error) {
-      console.error('Error removing member:', error);
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
       toast({
-        title: "Erro",
-        description: "Erro ao remover membro",
-        variant: "destructive",
+        title: 'Erro',
+        description: error.message || 'Erro ao excluir usuário',
+        variant: 'destructive',
       });
     }
   };
@@ -348,7 +349,7 @@ export const AdminTeamManagement = () => {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => removeMember(member.user_id)}
+                          onClick={() => removeMember(member)}
                           className="text-red-600 hover:text-red-700"
                         >
                           <Trash2 className="w-4 h-4" />
