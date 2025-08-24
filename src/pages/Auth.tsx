@@ -27,48 +27,11 @@ const Auth = () => {
   const { toast } = useToast();
   const { hasAcceptedTerms, loading: termsLoading } = useTermsAcceptance();
 
-  // Garante que o perfil existe após login/confirmacao de email
-  const ensureProfile = async (userId: string) => {
-    try {
-      const { data: existing, error: selErr } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('user_id', userId)
-        .maybeSingle();
-      if (selErr) {
-        console.warn('Profile check error:', selErr);
-      }
-
-      if (!existing) {
-        const { data: userData } = await supabase.auth.getUser();
-        const meta = userData.user?.user_metadata || {};
-        const { error: insErr } = await supabase.from('profiles').insert({
-          user_id: userId,
-          full_name: meta.full_name ?? null,
-          whatsapp: meta.whatsapp ?? null,
-          purchase_source: meta.purchase_source ?? null,
-        });
-        if (insErr) {
-          console.warn('Profile insert error:', insErr);
-        } else {
-          console.log('Profile created for user:', userId);
-        }
-      }
-    } catch (e) {
-      console.warn('ensureProfile error:', e);
-    }
-  };
-
   useEffect(() => {
     // Listener otimizado - evita duplicatas no useAuth
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Aguarda termos carregarem antes de navegar
       if (session && !termsLoading) {
-        // Evitar deadlocks: adia chamadas Supabase
-        setTimeout(() => {
-          ensureProfile(session.user.id);
-        }, 0);
-
         if (hasAcceptedTerms) {
           navigate("/dashboard");
         } else {
