@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Calendar, Clock, Star, Bell, Loader2, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 import { TopicsRouter } from "@/components/navigation/TopicsRouter";
 
 interface UpcomingRelease {
@@ -29,6 +30,7 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
+  const { navigateToPlans } = useOptimizedNavigation();
 
   useEffect(() => {
     fetchUpcomingReleases();
@@ -258,14 +260,24 @@ export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {
 
                   {/* Action Button */}
                   {isReleased(release.release_date) ? (
-                    <Button 
-                      className="w-full" 
-                      onClick={() => handleAccessContent(release.title)}
-                      disabled={!canUserAccess(release.target_plans)}
-                    >
-                      <Star className="w-4 h-4 mr-2" />
-                      {canUserAccess(release.target_plans) ? 'Acessar' : 'Upgrade Necessário'}
-                    </Button>
+                    canUserAccess(release.target_plans) ? (
+                      <Button 
+                        className="w-full" 
+                        onClick={() => handleAccessContent(release.title)}
+                      >
+                        <Star className="w-4 h-4 mr-2" />
+                        Acessar
+                      </Button>
+                    ) : (
+                      <Button 
+                        variant="outline"
+                        className="w-full" 
+                        onClick={navigateToPlans}
+                      >
+                        <Star className="w-4 h-4 mr-2" />
+                        Upgrade Necessário
+                      </Button>
+                    )
                   ) : (
                     <Button variant="outline" className="w-full" disabled>
                       <Bell className="w-4 h-4 mr-2" />

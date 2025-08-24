@@ -143,8 +143,8 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
 
   const openResource = (resource: Resource) => {
     if (resource.is_premium && !hasAccess(resource)) {
-      // Navigate to plans section properly
-      const newUrl = `/dashboard#plans`;
+      // Navigate to plans section using correct URL format
+      const newUrl = `/dashboard?section=plans`;
       window.history.pushState({}, '', newUrl);
       window.dispatchEvent(new PopStateEvent('popstate'));
       return;
