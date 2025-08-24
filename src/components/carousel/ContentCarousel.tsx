@@ -310,10 +310,10 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
                       variant="outline" 
                       className="w-full"
                       onClick={() => {
-                        // Navigate to plans section using correct URL format
-                        const newUrl = `/dashboard?section=plans`;
-                        window.history.pushState({}, '', newUrl);
-                        window.dispatchEvent(new PopStateEvent('popstate'));
+                        // Redirect to plans section
+                        const currentUrl = new URL(window.location.href);
+                        currentUrl.hash = '#plans';
+                        window.location.href = currentUrl.toString();
                       }}
                     >
                       <Crown className="w-4 h-4 mr-2" />

@@ -294,32 +294,28 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
                 </p>
               )}
 
-              {tool.status === 'blocked' || tool.status === 'maintenance' ? (
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  disabled
-                >
-                  {tool.status === 'blocked' ? 'Bloqueado' : 'Em Manutenção'}
-                </Button>
-              ) : !canAccess(tool) ? (
-                <Button
-                  onClick={navigateToPlans}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <Lock className="h-4 w-4 mr-2" />
-                  Upgrade Necessário
-                </Button>
-              ) : (
-                <Button
-                  onClick={() => handleAccessTool(tool)}
-                  className="w-full"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Acessar
-                </Button>
-              )}
+              <Button
+                onClick={() => handleAccessTool(tool)}
+                className="w-full"
+                variant={canAccess(tool) && tool.status === 'active' ? 'default' : 'outline'}
+                disabled={tool.status === 'blocked' || tool.status === 'maintenance'}
+              >
+                {tool.status === 'blocked' ? (
+                  'Bloqueado'
+                ) : tool.status === 'maintenance' ? (
+                  'Em Manutenção'
+                ) : !canAccess(tool) ? (
+                  <>
+                    <Lock className="h-4 w-4 mr-2" />
+                    Upgrade Necessário
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Acessar
+                  </>
+                )}
+              </Button>
             </CardContent>
           </Card>
         ))}

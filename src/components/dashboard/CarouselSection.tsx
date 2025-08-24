@@ -216,10 +216,10 @@ export const CarouselSection = ({ userPlan, onContentSelect }: CarouselSectionPr
                           variant="outline" 
                           className="w-full"
                           onClick={() => {
-                            // Navigate to plans section using correct URL format
-                            const newUrl = `/dashboard?section=plans`;
-                            window.history.pushState({}, '', newUrl);
-                            window.dispatchEvent(new PopStateEvent('popstate'));
+                            // Redirect to plans section
+                            const currentUrl = new URL(window.location.href);
+                            currentUrl.hash = '#plans';
+                            window.location.href = currentUrl.toString();
                           }}
                         >
                           <Lock className="w-4 h-4 mr-2" />
