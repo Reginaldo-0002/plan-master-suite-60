@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { Images, Loader2, Play, Eye, Lock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 interface CarouselContent {
@@ -29,6 +30,7 @@ export const CarouselSection = ({ userPlan, onContentSelect }: CarouselSectionPr
   const [carouselContent, setCarouselContent] = useState<CarouselContent[]>([]);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const { navigateToPlans } = useOptimizedNavigation();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
@@ -215,12 +217,7 @@ export const CarouselSection = ({ userPlan, onContentSelect }: CarouselSectionPr
                         <Button 
                           variant="outline" 
                           className="w-full"
-                          onClick={() => {
-                            // Navigate to plans section properly
-                            const newUrl = `/dashboard#plans`;
-                            window.history.pushState({}, '', newUrl);
-                            window.dispatchEvent(new PopStateEvent('popstate'));
-                          }}
+                          onClick={navigateToPlans}
                         >
                           <Lock className="w-4 h-4 mr-2" />
                           Upgrade Necessário

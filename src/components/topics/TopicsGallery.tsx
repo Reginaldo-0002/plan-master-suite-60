@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { ArrowLeft, Play, FileText, Link, Unlock, Eye, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 
 interface Topic {
   id: string;
@@ -50,6 +51,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
+  const { navigateToPlans } = useOptimizedNavigation();
 
   useEffect(() => {
     fetchTopics();
@@ -143,10 +145,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
 
   const openResource = (resource: Resource) => {
     if (resource.is_premium && !hasAccess(resource)) {
-      // Navigate to plans section properly
-      const newUrl = `/dashboard#plans`;
-      window.history.pushState({}, '', newUrl);
-      window.dispatchEvent(new PopStateEvent('popstate'));
+      navigateToPlans();
       return;
     }
 

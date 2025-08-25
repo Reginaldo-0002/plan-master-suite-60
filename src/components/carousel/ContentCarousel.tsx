@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Crown, Gem, Star, Play, ExternalLink, Loader2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
+import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 
 interface ContentItem {
   id: string;
@@ -40,6 +41,7 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
+  const { navigateToPlans } = useOptimizedNavigation();
 
   const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
 
@@ -309,12 +311,7 @@ export const ContentCarousel = ({ userPlan, onContentClick }: ContentCarouselPro
                     <Button 
                       variant="outline" 
                       className="w-full"
-                      onClick={() => {
-                        // Navigate to plans section properly
-                        const newUrl = `/dashboard#plans`;
-                        window.history.pushState({}, '', newUrl);
-                        window.dispatchEvent(new PopStateEvent('popstate'));
-                      }}
+                      onClick={navigateToPlans}
                     >
                       <Crown className="w-4 h-4 mr-2" />
                       Upgrade Necessário

@@ -295,7 +295,13 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
               )}
 
               <Button
-                onClick={() => handleAccessTool(tool)}
+                onClick={() => {
+                  if (canAccess(tool) && tool.status === 'active') {
+                    handleAccessTool(tool);
+                  } else if (!canAccess(tool)) {
+                    navigateToPlans();
+                  }
+                }}
                 className="w-full"
                 variant={canAccess(tool) && tool.status === 'active' ? 'default' : 'outline'}
                 disabled={tool.status === 'blocked' || tool.status === 'maintenance'}
