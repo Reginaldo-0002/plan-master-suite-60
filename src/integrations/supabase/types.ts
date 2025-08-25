@@ -657,7 +657,7 @@ export type Database = {
           {
             foreignKeyName: "plan_expiration_queue_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["user_id"]
           },

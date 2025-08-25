@@ -340,7 +340,8 @@ export const AdvancedUserManagement = () => {
     if (!confirm("Tem certeza que deseja expirar manualmente este usuário?")) return;
 
     try {
-      const { error } = await supabase
+      // Expire o usuário: plan=free, plan_status=expired
+      const { error: profileError } = await supabase
         .from('profiles')
         .update({
           plan: 'free',
@@ -349,7 +350,23 @@ export const AdvancedUserManagement = () => {
         })
         .eq('user_id', userId);
 
-      if (error) throw error;
+      if (profileError) throw profileError;
+
+      // Adicionar à fila de expiração usando UPSERT com a constraint criada
+      const { error: queueError } = await supabase
+        .from('plan_expiration_queue')
+        .upsert({
+          user_id: userId,
+          expiration_date: new Date().toISOString(),
+          reminder_7_days: true,
+          reminder_1_day: true,
+          expiration_notice: true,
+          downgrade_executed: true
+        }, {
+          onConflict: 'user_id'
+        });
+
+      if (queueError) throw queueError;
 
       toast({
         title: "Usuário expirado",
