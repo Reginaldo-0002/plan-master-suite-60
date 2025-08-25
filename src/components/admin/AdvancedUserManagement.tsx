@@ -86,6 +86,13 @@ export const AdvancedUserManagement = () => {
     plan_start_date: "",
     plan_end_date: ""
   });
+  const [planEditData, setPlanEditData] = useState({
+    plan: '',
+    plan_start_date: '',
+    plan_end_date: '',
+    plan_status: 'active',
+    auto_renewal: true
+  });
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
 
@@ -400,6 +407,19 @@ export const AdvancedUserManagement = () => {
 
   const openPlanDialog = (user: User) => {
     setSelectedUser(user);
+    // Converter datas para formato input
+    const formatDateForInput = (dateString: string | null) => {
+      if (!dateString) return '';
+      return new Date(dateString).toISOString().split('T')[0];
+    };
+    
+    setPlanEditData({
+      plan: user.plan,
+      plan_start_date: formatDateForInput(user.plan_start_date),
+      plan_end_date: formatDateForInput(user.plan_end_date),
+      plan_status: user.plan_status,
+      auto_renewal: user.auto_renewal
+    });
     setIsPlanDialogOpen(true);
   };
 
@@ -833,28 +853,21 @@ const formatTime = (minutes?: number) => {
 
       {/* Plan Dialog */}
       <Dialog open={isPlanDialogOpen} onOpenChange={setIsPlanDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Editar Plano</DialogTitle>
             <DialogDescription>
-              Altere o plano e datas de {selectedUser?.full_name}
+              Altere o plano, datas e status de {selectedUser?.full_name}
             </DialogDescription>
           </DialogHeader>
           {selectedUser && (
             <div className="space-y-4">
               <div>
-                <Label>Plano Atual</Label>
+                <Label>Plano</Label>
                 <Select 
-                  defaultValue={selectedUser.plan}
+                  value={planEditData.plan}
                   onValueChange={(value: any) => {
-                    const planData = {
-                      plan: value,
-                      plan_start_date: selectedUser.plan_start_date,
-                      plan_end_date: selectedUser.plan_end_date,
-                      plan_status: selectedUser.plan_status,
-                      auto_renewal: selectedUser.auto_renewal
-                    };
-                    updateUserPlan(selectedUser.user_id, planData);
+                    setPlanEditData({ ...planEditData, plan: value });
                   }}
                 >
                   <SelectTrigger>
@@ -867,32 +880,110 @@ const formatTime = (minutes?: number) => {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label>Data de Início</Label>
-                  <div className="text-sm p-2 bg-muted rounded">
-                    {formatDate(selectedUser.plan_start_date)}
-                  </div>
+                  <Label htmlFor="plan_start_edit">Data de Início</Label>
+                  <Input
+                    id="plan_start_edit"
+                    type="date"
+                    value={planEditData.plan_start_date}
+                    onChange={(e) => {
+                      setPlanEditData({ ...planEditData, plan_start_date: e.target.value });
+                    }}
+                  />
                 </div>
                 <div>
-                  <Label>Data de Vencimento</Label>
-                  <div className="text-sm p-2 bg-muted rounded">
-                    {formatDate(selectedUser.plan_end_date)}
-                  </div>
+                  <Label htmlFor="plan_end_edit">Data de Vencimento</Label>
+                  <Input
+                    id="plan_end_edit"
+                    type="date"
+                    value={planEditData.plan_end_date}
+                    onChange={(e) => {
+                      const newEndDate = e.target.value;
+                      const today = new Date().toISOString().split('T')[0];
+                      const newStatus = newEndDate && newEndDate >= today ? 'active' : 'expired';
+                      
+                      setPlanEditData({ 
+                        ...planEditData, 
+                        plan_end_date: newEndDate,
+                        plan_status: newStatus
+                      });
+                    }}
+                  />
                 </div>
               </div>
+
+              <div>
+                <Label>Status do Plano</Label>
+                <Select 
+                  value={planEditData.plan_status}
+                  onValueChange={(value: string) => {
+                    setPlanEditData({ ...planEditData, plan_status: value });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="expired">Expirado</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Status é atualizado automaticamente baseado na data de vencimento
+                </p>
+              </div>
+
               <div className="flex items-center justify-between">
                 <Label>Auto Renovação</Label>
-                <Badge variant={selectedUser.auto_renewal ? "default" : "secondary"}>
-                  {selectedUser.auto_renewal ? "Ativo" : "Inativo"}
-                </Badge>
+                <Select 
+                  value={planEditData.auto_renewal ? "true" : "false"}
+                  onValueChange={(value: string) => {
+                    setPlanEditData({ ...planEditData, auto_renewal: value === "true" });
+                  }}
+                >
+                  <SelectTrigger className="w-32">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Ativo</SelectItem>
+                    <SelectItem value="false">Inativo</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <Button
-                onClick={() => setIsPlanDialogOpen(false)}
-                className="w-full"
-              >
-                Fechar
-              </Button>
+
+              <div className="flex gap-2">
+                <Button
+                  onClick={() => {
+                    // Converter datas de volta para ISO
+                    const startDate = planEditData.plan_start_date ? 
+                      new Date(planEditData.plan_start_date + 'T00:00:00').toISOString() : null;
+                    const endDate = planEditData.plan_end_date ? 
+                      new Date(planEditData.plan_end_date + 'T23:59:59').toISOString() : null;
+                    
+                    const planData = {
+                      plan: planEditData.plan,
+                      plan_start_date: startDate,
+                      plan_end_date: endDate,
+                      plan_status: planEditData.plan_status,
+                      auto_renewal: planEditData.auto_renewal
+                    };
+                    updateUserPlan(selectedUser.user_id, planData);
+                  }}
+                  className="flex-1"
+                >
+                  <CalendarDays className="w-4 h-4 mr-2" />
+                  Salvar Alterações
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsPlanDialogOpen(false)}
+                >
+                  Cancelar
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
