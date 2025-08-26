@@ -158,9 +158,8 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
         color: 'bg-plan-free',
         features: [
           'Acesso básico ao conteúdo',
-          'Suporte por email',
+          'Suporte por Chat',
           'Tutoriais essenciais',
-          'Dashboard básico'
         ]
       },
       vip: {
@@ -170,10 +169,9 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
         color: 'bg-plan-vip',
         features: [
           'Tudo do plano Free',
-          'Acesso a conteúdo premium',
+          'Acesso a conteúdos Vip',
           'Suporte prioritário',
-          'Ferramentas avançadas',
-          'Webinars exclusivos',
+          'Ferramentas avançadas',,
           'Comunidade VIP'
         ]
       },
@@ -187,9 +185,8 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
           'Acesso ilimitado a tudo',
           'Suporte 24/7',
           'Consultoria individual',
-          'Recursos beta',
-          'Certificações',
-          'Mentorias ao vivo'
+          'Recursos avançados',
+          'Sistemas com gerador de licenças web',
         ]
       }
     };
