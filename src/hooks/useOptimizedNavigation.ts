@@ -26,7 +26,9 @@ export const useOptimizedNavigation = () => {
   // Navegação para planos
   const navigateToPlans = useCallback(() => {
     console.log('🧭 Navigating to plans section');
-    navigate('/dashboard?section=plans');
+    navigate('/dashboard?section=plans', { replace: true });
+    // Force immediate URL update for instant navigation
+    window.dispatchEvent(new PopStateEvent('popstate'));
   }, [navigate]);
 
   // Atualizar URL sem navegar (para estados internos)
