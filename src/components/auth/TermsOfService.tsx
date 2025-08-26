@@ -188,21 +188,19 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
                 <p className="mb-4">
                   Ao acessar e usar nossa plataforma, você concorda em estar vinculado a estes termos de uso, 
                   todas as leis e regulamentos aplicáveis, e concorda que é responsável pelo cumprimento de 
-                  todas as leis locais aplicáveis.
+                  todas as leis aplicáveis.
                 </p>
               </section>
 
               <section>
                 <h2 className="text-xl font-semibold mb-3">2. Uso da Licença</h2>
                 <p className="mb-4">
-                  É concedida permissão para baixar temporariamente uma cópia dos materiais em nossa plataforma 
-                  apenas para visualização transitória pessoal e não comercial. Esta é a concessão de uma licença, 
-                  não uma transferência de título.
+                  É concedida permissão para acessa a comunidade e todos os seus conteúdos, em nossa plataforma 
+                  você tem acesso de acordo com seu plano e todos os conteúdos do plano seu é acessado por você.                
                 </p>
                 <p className="mb-4">Sob esta licença, você não pode:</p>
                 <ul className="list-disc pl-6 mb-4">
-                  <li>modificar ou copiar os materiais;</li>
-                  <li>usar os materiais para qualquer finalidade comercial ou para exibição pública;</li>
+                  <li>modificar ou revende os materiais sem automarização de venda;</li>
                   <li>tentar fazer engenharia reversa de qualquer software contido na plataforma;</li>
                   <li>remover quaisquer direitos autorais ou outras notações proprietárias dos materiais.</li>
                 </ul>
@@ -246,7 +244,7 @@ const TermsOfService = ({ onAccept }: TermsOfServiceProps) => {
                 <h2 className="text-xl font-semibold mb-3">6. Precisão dos Materiais</h2>
                 <p className="mb-4">
                   Os materiais exibidos em nossa plataforma podem incluir erros técnicos, tipográficos ou fotográficos. 
-                  Não garantimos que qualquer material em nossa plataforma seja preciso, completo ou atual.
+                  mais nos comprometemos a corrigi os erros com um prazo estimado
                 </p>
               </section>
 
