@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useProfileRealtime } from "@/hooks/useProfileRealtime";
 import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
 import {
   LayoutDashboard,
@@ -36,6 +37,7 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
   const { navigateTo } = useOptimizedNavigation();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { profile } = useProfileRealtime(user?.id);
 
   const handleLogout = async () => {
     try {
@@ -90,14 +92,14 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
       <div className="p-6 border-b border-border bg-gradient-to-b from-card/90 to-card backdrop-blur-sm">
         <div className="flex items-center gap-3">
           <Avatar className="w-10 h-10">
-            <AvatarImage src="" />
+            <AvatarImage src={profile?.avatar_url || ""} />
             <AvatarFallback className="gradient-primary text-primary-foreground">
-              {user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              {profile?.full_name?.charAt(0) || user?.user_metadata?.full_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-medium text-foreground truncate">
-              {user?.user_metadata?.full_name || user?.email || 'Usuário'}
+              {profile?.full_name || user?.user_metadata?.full_name || user?.email || 'Usuário'}
             </p>
             <Badge className={`text-xs ${getPlanColor(userPlan)}`}>
               {getPlanIcon(userPlan)}
