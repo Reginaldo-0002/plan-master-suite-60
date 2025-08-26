@@ -627,8 +627,8 @@ export const AdminUserManagement = () => {
                 <h4 className="font-semibold text-base border-b pb-2">📞 Informações de Contato</h4>
                 <div className="grid grid-cols-1 gap-3">
                   <div className="p-3 bg-background border rounded-lg">
-                    <label className="text-sm font-medium text-muted-foreground">Email</label>
-                    <p className="text-sm font-medium">{selectedUser.user_email || "Não informado"}</p>
+                    <label className="text-sm font-medium text-muted-foreground">📧 Email</label>
+                    <p className="text-sm font-medium break-all">{selectedUser.user_email || "Email não informado"}</p>
                   </div>
                   <div className="p-3 bg-background border rounded-lg">
                     <label className="text-sm font-medium text-muted-foreground">WhatsApp</label>
