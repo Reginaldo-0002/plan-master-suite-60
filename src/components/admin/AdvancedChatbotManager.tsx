@@ -197,27 +197,35 @@ export const AdvancedChatbotManager = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Tem certeza que deseja excluir esta resposta?')) return;
+    if (!confirm('Tem certeza que deseja excluir esta resposta? Esta ação não pode ser desfeita.')) return;
     
     try {
+      console.log('Tentando deletar resposta com ID:', id);
+      
       const { error } = await supabase
         .from('chatbot_rich_responses')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Erro no Supabase:', error);
+        throw error;
+      }
+      
+      console.log('Resposta deletada com sucesso');
       
       toast({
         title: 'Sucesso',
         description: 'Resposta excluída com sucesso'
       });
       
-      fetchResponses();
+      // Atualizar a lista imediatamente
+      await fetchResponses();
     } catch (error) {
       console.error('Error deleting response:', error);
       toast({
         title: 'Erro',
-        description: 'Erro ao excluir resposta',
+        description: `Erro ao excluir resposta: ${error.message || 'Erro desconhecido'}`,
         variant: 'destructive'
       });
     }
