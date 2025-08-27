@@ -60,6 +60,10 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
     try {
       console.log('🔄 Fetching tools data...');
       
+      // Verificar usuário atual para debug
+      const currentUser = await supabase.auth.getUser();
+      console.log('👤 Current user ID for tools:', currentUser.data.user?.id);
+      
       const { data: contentData, error } = await supabase
         .from('content')
         .select('*')
@@ -71,7 +75,29 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
         return;
       }
 
-      console.log('📋 Content data fetched:', contentData);
+      console.log('📋 Content data fetched (before filtering):', contentData);
+      
+      // Filtrar manualmente conteúdo oculto para garantir
+      let filteredContentData = contentData || [];
+      
+      if (currentUser.data.user?.id) {
+        const { data: hiddenContent } = await supabase
+          .from('content_visibility_rules')
+          .select('content_id')
+          .eq('user_id', currentUser.data.user.id)
+          .eq('is_visible', false);
+          
+        const hiddenContentIds = hiddenContent?.map(rule => rule.content_id) || [];
+        console.log('🚫 Hidden tool IDs for user:', hiddenContentIds);
+        
+        // Filtrar conteúdo oculto
+        filteredContentData = filteredContentData.filter(item => !hiddenContentIds.includes(item.id));
+        
+        console.log('✅ Tools after manual filtering:', { 
+          count: filteredContentData.length, 
+          items: filteredContentData.map(item => ({ id: item.id, title: item.title }))
+        });
+      }
 
       // Fetch tool statuses
       const { data: statusData } = await supabase
@@ -80,7 +106,7 @@ export const ToolsSection = ({ userPlan, onContentSelect }: ToolsSectionProps) =
 
       console.log('📊 Status data fetched:', statusData);
 
-      const toolsWithStatus = contentData.map(tool => {
+      const toolsWithStatus = filteredContentData.map(tool => {
         const status = statusData?.find(s => s.tool_name === tool.title);
         
         console.log(`🔧 Processing tool: ${tool.title}`, {

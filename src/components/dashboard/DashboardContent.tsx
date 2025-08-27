@@ -108,13 +108,40 @@ export const DashboardContent = ({ onContentSelect }: DashboardContentProps) => 
   const fetchRecentContent = async () => {
     const data = await fetchWithErrorHandling(
       async () => {
+        // Verificar usuário atual para debug
+        const currentUser = await supabase.auth.getUser();
+        console.log('👤 Current user ID for recent content:', currentUser.data.user?.id);
+        
         const result = await supabase
           .from('content')
           .select('id, title, content_type, required_plan, created_at')
           .eq('is_active', true)
           .order('created_at', { ascending: false })
-          .limit(3);
-        return { data: result.data, error: result.error };
+          .limit(10); // Aumentar limite para compensar filtros
+        
+        // Filtrar manualmente conteúdo oculto para garantir
+        let filteredData = result.data || [];
+        
+        if (currentUser.data.user?.id && result.data) {
+          const { data: hiddenContent } = await supabase
+            .from('content_visibility_rules')
+            .select('content_id')
+            .eq('user_id', currentUser.data.user.id)
+            .eq('is_visible', false);
+            
+          const hiddenContentIds = hiddenContent?.map(rule => rule.content_id) || [];
+          console.log('🚫 Hidden recent content IDs for user:', hiddenContentIds);
+          
+          // Filtrar conteúdo oculto e limitar a 3
+          filteredData = filteredData.filter(item => !hiddenContentIds.includes(item.id)).slice(0, 3);
+          
+          console.log('✅ Recent content after manual filtering:', { 
+            count: filteredData.length, 
+            items: filteredData.map(item => ({ id: item.id, title: item.title }))
+          });
+        }
+        
+        return { data: filteredData, error: result.error };
       },
       'Erro ao carregar conteúdo'
     );

@@ -40,6 +40,10 @@ export const CarouselSection = ({ userPlan, onContentSelect }: CarouselSectionPr
 
   const fetchCarouselContent = async () => {
     try {
+      // Verificar usuário atual para debug
+      const currentUser = await supabase.auth.getUser();
+      console.log('👤 Current user ID for carousel:', currentUser.data.user?.id);
+      
       const { data, error } = await supabase
         .from('content')
         .select('id, title, description, content_type, hero_image_url, video_url, required_plan, status, show_in_carousel, carousel_order')
@@ -50,7 +54,31 @@ export const CarouselSection = ({ userPlan, onContentSelect }: CarouselSectionPr
 
       if (error) throw error;
 
-      const mappedData: CarouselContent[] = (data || []).map(item => ({
+      console.log('📋 Carousel content fetched (before filtering):', data);
+      
+      // Filtrar manualmente conteúdo oculto para garantir
+      let filteredData = data || [];
+      
+      if (currentUser.data.user?.id) {
+        const { data: hiddenContent } = await supabase
+          .from('content_visibility_rules')
+          .select('content_id')
+          .eq('user_id', currentUser.data.user.id)
+          .eq('is_visible', false);
+          
+        const hiddenContentIds = hiddenContent?.map(rule => rule.content_id) || [];
+        console.log('🚫 Hidden carousel content IDs for user:', hiddenContentIds);
+        
+        // Filtrar conteúdo oculto
+        filteredData = filteredData.filter(item => !hiddenContentIds.includes(item.id));
+        
+        console.log('✅ Carousel content after manual filtering:', { 
+          count: filteredData.length, 
+          items: filteredData.map(item => ({ id: item.id, title: item.title }))
+        });
+      }
+
+      const mappedData: CarouselContent[] = filteredData.map(item => ({
         ...item,
         status: (item.status as 'active' | 'maintenance' | 'blocked' | 'published' | 'draft') || 'published'
       }));

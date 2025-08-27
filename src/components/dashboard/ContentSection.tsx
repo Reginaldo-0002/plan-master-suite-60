@@ -69,6 +69,20 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   const fetchContent = async () => {
     try {
       console.log('🔄 Fetching content for type:', contentType, 'userPlan:', userPlan);
+      
+      // Verificar usuário atual para debug
+      const currentUser = await supabase.auth.getUser();
+      console.log('👤 Current user ID:', currentUser.data.user?.id);
+      
+      // Verificar regras de visibilidade primeiro para debug
+      if (currentUser.data.user?.id) {
+        const { data: visibilityRules } = await supabase
+          .from('content_visibility_rules')
+          .select('content_id, is_visible')
+          .eq('user_id', currentUser.data.user.id);
+        
+        console.log('👀 Visibility rules for user:', visibilityRules);
+      }
 
       let query = supabase
         .from('content')
@@ -90,14 +104,36 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
         throw error;
       }
 
-      console.log('✅ Content fetched successfully:', { 
+      console.log('✅ Content fetched successfully (before RLS filtering):', { 
         count: data?.length || 0, 
         type: contentType,
         items: data?.map(item => ({ id: item.id, title: item.title, required_plan: item.required_plan }))
       });
 
-      // RLS agora cuida da filtragem de acesso, não precisamos filtrar manualmente
-      const mappedData: Content[] = (data || []).map(item => ({
+      // A política RLS deveria ter filtrado automaticamente, mas vamos verificar manualmente também
+      // para garantir que conteúdo oculto não apareça
+      let filteredData = data || [];
+      
+      if (currentUser.data.user?.id) {
+        const { data: hiddenContent } = await supabase
+          .from('content_visibility_rules')
+          .select('content_id')
+          .eq('user_id', currentUser.data.user.id)
+          .eq('is_visible', false);
+          
+        const hiddenContentIds = hiddenContent?.map(rule => rule.content_id) || [];
+        console.log('🚫 Hidden content IDs for user:', hiddenContentIds);
+        
+        // Filtrar manualmente conteúdo oculto
+        filteredData = filteredData.filter(item => !hiddenContentIds.includes(item.id));
+        
+        console.log('✅ Content after manual filtering:', { 
+          count: filteredData.length, 
+          items: filteredData.map(item => ({ id: item.id, title: item.title }))
+        });
+      }
+
+      const mappedData: Content[] = filteredData.map(item => ({
         ...item,
         status: (item.status as 'active' | 'maintenance' | 'blocked' | 'published' | 'draft') || 'published',
         release_date: item.scheduled_publish_at
