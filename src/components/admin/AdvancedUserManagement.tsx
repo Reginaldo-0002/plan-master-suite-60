@@ -46,6 +46,7 @@ interface User {
   areas_accessed?: number;
   referral_code?: string;
   referral_earnings?: number;
+  user_email?: string | null;
 }
 
 interface MessageData {
@@ -400,10 +401,23 @@ export const AdvancedUserManagement = () => {
     setIsMessageDialogOpen(true);
   };
 
-  const openDetailsDialog = (user: User) => {
-    setSelectedUser(user);
-    setIsDetailsDialogOpen(true);
-  };
+const openDetailsDialog = async (user: User) => {
+  setSelectedUser(user);
+  setIsDetailsDialogOpen(true);
+  try {
+    // Buscar email com função segura (admin)
+    const { data, error } = await supabase
+      .rpc('get_all_users_for_admin')
+      .eq('user_id', user.user_id)
+      .maybeSingle();
+
+    if (!error && data && data.user_email) {
+      setSelectedUser((prev) => prev ? { ...prev, user_email: data.user_email } : prev);
+    }
+  } catch (e) {
+    console.warn('Não foi possível carregar o email do usuário:', e);
+  }
+};
 
   const openPlanDialog = (user: User) => {
     setSelectedUser(user);
@@ -629,7 +643,11 @@ const formatTime = (minutes?: number) => {
           <h4 className="font-semibold text-base border-b pb-2">📞 Contato</h4>
           <div className="grid grid-cols-1 gap-3">
             <div className="p-3 bg-background border rounded-lg">
-              <label className="text-sm font-medium text-muted-foreground">WhatsApp</label>
+              <label className="text-sm font-medium text-muted-foreground">📧 Email</label>
+              <p className="text-sm font-medium break-all">{selectedUser.user_email || "Email não informado"}</p>
+            </div>
+            <div className="p-3 bg-background border rounded-lg">
+              <label className="text-sm font-medium text-muted-foreground">📱 WhatsApp</label>
               <p className="text-sm font-medium">{selectedUser.whatsapp || "Não informado"}</p>
             </div>
           </div>

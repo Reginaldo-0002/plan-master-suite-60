@@ -1852,6 +1852,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: Json
       }
+      admin_delete_chatbot_response: {
+        Args: { response_uuid: string }
+        Returns: Json
+      }
       admin_delete_user_completely: {
         Args: { target_user_id: string }
         Returns: Json
