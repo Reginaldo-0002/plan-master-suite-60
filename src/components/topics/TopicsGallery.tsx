@@ -62,6 +62,32 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
       setLoading(true);
       console.log('Fetching topics for contentId:', contentId);
       
+      // Primeiro verificar se o usuário atual tem acesso a este conteúdo
+      const currentUser = await supabase.auth.getUser();
+      console.log('👤 Current user checking content access:', currentUser.data.user?.id);
+      
+      if (currentUser.data.user?.id) {
+        // Verificar se o conteúdo está oculto para este usuário
+        const { data: hiddenContent } = await supabase
+          .from('content_visibility_rules')
+          .select('content_id')
+          .eq('user_id', currentUser.data.user.id)
+          .eq('content_id', contentId)
+          .eq('is_visible', false);
+        
+        if (hiddenContent && hiddenContent.length > 0) {
+          console.log('🚫 Content is hidden for user, blocking access to topics');
+          setTopics([]);
+          setLoading(false);
+          toast({
+            title: "Acesso Negado",
+            description: "Você não tem permissão para acessar este conteúdo",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
       const { data, error } = await supabase
         .from('content_topics')
         .select('*')
