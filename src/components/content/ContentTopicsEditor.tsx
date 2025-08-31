@@ -362,7 +362,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     try {
       const { error } = await supabase
         .from('content_topics')
-        .update({ is_active: false })
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', topicId);
 
       if (error) throw error;
@@ -395,7 +398,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     try {
       const { error } = await supabase
         .from('topic_resources')
-        .update({ is_active: false })
+        .update({ 
+          is_active: false,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', resourceId);
 
       if (error) throw error;
