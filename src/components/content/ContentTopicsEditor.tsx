@@ -360,17 +360,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     if (!confirm(`Tem certeza que deseja excluir o tópico "${topic?.title}"?\n\nEsta ação não pode ser desfeita e todos os recursos do tópico também serão removidos.`)) return;
 
     try {
-      const { error } = await supabase
-        .from('content_topics')
-        .update({ 
-          is_active: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', topicId);
+      const { data, error } = await supabase.rpc('admin_soft_delete_content_topic', { topic_uuid: topicId });
 
       if (error) {
-        // Try again with direct delete approach if needed
-        console.error('Error in soft delete:', error);
+        console.error('RPC error in soft delete topic:', error);
         throw error;
       }
 
@@ -386,7 +379,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       fetchTopics();
       onSave();
     } catch (error: any) {
-      console.error('Error deleting topic:', error);
+      console.error('Error deleting topic via RPC:', error);
       toast({
         title: "Erro ao excluir tópico",
         description: error.message || "Erro interno do servidor",
@@ -400,17 +393,10 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
     if (!confirm(`Tem certeza que deseja excluir o recurso "${resource?.title}"?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('topic_resources')
-        .update({ 
-          is_active: false,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', resourceId);
+      const { data, error } = await supabase.rpc('admin_soft_delete_topic_resource', { resource_uuid: resourceId });
 
       if (error) {
-        // Try again with direct delete approach if needed
-        console.error('Error in soft delete:', error);
+        console.error('RPC error in soft delete resource:', error);
         throw error;
       }
 
@@ -422,7 +408,7 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
       fetchResources(activeTopic!);
       onSave();
     } catch (error: any) {
-      console.error('Error deleting resource:', error);
+      console.error('Error deleting resource via RPC:', error);
       toast({
         title: "Erro ao excluir recurso",
         description: error.message || "Erro interno do servidor",
