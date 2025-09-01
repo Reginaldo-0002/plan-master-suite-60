@@ -368,7 +368,15 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         })
         .eq('id', topicId);
 
-      if (error) throw error;
+      if (error) {
+        // Fallback via RPC com SECURITY DEFINER se RLS bloquear
+        if (error.code === '42501' || (error.message && error.message.includes('row-level security'))) {
+          const { error: rpcError } = await supabase.rpc('admin_soft_delete_content_topic', { topic_uuid: topicId });
+          if (rpcError) throw rpcError;
+        } else {
+          throw error;
+        }
+      }
 
       toast({
         title: "Tópico excluído",
@@ -404,7 +412,15 @@ export const ContentTopicsEditor = ({ contentId, onSave }: ContentTopicsEditorPr
         })
         .eq('id', resourceId);
 
-      if (error) throw error;
+      if (error) {
+        // Fallback via RPC com SECURITY DEFINER se RLS bloquear
+        if (error.code === '42501' || (error.message && error.message.includes('row-level security'))) {
+          const { error: rpcError } = await supabase.rpc('admin_soft_delete_topic_resource', { resource_uuid: resourceId });
+          if (rpcError) throw rpcError;
+        } else {
+          throw error;
+        }
+      }
 
       toast({
         title: "Recurso excluído",
