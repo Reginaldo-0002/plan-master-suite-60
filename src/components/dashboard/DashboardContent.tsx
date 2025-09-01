@@ -20,13 +20,15 @@ interface DashboardContentProps {
 }
 
 export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSelect }) => {
-  const { profile, user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { 
     dashboardData, 
     recentContents, 
     activeNotifications,
     isLoading
   } = useOptimizedDashboard(user?.id);
+
+  const profile = dashboardData?.profile;
 
   // Memoized stats cards for performance
   const statsCards = useMemo(() => [
@@ -168,19 +170,24 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
 
         {/* Lazy Loaded Sections */}
         <Suspense fallback={<OptimizedLoader type="content" count={3} />}>
-          <CarouselSection />
+          <CarouselSection userPlan={profile.plan} />
         </Suspense>
         
         <Suspense fallback={<OptimizedLoader type="content" count={3} />}>
-          <ContentSection />
+          <ContentSection 
+            contentType="all" 
+            title="Conteúdo Disponível" 
+            description="Explore todo o conteúdo da plataforma" 
+            userPlan={profile.plan} 
+          />
         </Suspense>
         
         <Suspense fallback={<OptimizedLoader type="content" count={2} />}>
-          <PlansSection />
+          <PlansSection userPlan={profile.plan} profile={profile} />
         </Suspense>
         
         <Suspense fallback={<OptimizedLoader type="content" count={1} />}>
-          <ReferralSystem />
+          <ReferralSystem profile={profile} />
         </Suspense>
         
         <Suspense fallback={<OptimizedLoader type="content" count={1} />}>

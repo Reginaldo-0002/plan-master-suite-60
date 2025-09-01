@@ -1864,6 +1864,14 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: Json
       }
+      admin_soft_delete_content_topic: {
+        Args: { topic_uuid: string }
+        Returns: Json
+      }
+      admin_soft_delete_topic_resource: {
+        Args: { resource_uuid: string }
+        Returns: Json
+      }
       admin_toggle_user_chat_visibility: {
         Args: {
           hide_chat: boolean

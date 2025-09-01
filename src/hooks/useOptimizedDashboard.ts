@@ -7,6 +7,7 @@ interface DashboardData {
   contents: any[];
   notifications: any[];
   carouselContent: any[];
+  profile: any;
   userStats: {
     totalSessions: number;
     areasAccessed: number;
@@ -19,6 +20,7 @@ export const useOptimizedDashboard = (userId?: string) => {
     contents: [],
     notifications: [],
     carouselContent: [],
+    profile: null,
     userStats: {
       totalSessions: 0,
       areasAccessed: 0,
@@ -46,6 +48,7 @@ export const useOptimizedDashboard = (userId?: string) => {
         contents: contentsResult.data || [],
         notifications: notificationsResult.data || [],
         carouselContent: (contentsResult.data || []).filter((c: any) => c.show_in_carousel),
+        profile: profileResult.data || null,
         userStats: {
           totalSessions: profileResult.data?.total_session_time || 0,
           areasAccessed: profileResult.data?.areas_accessed || 0,
@@ -71,6 +74,13 @@ export const useOptimizedDashboard = (userId?: string) => {
     dashboardData.notifications.filter(n => n.is_active),
     [dashboardData.notifications]
   );
+
+  // Effect to fetch data when userId changes
+  useEffect(() => {
+    if (userId) {
+      fetchDashboardData();
+    }
+  }, [userId, fetchDashboardData]);
 
   // Optimized refresh function
   const refreshData = useCallback(async (userPlan?: string) => {
