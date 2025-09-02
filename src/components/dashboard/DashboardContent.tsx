@@ -4,8 +4,10 @@ import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 import { OptimizedLoader } from '@/components/optimized/OptimizedLoader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { MagneticBackground } from '@/components/background/MagneticBackground';
 import { Clock, Target, Users, Gift } from 'lucide-react';
+import SessionInfo from './SessionInfo';
 
 
 interface DashboardContentProps {
@@ -157,6 +159,51 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
                   </p>
                 </div>
               ))}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Session Information and Referral Program */}
+        <div className="grid gap-4 md:grid-cols-2">
+          <SessionInfo />
+          
+          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gift className="w-5 h-5 text-futuristic-primary" />
+                Programa de Indicação
+              </CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Compartilhe seu código e ganhe R$ {(profile?.referral_earnings || 0).toFixed(2)} com suas indicações
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <p className="text-sm font-medium mb-2">Seu código de indicação:</p>
+                <div className="flex items-center justify-between p-3 bg-background/20 rounded-lg border">
+                  <code className="text-futuristic-primary font-mono text-lg">
+                    {profile?.referral_code || 'Carregando...'}
+                  </code>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => {
+                      if (profile?.referral_code) {
+                        navigator.clipboard.writeText(profile.referral_code);
+                      }
+                    }}
+                  >
+                    Copiar Código
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Ganhos totais:</span>
+                <span className="text-lg font-bold text-futuristic-secondary">
+                  R$ {(profile?.referral_earnings || 0).toFixed(2)}
+                </span>
+              </div>
             </CardContent>
           </Card>
         </div>
