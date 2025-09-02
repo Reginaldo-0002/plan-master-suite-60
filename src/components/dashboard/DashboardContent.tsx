@@ -1,4 +1,4 @@
-import React, { useMemo, lazy, Suspense } from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
 import { OptimizedLoader } from '@/components/optimized/OptimizedLoader';
@@ -7,13 +7,6 @@ import { Badge } from '@/components/ui/badge';
 import { MagneticBackground } from '@/components/background/MagneticBackground';
 import { Clock, Target, Users, Gift } from 'lucide-react';
 
-// Lazy load sections for better performance
-const CarouselSection = lazy(() => import('./CarouselSection').then(module => ({ default: module.CarouselSection })));
-const ContentSection = lazy(() => import('./ContentSection').then(module => ({ default: module.ContentSection })));
-const PlansSection = lazy(() => import('./PlansSection').then(module => ({ default: module.PlansSection })));
-const ReferralSystem = lazy(() => import('./ReferralSystem').then(module => ({ default: module.ReferralSystem })));
-const RulesSection = lazy(() => import('./RulesSection').then(module => ({ default: module.RulesSection })));
-const ComingSoonSection = lazy(() => import('./ComingSoonSection').then(module => ({ default: module.ComingSoonSection })));
 
 interface DashboardContentProps {
   onContentSelect?: (contentId: string) => void;
@@ -168,35 +161,6 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
           </Card>
         </div>
 
-        {/* Lazy Loaded Sections */}
-        <Suspense fallback={<OptimizedLoader type="content" count={3} />}>
-          <CarouselSection userPlan={profile.plan} />
-        </Suspense>
-        
-        <Suspense fallback={<OptimizedLoader type="content" count={3} />}>
-          <ContentSection 
-            contentType="all" 
-            title="Conteúdo Disponível" 
-            description="Explore todo o conteúdo da plataforma" 
-            userPlan={profile.plan} 
-          />
-        </Suspense>
-        
-        <Suspense fallback={<OptimizedLoader type="content" count={2} />}>
-          <PlansSection userPlan={profile.plan} profile={profile} />
-        </Suspense>
-        
-        <Suspense fallback={<OptimizedLoader type="content" count={1} />}>
-          <ReferralSystem profile={profile} />
-        </Suspense>
-        
-        <Suspense fallback={<OptimizedLoader type="content" count={1} />}>
-          <RulesSection />
-        </Suspense>
-        
-        <Suspense fallback={<OptimizedLoader type="content" count={2} />}>
-          <ComingSoonSection />
-        </Suspense>
       </div>
     </>
   );
