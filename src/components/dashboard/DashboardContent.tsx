@@ -1,12 +1,15 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useOptimizedDashboard } from '@/hooks/useOptimizedDashboard';
+import { useTimeStats } from '@/hooks/useTimeStats';
+import { useAreasAccessedStats } from '@/hooks/useAreasAccessedStats';
+import { useReferralStats } from '@/hooks/useReferralStats';
 import { OptimizedLoader } from '@/components/optimized/OptimizedLoader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MagneticBackground } from '@/components/background/MagneticBackground';
-import { Clock, Target, Users, Gift } from 'lucide-react';
+import { Clock, Target, Users, Gift, Calendar, TrendingUp } from 'lucide-react';
 import SessionInfo from './SessionInfo';
 
 
@@ -20,42 +23,73 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
     dashboardData, 
     recentContents, 
     activeNotifications,
-    isLoading
+    isLoading: dashboardLoading
   } = useOptimizedDashboard(user?.id);
 
-  const profile = dashboardData?.profile;
+  // Real-time hooks for dashboard stats
+  const { timeStats, loading: timeLoading, formatTime } = useTimeStats();
+  const { areasAccessed, loading: areasLoading } = useAreasAccessedStats();  
+  const { referralStats, loading: referralLoading } = useReferralStats();
 
-  // Memoized stats cards for performance
-  const statsCards = useMemo(() => [
+  const profile = dashboardData?.profile;
+  const isStatsLoading = timeLoading || areasLoading || referralLoading;
+
+  // Memoized main stats cards (primeira linha)
+  const mainStatsCards = useMemo(() => [
     {
-      title: "Tempo Total",
-      value: `${Math.floor(dashboardData.userStats.totalSessions / 60)}h ${dashboardData.userStats.totalSessions % 60}m`,
-      description: "Tempo de sessão acumulado",
+      title: "Tempo Hoje",
+      value: timeStats ? formatTime(timeStats.today_minutes) : '0m',
+      description: "hoje na plataforma",
       icon: Clock,
       color: "text-futuristic-primary"
     },
     {
       title: "Áreas Acessadas", 
-      value: dashboardData.userStats.areasAccessed.toString(),
-      description: "Diferentes seções visitadas",
+      value: areasAccessed.toString(),
+      description: "diferentes seções",
       icon: Target,
       color: "text-futuristic-accent"
     },
     {
       title: "Indicações",
-      value: profile?.total_points?.toString() || '0',
-      description: "Usuários indicados",
+      value: referralStats.total_referrals.toString(),
+      description: "usuários indicados",
       icon: Users,
       color: "text-futuristic-secondary"
     },
     {
-      title: "Plano Atual",
-      value: profile?.plan?.toUpperCase() || 'FREE',
-      description: "Seu plano de assinatura",
+      title: "Tempo Total",
+      value: timeStats ? formatTime(timeStats.year_minutes) : '0m',
+      description: "este ano",
       icon: Gift,
       color: "text-futuristic-neon"
     }
-  ], [dashboardData.userStats, profile]);
+  ], [timeStats, areasAccessed, referralStats, formatTime]);
+
+  // Memoized time stats cards (segunda linha)
+  const timeStatsCards = useMemo(() => [
+    {
+      title: "Tempo Semanal",
+      value: timeStats ? formatTime(timeStats.week_minutes) : '0m',
+      description: "nesta semana",
+      icon: Calendar,
+      color: "text-futuristic-primary"
+    },
+    {
+      title: "Tempo Mensal",
+      value: timeStats ? formatTime(timeStats.month_minutes) : '0m',
+      description: "neste mês",
+      icon: TrendingUp,
+      color: "text-futuristic-accent"
+    },
+    {
+      title: "Tempo Anual",
+      value: timeStats ? formatTime(timeStats.year_minutes) : '0m',
+      description: "neste ano",
+      icon: Clock,
+      color: "text-futuristic-neon"
+    }
+  ], [timeStats, formatTime]);
 
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
@@ -66,7 +100,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
     }
   };
 
-  if (!isAuthenticated || !profile || isLoading) {
+  if (!isAuthenticated || !profile || dashboardLoading || isStatsLoading) {
     return (
       <>
         <MagneticBackground />
@@ -96,9 +130,32 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
           </Badge>
         </div>
 
-        {/* Stats Cards */}
+        {/* Main Stats Cards - Primeira linha */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {statsCards.map((stat, index) => {
+          {mainStatsCards.map((stat, index) => {
+            const IconComponent = stat.icon;
+            return (
+              <Card key={index} className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20 hover:shadow-lg transition-all duration-300">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                  <IconComponent className={`h-4 w-4 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className={`text-2xl font-bold ${stat.color}`}>
+                    {stat.value}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {stat.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Time Stats Cards - Segunda linha */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {timeStatsCards.map((stat, index) => {
             const IconComponent = stat.icon;
             return (
               <Card key={index} className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20 hover:shadow-lg transition-all duration-300">
@@ -174,7 +231,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
                 Programa de Indicação
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Compartilhe seu código e ganhe R$ {(profile?.referral_earnings || 0).toFixed(2)} com suas indicações
+                Compartilhe seu código e ganhe R$ {referralStats.referral_earnings.toFixed(2)} com suas indicações
               </p>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -201,7 +258,7 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Ganhos totais:</span>
                 <span className="text-lg font-bold text-futuristic-secondary">
-                  R$ {(profile?.referral_earnings || 0).toFixed(2)}
+                  R$ {referralStats.referral_earnings.toFixed(2)}
                 </span>
               </div>
             </CardContent>
