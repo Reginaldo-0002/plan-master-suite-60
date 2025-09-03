@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MagneticBackground } from '@/components/background/MagneticBackground';
 import { Clock, Target, Users, Gift, Calendar, TrendingUp } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 import SessionInfo from './SessionInfo';
 
 
@@ -19,6 +20,7 @@ interface DashboardContentProps {
 
 export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSelect }) => {
   const { user, isAuthenticated } = useAuth();
+  const { toast } = useToast();
   const { 
     dashboardData, 
     recentContents, 
@@ -224,42 +226,62 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
         <div className="grid gap-4 md:grid-cols-2">
           <SessionInfo />
           
-          <Card className="bg-background/60 backdrop-blur-sm border-futuristic-primary/20">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Gift className="w-5 h-5 text-futuristic-primary" />
+          <Card className="bg-gradient-to-br from-futuristic-primary/10 to-futuristic-secondary/10 backdrop-blur-sm border-futuristic-primary/30 shadow-lg">
+            <CardHeader className="pb-4">
+              <CardTitle className="flex items-center gap-2 text-futuristic-primary">
+                <Gift className="w-6 h-6" />
                 Programa de Indicação
               </CardTitle>
               <p className="text-sm text-muted-foreground">
                 Compartilhe seu código e ganhe R$ {referralStats.referral_earnings.toFixed(2)} com suas indicações
               </p>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <p className="text-sm font-medium mb-2">Seu código de indicação:</p>
-                <div className="flex items-center justify-between p-3 bg-background/20 rounded-lg border">
-                  <code className="text-futuristic-primary font-mono text-lg">
-                    {profile?.referral_code || 'Carregando...'}
-                  </code>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={() => {
-                      if (profile?.referral_code) {
-                        navigator.clipboard.writeText(profile.referral_code);
-                      }
-                    }}
-                  >
-                    Copiar Código
-                  </Button>
+            <CardContent className="space-y-6">
+              <div className="space-y-3">
+                <p className="text-sm font-semibold text-foreground">Seu código de indicação:</p>
+                <div className="relative">
+                  <div className="flex items-center gap-3 p-4 bg-gradient-to-r from-futuristic-primary/20 to-futuristic-secondary/20 rounded-lg border border-futuristic-primary/40">
+                    <code className="text-futuristic-primary font-mono text-xl font-bold flex-1">
+                      {profile?.referral_code || 'Carregando...'}
+                    </code>
+                    <Button 
+                      className="bg-futuristic-primary hover:bg-futuristic-primary/80 text-white px-6 py-2 rounded-lg font-medium transition-all duration-200 hover:scale-105"
+                      size="sm"
+                      onClick={async () => {
+                        if (profile?.referral_code) {
+                          try {
+                            await navigator.clipboard.writeText(profile.referral_code);
+                            toast({
+                              title: "Código copiado!",
+                              description: "Seu código de indicação foi copiado para a área de transferência.",
+                              duration: 3000,
+                            });
+                          } catch (error) {
+                            toast({
+                              title: "Erro ao copiar",
+                              description: "Não foi possível copiar o código. Tente novamente.",
+                              variant: "destructive",
+                              duration: 3000,
+                            });
+                          }
+                        }
+                      }}
+                    >
+                      Copiar Código
+                    </Button>
+                  </div>
                 </div>
               </div>
               
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Ganhos totais:</span>
-                <span className="text-lg font-bold text-futuristic-secondary">
+              <div className="flex items-center justify-between p-4 bg-futuristic-secondary/10 rounded-lg border border-futuristic-secondary/30">
+                <span className="text-sm font-semibold text-foreground">Ganhos totais:</span>
+                <span className="text-2xl font-bold text-futuristic-secondary">
                   R$ {referralStats.referral_earnings.toFixed(2)}
                 </span>
+              </div>
+              
+              <div className="text-xs text-muted-foreground bg-background/30 p-3 rounded-lg border">
+                <p><strong>Como funciona:</strong> Compartilhe seu código com amigos. Quando eles comprarem usando seu código, você ganha comissão automaticamente!</p>
               </div>
             </CardContent>
           </Card>
