@@ -2061,6 +2061,15 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      process_referral_purchase: {
+        Args: {
+          plan_purchased: string
+          purchase_amount: number
+          referral_code_used: string
+          referred_user_email: string
+        }
+        Returns: Json
+      }
       process_webhook_event: {
         Args: { event_id: string }
         Returns: Json
@@ -2080,6 +2089,10 @@ export type Database = {
       update_user_total_session_time: {
         Args: Record<PropertyKey, never>
         Returns: undefined
+      }
+      validate_referral_code: {
+        Args: { code: string }
+        Returns: boolean
       }
     }
     Enums: {

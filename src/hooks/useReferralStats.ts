@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 
@@ -15,36 +15,44 @@ export const useReferralStats = () => {
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
 
-  const fetchReferralStats = async () => {
-    if (!user) return;
+  const fetchReferralStats = useCallback(async () => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      // Buscar total de indicações
-      const { data: referralsData, error: referralsError } = await supabase
-        .from('referrals')
-        .select('*')
-        .eq('referrer_id', user.id);
+      setLoading(true);
+      
+      // Buscar total de indicações usando Promise.all para melhor performance
+      const [referralsResult, profileResult] = await Promise.all([
+        supabase
+          .from('referrals')
+          .select('*')
+          .eq('referrer_id', user.id),
+        supabase
+          .from('profiles')
+          .select('referral_earnings')
+          .eq('user_id', user.id)
+          .single()
+      ]);
 
-      if (referralsError) throw referralsError;
+      if (referralsResult.error) {
+        console.error('❌ Error fetching referrals:', referralsResult.error);
+      }
 
-      // Buscar ganhos de indicação do perfil
-      const { data: profileData, error: profileError } = await supabase
-        .from('profiles')
-        .select('referral_earnings')
-        .eq('user_id', user.id)
-        .single();
+      if (profileResult.error) {
+        console.error('❌ Error fetching profile:', profileResult.error);
+      }
 
-      if (profileError) throw profileError;
+      const stats = {
+        total_referrals: referralsResult.data?.length || 0,
+        referral_earnings: Number(profileResult.data?.referral_earnings || 0)
+      };
 
-      setReferralStats({
-        total_referrals: referralsData?.length || 0,
-        referral_earnings: Number(profileData?.referral_earnings || 0)
-      });
+      setReferralStats(stats);
 
-      console.log('💰 Referral stats loaded:', {
-        total_referrals: referralsData?.length || 0,
-        referral_earnings: Number(profileData?.referral_earnings || 0)
-      });
+      console.log('💰 Referral stats loaded:', stats);
     } catch (error) {
       console.error('❌ Error fetching referral stats:', error);
       setReferralStats({
@@ -54,24 +62,26 @@ export const useReferralStats = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
 
   useEffect(() => {
     fetchReferralStats();
     
+    if (!user) return;
+
     // Set up real-time listener for referrals
     const referralsChannel = supabase
-      .channel('referrals-changes')
+      .channel(`referrals-${user.id}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'referrals',
-          filter: `referrer_id=eq.${user?.id}`
+          filter: `referrer_id=eq.${user.id}`
         },
-        () => {
-          console.log('💰 Referral changed, refetching stats...');
+        (payload) => {
+          console.log('💰 Referral changed:', payload);
           fetchReferralStats();
         }
       )
@@ -79,17 +89,17 @@ export const useReferralStats = () => {
 
     // Set up real-time listener for profile changes (earnings)
     const profileChannel = supabase
-      .channel('profile-earnings-changes')
+      .channel(`profile-earnings-${user.id}`)
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
           table: 'profiles',
-          filter: `user_id=eq.${user?.id}`
+          filter: `user_id=eq.${user.id}`
         },
-        () => {
-          console.log('💰 Profile earnings changed, refetching stats...');
+        (payload) => {
+          console.log('💰 Profile earnings changed:', payload);
           fetchReferralStats();
         }
       )
@@ -99,7 +109,7 @@ export const useReferralStats = () => {
       supabase.removeChannel(referralsChannel);
       supabase.removeChannel(profileChannel);
     };
-  }, [user]);
+  }, [fetchReferralStats, user]);
 
   return { referralStats, loading, refetch: fetchReferralStats };
 };
