@@ -827,6 +827,42 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_referrals: {
+        Row: {
+          created_at: string | null
+          id: string
+          plan_purchased: string
+          platform: string
+          processed: boolean | null
+          purchase_amount: number | null
+          referral_code: string
+          updated_at: string | null
+          user_email: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          plan_purchased: string
+          platform: string
+          processed?: boolean | null
+          purchase_amount?: number | null
+          referral_code: string
+          updated_at?: string | null
+          user_email: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          plan_purchased?: string
+          platform?: string
+          processed?: boolean | null
+          purchase_amount?: number | null
+          referral_code?: string
+          updated_at?: string | null
+          user_email?: string
+        }
+        Relationships: []
+      }
       referral_settings: {
         Row: {
           amount: number
@@ -1909,7 +1945,12 @@ export type Database = {
         Returns: undefined
       }
       create_platform_checkout: {
-        Args: { plan_slug: string; platform_name: string; user_email?: string }
+        Args: {
+          plan_slug: string
+          platform_name: string
+          referral_code_param?: string
+          user_email: string
+        }
         Returns: Json
       }
       enforce_ip_limits: {

@@ -15,6 +15,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
+import { ReferralCapture } from "@/components/ReferralCapture";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +56,7 @@ function AppContent() {
           <Toaster />
           <Sonner />
           <NotificationPopup />
+          <ReferralCapture />
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />

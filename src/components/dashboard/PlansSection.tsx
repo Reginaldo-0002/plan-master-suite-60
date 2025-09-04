@@ -37,6 +37,12 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
   const [plansFromDB, setPlansFromDB] = useState<any[]>([]);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
+  
+  // Capturar código de referência da URL
+  const getReferralCodeFromURL = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('ref') || urlParams.get('referral') || localStorage.getItem('referral_code') || null;
+  };
 
   // Remove any admin-only restrictions for viewing plans
   // All users should be able to see and interact with plans
@@ -83,6 +89,10 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
     setLoading(true);
     try {
       console.log('🚀 Starting upgrade process for plan:', planSlug);
+      
+      // Capturar código de referência
+      const referralCode = getReferralCodeFromURL();
+      console.log('📋 Referral code:', referralCode || 'none');
 
       // First fetch available platforms from the database
       const { data: platformData, error: platformError } = await supabase
@@ -109,7 +119,8 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
       const { data, error } = await supabase.functions.invoke('platform-checkout', {
         body: {
           platform: platform,
-          plan_slug: planSlug
+          plan_slug: planSlug,
+          referral_code: referralCode // Incluir código de referência
         }
       });
 

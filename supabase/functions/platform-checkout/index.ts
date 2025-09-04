@@ -30,8 +30,8 @@ serve(async (req) => {
     if (userError) throw userError;
     if (!userData.user?.email) throw new Error("User not authenticated or email not available");
 
-    const { platform, plan_slug } = await req.json();
-    console.log("📋 Request data:", { platform, plan_slug, user_email: userData.user.email });
+    const { platform, plan_slug, referral_code } = await req.json();
+    console.log("📋 Request data:", { platform, plan_slug, referral_code, user_email: userData.user.email });
 
     // Chamar função RPC do banco
     const { data: checkoutData, error: checkoutError } = await supabaseClient.rpc(
@@ -39,7 +39,8 @@ serve(async (req) => {
       {
         platform_name: platform,
         plan_slug: plan_slug,
-        user_email: userData.user.email
+        user_email: userData.user.email,
+        referral_code_param: referral_code || null
       }
     );
 
