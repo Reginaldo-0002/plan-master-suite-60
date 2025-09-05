@@ -44,6 +44,11 @@ export const NotificationPopup = () => {
   const shouldShowNotification = useCallback((notification: any, profile?: any) => {
     if (!user?.id) return false;
     
+    // Hide specific system heartbeat/health notification by title
+    if (typeof notification.title === 'string' && notification.title.trim() === 'Sistema de Notificações Ativo') {
+      return false;
+    }
+    
     console.log('🔍 [NotificationPopup] Verificando notificação:', {
       id: notification.id,
       title: notification.title,
