@@ -426,22 +426,32 @@ export const NotificationPopup = () => {
     }
   };
 
-  // Auto remove notifications after their duration (only if duration is set)
+  // Auto remove notifications after their duration (only if duration is set and > 0)
   useEffect(() => {
-    if (!mountedRef.current) return;
+    if (!mountedRef.current || notifications.length === 0) return;
     
     const timers: NodeJS.Timeout[] = [];
     
     notifications.forEach(notification => {
-      const duration = notification.popup_duration;
-      if (duration && duration > 0) {
-        const timer = setTimeout(() => {
-          if (mountedRef.current) {
-            removeNotification(notification.id);
-          }
-        }, duration);
-        timers.push(timer);
+      // Use popup_duration if set and > 0, otherwise default to 10 seconds for non-chat messages
+      let duration = notification.popup_duration;
+      
+      // Chat messages (with action_type) should stay until manually closed
+      if (notification.notification_metadata?.action_type === 'chat_message') {
+        return; // Don't auto-remove chat notifications
       }
+      
+      // For other notifications, use a sensible default if duration is 0 or null
+      if (!duration || duration <= 0) {
+        duration = 10000; // 10 seconds default
+      }
+      
+      const timer = setTimeout(() => {
+        if (mountedRef.current) {
+          removeNotification(notification.id);
+        }
+      }, duration);
+      timers.push(timer);
     });
 
     return () => {

@@ -19,64 +19,43 @@ export const useWebhookIntegration = (userId?: string) => {
   useEffect(() => {
     if (!userId) return;
 
-    // Subscribe to webhook events that affect this user
-    const channel = supabase
-      .channel('webhook-events')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'webhook_events',
-          filter: `canonical_event->user_email=eq.${userId}`
-        },
-        (payload) => {
-          console.log('🔔 New webhook event received:', payload);
-          const newEvent = payload.new as WebhookEvent;
-          setWebhookEvents(prev => [newEvent, ...prev]);
-          
-          // Show notification for important events
-          if (newEvent.canonical_event?.type === 'payment_succeeded') {
-            toast({
-              title: "Pagamento Confirmado! 🎉",
-              description: `Seu plano ${newEvent.canonical_event.plan_slug?.toUpperCase()} foi ativado com sucesso!`,
-              variant: "default",
-            });
-          }
-        }
-      )
+    // Subscribe to profile updates for real-time plan changes  
+    const profileChannel = supabase
+      .channel('user-profile-updates')
       .on(
         'postgres_changes',
         {
           event: 'UPDATE',
           schema: 'public',
-          table: 'webhook_events'
+          table: 'profiles',
+          filter: `user_id=eq.${userId}`
         },
         (payload) => {
-          console.log('📝 Webhook event updated:', payload);
-          const updatedEvent = payload.new as WebhookEvent;
+          console.log('👤 Profile updated via webhook:', payload);
+          const updatedProfile = payload.new as any;
           
-          if (updatedEvent.status === 'processed' && updatedEvent.canonical_event?.type === 'payment_succeeded') {
+          // Check if plan was updated
+          if (updatedProfile.plan && payload.old?.plan !== updatedProfile.plan) {
             toast({
-              title: "Plano Atualizado! ✅",
-              description: "Seu perfil foi atualizado automaticamente. Recarregue a página para ver as mudanças.",
+              title: "Plano Atualizado! 🎉",
+              description: `Seu plano foi alterado para ${updatedProfile.plan.toUpperCase()}! A página será recarregada automaticamente.`,
               variant: "default",
             });
             
-            // Refresh the page after a delay to show updated plan
+            // Refresh after showing the notification
             setTimeout(() => {
               window.location.reload();
-            }, 3000);
+            }, 2000);
           }
         }
       )
       .subscribe((status) => {
-        console.log('📡 Webhook subscription status:', status);
+        console.log('📡 Profile subscription status:', status);
         setIsListening(status === 'SUBSCRIBED');
       });
 
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(profileChannel);
       setIsListening(false);
     };
   }, [userId, toast]);
