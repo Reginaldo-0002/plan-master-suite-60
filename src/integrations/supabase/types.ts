@@ -759,7 +759,6 @@ export type Database = {
           id: string
           last_activity: string | null
           loyalty_level: string | null
-          pix_key: string | null
           plan: Database["public"]["Enums"]["user_plan"]
           plan_end_date: string | null
           plan_start_date: string | null
@@ -767,9 +766,7 @@ export type Database = {
           preferences: Json | null
           purchase_source: string | null
           referral_code: string | null
-          referral_earnings: number | null
           role: string | null
-          total_points: number | null
           total_session_time: number | null
           updated_at: string | null
           user_id: string
@@ -784,7 +781,6 @@ export type Database = {
           id?: string
           last_activity?: string | null
           loyalty_level?: string | null
-          pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           plan_end_date?: string | null
           plan_start_date?: string | null
@@ -792,9 +788,7 @@ export type Database = {
           preferences?: Json | null
           purchase_source?: string | null
           referral_code?: string | null
-          referral_earnings?: number | null
           role?: string | null
-          total_points?: number | null
           total_session_time?: number | null
           updated_at?: string | null
           user_id: string
@@ -809,7 +803,6 @@ export type Database = {
           id?: string
           last_activity?: string | null
           loyalty_level?: string | null
-          pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           plan_end_date?: string | null
           plan_start_date?: string | null
@@ -817,9 +810,7 @@ export type Database = {
           preferences?: Json | null
           purchase_source?: string | null
           referral_code?: string | null
-          referral_earnings?: number | null
           role?: string | null
-          total_points?: number | null
           total_session_time?: number | null
           updated_at?: string | null
           user_id?: string
@@ -1530,6 +1521,36 @@ export type Database = {
         }
         Relationships: []
       }
+      user_financial_data: {
+        Row: {
+          created_at: string | null
+          id: string
+          pix_key: string | null
+          referral_earnings: number | null
+          total_points: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          pix_key?: string | null
+          referral_earnings?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          pix_key?: string | null
+          referral_earnings?: number | null
+          total_points?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_interactions: {
         Row: {
           created_at: string | null
@@ -2018,6 +2039,14 @@ export type Database = {
           year_minutes: number
         }[]
       }
+      get_user_financial_data: {
+        Args: { target_user_id?: string }
+        Returns: {
+          pix_key: string
+          referral_earnings: number
+          total_points: number
+        }[]
+      }
       get_user_resources: {
         Args: { topic_id_param: string }
         Returns: {
@@ -2125,6 +2154,10 @@ export type Database = {
       }
       track_daily_time: {
         Args: { minutes_to_add: number }
+        Returns: undefined
+      }
+      update_referral_earnings: {
+        Args: { amount: number; user_uuid: string }
         Returns: undefined
       }
       update_user_total_session_time: {
