@@ -759,6 +759,7 @@ export type Database = {
           id: string
           last_activity: string | null
           loyalty_level: string | null
+          pix_key: string | null
           plan: Database["public"]["Enums"]["user_plan"]
           plan_end_date: string | null
           plan_start_date: string | null
@@ -766,6 +767,7 @@ export type Database = {
           preferences: Json | null
           purchase_source: string | null
           referral_code: string | null
+          referral_earnings: number
           role: string | null
           total_session_time: number | null
           updated_at: string | null
@@ -781,6 +783,7 @@ export type Database = {
           id?: string
           last_activity?: string | null
           loyalty_level?: string | null
+          pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           plan_end_date?: string | null
           plan_start_date?: string | null
@@ -788,6 +791,7 @@ export type Database = {
           preferences?: Json | null
           purchase_source?: string | null
           referral_code?: string | null
+          referral_earnings?: number
           role?: string | null
           total_session_time?: number | null
           updated_at?: string | null
@@ -803,6 +807,7 @@ export type Database = {
           id?: string
           last_activity?: string | null
           loyalty_level?: string | null
+          pix_key?: string | null
           plan?: Database["public"]["Enums"]["user_plan"]
           plan_end_date?: string | null
           plan_start_date?: string | null
@@ -810,6 +815,7 @@ export type Database = {
           preferences?: Json | null
           purchase_source?: string | null
           referral_code?: string | null
+          referral_earnings?: number
           role?: string | null
           total_session_time?: number | null
           updated_at?: string | null
