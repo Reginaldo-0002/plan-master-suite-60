@@ -37,15 +37,20 @@ export const useWebhookIntegration = (userId?: string) => {
           // Check if plan was updated
           if (updatedProfile.plan && payload.old?.plan !== updatedProfile.plan) {
             toast({
-              title: "Plano Atualizado! 🎉",
-              description: `Seu plano foi alterado para ${updatedProfile.plan.toUpperCase()}! A página será recarregada automaticamente.`,
+              title: "🎉 Pagamento Confirmado!",
+              description: `Seu plano foi atualizado para ${updatedProfile.plan.toUpperCase()}! Todas as funcionalidades já estão disponíveis.`,
               variant: "default",
             });
             
-            // Refresh after showing the notification
-            setTimeout(() => {
-              window.location.reload();
-            }, 2000);
+            // Force immediate update without page reload
+            window.dispatchEvent(new CustomEvent('profile-updated', { 
+              detail: { profile: updatedProfile } 
+            }));
+          }
+          
+          // Also notify about plan end date changes
+          if (updatedProfile.plan_end_date && payload.old?.plan_end_date !== updatedProfile.plan_end_date) {
+            console.log('📅 Plan end date updated:', updatedProfile.plan_end_date);
           }
         }
       )

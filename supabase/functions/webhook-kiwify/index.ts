@@ -84,8 +84,10 @@ serve(async (req) => {
       console.log('✅ Signature verified')
     }
 
-    // Gerar chave de idempotência
-    const idempotencyKey = `kiwify_${payload.order?.id || payload.id || Date.now()}_${payload.event_type || 'unknown'}`
+    // Gerar chave de idempotência usando order_id do payload da Kiwify
+    const orderId = payload.order_id || payload.order?.id || payload.id || Date.now()
+    const eventType = payload.webhook_event_type || payload.event_type || 'unknown'
+    const idempotencyKey = `kiwify_${orderId}_${eventType}`
     
     console.log('🔑 Idempotency key:', idempotencyKey)
 

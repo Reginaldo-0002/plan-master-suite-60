@@ -38,10 +38,25 @@ export default function Dashboard() {
   const { hasAcceptedTerms, loading: termsLoading } = useTermsAcceptance();
   
   // Initialize webhook integration for real-time payment updates
-  const { isListening: webhookListening } = useWebhookIntegration(user?.email);
+  const { isListening: webhookListening } = useWebhookIntegration(user?.id);
 
   // Usar o perfil em tempo real se disponível, senão usar o perfil local
   const currentProfile = realtimeProfile || profile;
+
+  // Listen for profile updates via custom events
+  useEffect(() => {
+    const handleProfileUpdate = (event: CustomEvent) => {
+      console.log('🔄 Custom profile update received:', event.detail);
+      if (event.detail?.profile) {
+        setProfile(event.detail.profile);
+      }
+    };
+
+    window.addEventListener('profile-updated', handleProfileUpdate as EventListener);
+    return () => {
+      window.removeEventListener('profile-updated', handleProfileUpdate as EventListener);
+    };
+  }, []);
 
   // Check authentication and terms acceptance
   useEffect(() => {
