@@ -1759,8 +1759,10 @@ export type Database = {
           created_by: string | null
           description: string | null
           id: string
+          ip_allowlist: string[] | null
           last_healthcheck_at: string | null
           provider: Database["public"]["Enums"]["platform_enum"]
+          require_signature: boolean
           secret: string
           updated_at: string
           url: string
@@ -1771,8 +1773,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          ip_allowlist?: string[] | null
           last_healthcheck_at?: string | null
           provider: Database["public"]["Enums"]["platform_enum"]
+          require_signature?: boolean
           secret: string
           updated_at?: string
           url: string
@@ -1783,8 +1787,10 @@ export type Database = {
           created_by?: string | null
           description?: string | null
           id?: string
+          ip_allowlist?: string[] | null
           last_healthcheck_at?: string | null
           provider?: Database["public"]["Enums"]["platform_enum"]
+          require_signature?: boolean
           secret?: string
           updated_at?: string
           url?: string
@@ -2122,7 +2128,7 @@ export type Database = {
         Returns: boolean
       }
       normalize_webhook_payload: {
-        Args: { payload: Json; provider_name: string }
+        Args: { payload: Json; provider: string }
         Returns: Json
       }
       notify_admins: {

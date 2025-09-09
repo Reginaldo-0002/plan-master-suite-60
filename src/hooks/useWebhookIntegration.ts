@@ -9,6 +9,7 @@ interface WebhookEvent {
   canonical_event: any;
   processed_at: string | null;
   created_at: string;
+  verified: boolean;
 }
 
 export const useWebhookIntegration = (userId?: string) => {
@@ -59,8 +60,48 @@ export const useWebhookIntegration = (userId?: string) => {
         setIsListening(status === 'SUBSCRIBED');
       });
 
+    // Subscribe to webhook events for automatic processing
+    const webhookChannel = supabase
+      .channel('webhook-events-monitoring')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'webhook_events'
+        },
+        async (payload) => {
+          console.log('🎣 New webhook event received:', payload);
+          const event = payload.new as any;
+          
+          // Automatically process if it's a payment-related event
+          if (event.provider === 'kiwify' && event.status === 'received') {
+            console.log('🔄 Auto-processing webhook event:', event.id);
+            
+            // Wait a moment to ensure the event is fully inserted
+            setTimeout(async () => {
+              try {
+                const { data, error } = await supabase.rpc('process_webhook_event', {
+                  event_id: event.id
+                });
+                
+                if (error) {
+                  console.error('❌ Auto-processing failed:', error);
+                } else {
+                  console.log('✅ Auto-processing successful:', data);
+                }
+              } catch (error) {
+                console.error('❌ Error in auto-processing:', error);
+              }
+            }, 1000);
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(profileChannel);
+      supabase.removeChannel(webhookChannel);
       setIsListening(false);
     };
   }, [userId, toast]);

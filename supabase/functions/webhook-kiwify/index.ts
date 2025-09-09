@@ -35,9 +35,6 @@ serve(async (req) => {
       )
     }
 
-    // Verificar assinatura Kiwify
-    const kiwifySignature = headers['x-kiwify-signature'] || headers['signature']
-    
     // Buscar endpoint configurado para Kiwify
     const { data: endpoints, error: endpointError } = await supabase
       .from('webhook_endpoints')
@@ -56,9 +53,12 @@ serve(async (req) => {
 
     const endpoint = endpoints[0]
 
-    // Verificar assinatura (se configurada)
-    if (endpoint.secret && kiwifySignature) {
-      // Implementar verificação de assinatura HMAC SHA256
+    // Determinar se deve verificar assinatura
+    let isVerified = false
+    const kiwifySignature = headers['x-kiwify-signature'] || headers['signature']
+
+    // Se endpoint exige assinatura E há assinatura, verifica
+    if (endpoint.require_signature && endpoint.secret && kiwifySignature) {
       const encoder = new TextEncoder()
       const key = await crypto.subtle.importKey(
         'raw',
@@ -81,7 +81,14 @@ serve(async (req) => {
         )
       }
       
+      isVerified = true
       console.log('✅ Signature verified')
+    } else if (!endpoint.require_signature) {
+      // Se não exige assinatura, marca como verificado por padrão
+      isVerified = true
+      console.log('✅ Verification not required - marking as verified')
+    } else {
+      console.log('⚠️ Verification required but signature missing')
     }
 
     // Gerar chave de idempotência usando order_id do payload da Kiwify
@@ -99,7 +106,7 @@ serve(async (req) => {
         raw_headers: headers,
         raw_payload: payload,
         idempotency_key: idempotencyKey,
-        verified: !!kiwifySignature,
+        verified: isVerified,
         status: 'received'
       })
       .select()

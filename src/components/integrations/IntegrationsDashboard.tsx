@@ -19,6 +19,8 @@ import { OutboundWebhooks } from './OutboundWebhooks';
 import { MetaTracking } from './MetaTracking';
 import { TestLab } from './TestLab';
 import { IntegrationsSettings } from './IntegrationsSettings';
+import { useWebhookIntegration } from '@/hooks/useWebhookIntegration';
+import { useAuth } from '@/hooks/useAuth';
 
 interface IntegrationsDashboardProps {
   onSectionChange: (section: string) => void;
@@ -26,6 +28,10 @@ interface IntegrationsDashboardProps {
 
 export function IntegrationsDashboard({ onSectionChange }: IntegrationsDashboardProps) {
   const [activeTab, setActiveTab] = useState('overview');
+  const { user } = useAuth();
+  
+  // Ativar monitoramento automático de webhooks
+  useWebhookIntegration(user?.id);
 
   const stats = [
     {
