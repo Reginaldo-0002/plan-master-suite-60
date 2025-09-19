@@ -43,7 +43,7 @@ export const useOptimizedDashboard = (userId?: string) => {
 
       const [contentsResult, notificationsResult] = await Promise.all([
         SupabaseWrapper.getRecentContent(),
-        SupabaseWrapper.getNotifications([resolvedPlan])
+        SupabaseWrapper.getNotifications([resolvedPlan, 'admin'])
       ]);
 
       const newDashboardData: DashboardData = {

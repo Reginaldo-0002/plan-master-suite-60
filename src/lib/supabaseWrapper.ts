@@ -94,9 +94,9 @@ export class SupabaseWrapper {
     return this.withTimeout(async () => {
       return await supabase
         .from('notifications')
-        .select('id, title, message, type, is_popup, popup_duration, created_at')
+        .select('id, title, message, type, is_popup, popup_duration, created_at, target_plans')
         .eq('is_active', true)
-        .overlaps('target_plans', targetPlans)
+        .or(`target_plans.is.null,target_plans.eq.{},target_plans.ov.{${targetPlans.join(',')}}`)
         .order('created_at', { ascending: false })
         .limit(10);
     });
