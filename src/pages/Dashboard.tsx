@@ -17,6 +17,9 @@ import { ToolsSection } from "@/components/dashboard/ToolsSection";
 import { EnhancedChatbot } from "@/components/chatbot/EnhancedChatbot";
 import { ComingSoonSection } from "@/components/dashboard/ComingSoonSection";
 import { CarouselSection } from "@/components/dashboard/CarouselSection";
+import { useOptimizedTimeTracking } from '@/hooks/useOptimizedTimeTracking';
+import { useOptimizedSessionTracking } from '@/hooks/useOptimizedSessionTracking';
+import { useOptimizedAreaTracking } from '@/hooks/useOptimizedAreaTracking';
 import { TopicsRouter } from "@/components/navigation/TopicsRouter";
 import { SupportChat } from "@/components/support/SupportChat";
 import { useWebhookIntegration } from "@/hooks/useWebhookIntegration";
@@ -37,6 +40,11 @@ export default function Dashboard() {
   const { profile: realtimeProfile } = useProfileRealtime(user?.id);
   const { hasAcceptedTerms, loading: termsLoading } = useTermsAcceptance();
   
+  // Initialize optimized tracking hooks
+  useOptimizedTimeTracking();
+  useOptimizedSessionTracking();
+  useOptimizedAreaTracking();
+
   // Initialize webhook integration for real-time payment updates
   const { isListening: webhookListening } = useWebhookIntegration(user?.id);
 

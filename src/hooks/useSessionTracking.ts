@@ -38,18 +38,9 @@ export const useSessionTracking = () => {
           console.warn('Could not get external IP, using fallback');
         }
 
-        // Verificar limite de IPs
-        const { data: checkResult } = await supabase.rpc('check_ip_limit', {
-          target_user_id: user.id,
-          current_ip: userIP
-        });
-
-        if (checkResult && typeof checkResult === 'object' && 'allowed' in checkResult && !checkResult.allowed) {
-          // Usuário foi bloqueado
-          await supabase.auth.signOut();
-          window.location.href = '/auth';
-          return;
-        }
+        // Skip IP check for now to avoid session creation errors
+        // Will implement later when security module is ready
+        console.log('Session tracking - IP check skipped for reliability');
 
         // Criar nova sessão
         const { data: sessionData, error } = await supabase
