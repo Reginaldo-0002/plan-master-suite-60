@@ -37,11 +37,13 @@ export const useOptimizedDashboard = (userId?: string) => {
     setIsLoading(true);
     
     try {
-      // Fetch all data in parallel for better performance
-      const [contentsResult, notificationsResult, profileResult] = await Promise.all([
+      // Fetch profile first to resolve the correct plan, then fetch the rest in parallel
+      const profileResult = await SupabaseWrapper.getUserProfile(userId);
+      const resolvedPlan = userPlan || profileResult.data?.plan || 'free';
+
+      const [contentsResult, notificationsResult] = await Promise.all([
         SupabaseWrapper.getRecentContent(),
-        SupabaseWrapper.getNotifications([userPlan]),
-        SupabaseWrapper.getUserProfile(userId)
+        SupabaseWrapper.getNotifications([resolvedPlan])
       ]);
 
       const newDashboardData: DashboardData = {
@@ -75,11 +77,21 @@ export const useOptimizedDashboard = (userId?: string) => {
     [dashboardData.notifications]
   );
 
-  // Effect to fetch data when userId changes
+  // Effect to fetch data when userId changes and react to real-time profile updates (e.g., plan changes)
   useEffect(() => {
     if (userId) {
       fetchDashboardData();
     }
+
+    const handler = (e: any) => {
+      const updatedPlan = e.detail?.profile?.plan as string | undefined;
+      fetchDashboardData(updatedPlan);
+    };
+    window.addEventListener('profile-updated', handler);
+
+    return () => {
+      window.removeEventListener('profile-updated', handler);
+    };
   }, [userId, fetchDashboardData]);
 
   // Optimized refresh function
