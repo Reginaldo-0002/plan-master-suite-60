@@ -2128,7 +2128,12 @@ export type Database = {
         Returns: boolean
       }
       normalize_webhook_payload: {
-        Args: { payload: Json; provider: string }
+        Args:
+          | { payload: Json; provider: string }
+          | {
+              payload_input: Json
+              provider_input: Database["public"]["Enums"]["platform_enum"]
+            }
         Returns: Json
       }
       notify_admins: {
