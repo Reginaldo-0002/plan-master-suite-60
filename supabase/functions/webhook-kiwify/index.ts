@@ -68,12 +68,13 @@ serve(async (req) => {
         ['verify']
       )
       
-      const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody))
-      const expectedSignature = Array.from(new Uint8Array(signature))
+      const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody))
+      const expectedHex = Array.from(new Uint8Array(mac))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('')
-      
-      if (`sha256=${expectedSignature}` !== kiwifySignature) {
+      const provided = String(kiwifySignature).trim()
+      const matches = provided === expectedHex || provided === `sha256=${expectedHex}`
+      if (!matches) {
         console.error('❌ Invalid signature')
         return new Response(
           JSON.stringify({ error: 'Invalid signature' }),

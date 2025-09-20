@@ -74,11 +74,10 @@ export const useWebhookIntegration = (userId?: string) => {
           console.log('🎣 New webhook event received:', payload);
           const event = payload.new as any;
           
-          // Automatically process if it's a payment-related event
-          if (event.provider === 'kiwify' && event.status === 'received') {
+          // Automatically process if it's a payment-related event (extra safety)
+          if ((event.provider === 'kiwify' || event.provider === 'hotmart' || event.provider === 'generic') && event.status === 'received') {
             console.log('🔄 Auto-processing webhook event:', event.id);
             
-            // Wait a moment to ensure the event is fully inserted
             setTimeout(async () => {
               try {
                 const { data, error } = await supabase.rpc('process_webhook_event', {
@@ -94,6 +93,37 @@ export const useWebhookIntegration = (userId?: string) => {
                 console.error('❌ Error in auto-processing:', error);
               }
             }, 1000);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'webhook_events'
+        },
+        async (payload) => {
+          const updated = payload.new as any;
+          if (updated?.status === 'processed' && userId) {
+            console.log('📬 Webhook event processed, refreshing profile:', updated.id);
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('user_id', userId)
+                .single();
+
+              if (profile) {
+                window.dispatchEvent(new CustomEvent('profile-updated', { detail: { profile } }));
+                toast({
+                  title: 'Plano atualizado',
+                  description: `Seu plano agora é ${profile.plan?.toUpperCase()}.`,
+                });
+              }
+            } catch (err) {
+              console.error('Erro buscando perfil após processamento do webhook:', err);
+            }
           }
         }
       )
