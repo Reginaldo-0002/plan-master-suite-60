@@ -2176,6 +2176,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      user_has_resource_access: {
+        Args: { resource_is_premium: boolean; resource_required_plan: string }
+        Returns: boolean
+      }
       validate_referral_code: {
         Args: { code: string }
         Returns: boolean
