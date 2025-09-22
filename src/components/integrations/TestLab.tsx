@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { TestTube, Send, Zap, Globe, Code, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export function TestLab() {
   const [selectedProvider, setSelectedProvider] = useState('hotmart');
@@ -120,13 +121,40 @@ export function TestLab() {
         throw new Error('Payload não encontrado');
       }
 
+      // Injetar o e-mail do usuário autenticado para validar atualização de plano
+      const { data: authData } = await supabase.auth.getUser();
+      const currentEmail = authData.user?.email;
+
+      let payloadObj: any = {};
+      try {
+        payloadObj = JSON.parse(payload as string);
+      } catch (e) {
+        throw new Error('Payload inválido');
+      }
+
+      if (currentEmail) {
+        if (provider === 'hotmart') {
+          payloadObj.data = payloadObj.data || {};
+          payloadObj.data.buyer = payloadObj.data.buyer || {};
+          payloadObj.data.buyer.email = currentEmail;
+        } else if (provider === 'kiwify') {
+          payloadObj.Customer = payloadObj.Customer || {};
+          payloadObj.Customer.email = currentEmail;
+        } else {
+          // genérico/caktor
+          payloadObj.email = currentEmail;
+        }
+      }
+
+      const payloadStr = JSON.stringify(payloadObj);
+
       // Mapear provider para endpoint da edge function
       const webhookEndpoints = {
         hotmart: 'webhook-hotmart',
         kiwify: 'webhook-kiwify', 
         caktor: 'webhook-generic',
         generic: 'webhook-generic'
-      };
+      } as const;
 
       const endpoint = webhookEndpoints[provider as keyof typeof webhookEndpoints];
       
@@ -142,7 +170,7 @@ export function TestLab() {
           'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNybndvZ3Jqd2hxamp5b2R4YWx4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ4NzY0NDIsImV4cCI6MjA3MDQ1MjQ0Mn0.MGvm-0S7W6NPtav5Gu2IbBwCvrs7VbcV04Py5eq66xc`,
           'X-Webhook-Secret': 'test-secret-123'
         },
-        body: payload
+        body: payloadStr
       });
 
       const result = await response.json();
@@ -151,7 +179,7 @@ export function TestLab() {
         id: result.event_id || `test_${Date.now()}`,
         provider,
         eventType,
-        payload: JSON.parse(payload),
+        payload: payloadObj,
         status: response.ok ? 'success' : 'error',
         timestamp: new Date().toISOString(),
         idempotencyKey: `test_${provider}_${Date.now()}`,

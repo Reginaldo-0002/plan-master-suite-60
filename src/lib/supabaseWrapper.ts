@@ -95,7 +95,7 @@ export class SupabaseWrapper {
       // Rely on RLS to deliver only notifications visible to the current user.
       return await supabase
         .from('notifications')
-        .select('id, title, message, type, is_popup, popup_duration, created_at, target_plans')
+        .select('id, title, message, type, is_popup, popup_duration, created_at, target_plans, is_active')
         .eq('is_active', true)
         .order('created_at', { ascending: false })
         .limit(10);
