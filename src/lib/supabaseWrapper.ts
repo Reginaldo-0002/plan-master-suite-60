@@ -92,11 +92,11 @@ export class SupabaseWrapper {
   // Optimized queries with field selection
   static async getNotifications(targetPlans: string[] = []) {
     return this.withTimeout(async () => {
+      // Rely on RLS to deliver only notifications visible to the current user.
       return await supabase
         .from('notifications')
         .select('id, title, message, type, is_popup, popup_duration, created_at, target_plans')
         .eq('is_active', true)
-        .or(`target_plans.is.null,target_plans.eq.{},target_plans.ov.{${targetPlans.join(',')}}`)
         .order('created_at', { ascending: false })
         .limit(10);
     });

@@ -210,14 +210,18 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
               <CardTitle className="text-futuristic-neon">Notificações</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {activeNotifications.slice(0, 3).map((notification: any) => (
-                <div key={notification.id} className="border-l-4 border-futuristic-primary pl-4 p-3 bg-background/20 rounded-r-lg">
-                  <p className="font-medium">{notification.title}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {notification.message}
-                  </p>
-                </div>
-              ))}
+              {activeNotifications.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma notificação no momento.</p>
+              ) : (
+                activeNotifications.slice(0, 3).map((notification: any) => (
+                  <div key={notification.id} className="border-l-4 border-futuristic-primary pl-4 p-3 bg-background/20 rounded-r-lg">
+                    <p className="font-medium">{notification.title}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {notification.message}
+                    </p>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>

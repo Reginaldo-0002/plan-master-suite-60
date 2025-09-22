@@ -39,7 +39,8 @@ export const useOptimizedDashboard = (userId?: string) => {
     try {
       // Fetch profile first to resolve the correct plan, then fetch the rest in parallel
       const profileResult = await SupabaseWrapper.getUserProfile(userId);
-      const resolvedPlan = userPlan || profileResult.data?.plan || 'free';
+      // Prefer the plan from the profile; fallback to provided param or 'free'
+      const resolvedPlan = (profileResult.data?.plan as string) || userPlan || 'free';
 
       const [contentsResult, notificationsResult] = await Promise.all([
         SupabaseWrapper.getRecentContent(),
