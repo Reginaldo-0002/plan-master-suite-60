@@ -16,24 +16,58 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
-    // Get raw body and headers
-    const rawBody = await req.text()
+    // Get raw body (as received) and headers
+    const contentType = req.headers.get('content-type') || ''
+    const rawBodyString = await req.text()
     const headers = Object.fromEntries(req.headers)
-    
-    console.log('📦 Raw payload:', rawBody)
+
+    console.log('📦 Raw body (string):', rawBodyString)
     console.log('📋 Headers:', headers)
 
-    // Parse JSON
+    // Parse payload supporting JSON and x-www-form-urlencoded
     let payload: any
     try {
-      payload = JSON.parse(rawBody)
+      if (contentType.includes('application/json')) {
+        payload = JSON.parse(rawBodyString)
+      } else if (contentType.includes('application/x-www-form-urlencoded')) {
+        const params = new URLSearchParams(rawBodyString)
+        const inner = params.get('payload') || params.get('data') || params.get('json')
+        if (inner) {
+          try {
+            payload = JSON.parse(inner)
+          } catch (_) {
+            payload = Object.fromEntries(params.entries())
+          }
+        } else {
+          payload = Object.fromEntries(params.entries())
+        }
+      } else {
+        // Best-effort fallback
+        try {
+          payload = JSON.parse(rawBodyString)
+        } catch (_) {
+          const params = new URLSearchParams(rawBodyString)
+          if ([...params.keys()].length > 0) {
+            const inner2 = params.get('payload') || params.get('data')
+            try {
+              payload = inner2 ? JSON.parse(inner2) : Object.fromEntries(params.entries())
+            } catch {
+              payload = Object.fromEntries(params.entries())
+            }
+          } else {
+            throw new Error('Unsupported payload format')
+          }
+        }
+      }
     } catch (e) {
-      console.error('❌ Invalid JSON:', e)
+      console.error('❌ Invalid or unsupported payload:', e)
       return new Response(
-        JSON.stringify({ error: 'Invalid JSON payload' }),
+        JSON.stringify({ error: 'Invalid or unsupported payload' }),
         { status: 400, headers: corsHeaders }
       )
     }
+
+    console.log('🧩 Parsed payload object:', payload)
 
     // Buscar endpoint configurado para Kiwify
     const { data: endpoints, error: endpointError } = await supabase
@@ -68,7 +102,7 @@ serve(async (req) => {
         ['verify']
       )
       
-      const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody))
+      const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBodyString))
       const expectedHex = Array.from(new Uint8Array(mac))
         .map(b => b.toString(16).padStart(2, '0'))
         .join('')
