@@ -140,6 +140,10 @@ export function TestLab() {
         } else if (provider === 'kiwify') {
           payloadObj.Customer = payloadObj.Customer || {};
           payloadObj.Customer.email = currentEmail;
+          
+          // CRÍTICO: Adicionar user_id via TrackingParameters.s1 para identificação confiável
+          payloadObj.TrackingParameters = payloadObj.TrackingParameters || {};
+          payloadObj.TrackingParameters.s1 = authData.user.id; // user_id para identificação precisa
         } else {
           // genérico/caktor
           payloadObj.email = currentEmail;

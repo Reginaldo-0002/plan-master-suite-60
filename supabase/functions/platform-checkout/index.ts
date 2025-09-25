@@ -51,6 +51,22 @@ serve(async (req) => {
 
     console.log("✅ Checkout data:", checkoutData);
 
+    // Para Kiwify, anexar parâmetros s1 (user_id) e s2 (referral_code) se tiver checkout_url
+    if (checkoutData?.success && checkoutData.checkout_url && platform === 'kiwify') {
+      const url = new URL(checkoutData.checkout_url);
+      
+      // s1 = user_id para identificação confiável
+      url.searchParams.set('s1', userData.user.id);
+      
+      // s2 = referral_code se disponível
+      if (referral_code) {
+        url.searchParams.set('s2', referral_code);
+      }
+      
+      checkoutData.checkout_url = url.toString();
+      console.log("🔗 Enhanced Kiwify checkout URL with tracking:", checkoutData.checkout_url);
+    }
+
     return new Response(JSON.stringify(checkoutData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

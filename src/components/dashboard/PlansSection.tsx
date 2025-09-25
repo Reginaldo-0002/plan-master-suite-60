@@ -182,7 +182,7 @@ export const PlansSection = ({ userPlan, profile }: PlansSectionProps) => {
           'Tudo do plano Free',
           'Acesso a conteúdos Vip',
           'Suporte prioritário',
-          'Ferramentas avançadas',,
+          'Ferramentas avançadas',
           'Comunidade VIP'
         ]
       },

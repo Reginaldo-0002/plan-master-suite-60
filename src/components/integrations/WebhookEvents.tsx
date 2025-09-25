@@ -75,19 +75,24 @@ export function WebhookEvents() {
 
   const handleReprocess = async (eventId: string) => {
     try {
-      // Aqui implementaríamos a lógica de reprocessamento
-      // Por enquanto, apenas simula o reprocessamento
-      const { error } = await supabase
-        .from('webhook_events')
-        .update({ status: 'processed', processed_at: new Date().toISOString() })
-        .eq('id', eventId);
+      // Reprocessar usando a RPC function que lida com toda a lógica
+      const { data, error } = await supabase.rpc('process_webhook_event', {
+        event_id: eventId
+      });
 
       if (error) throw error;
 
-      toast({
-        title: 'Sucesso',
-        description: 'Evento reprocessado com sucesso!'
-      });
+      const result = data as any;
+      
+      if (result?.success) {
+        toast({
+          title: 'Sucesso',
+          description: `Evento reprocessado! Plano ${result.plan} ativado até ${new Date(result.period_end).toLocaleDateString('pt-BR')}`,
+          variant: 'default'
+        });
+      } else {
+        throw new Error(result?.error || 'Falha no reprocessamento');
+      }
 
       loadEvents();
     } catch (error: any) {
