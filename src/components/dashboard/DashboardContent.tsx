@@ -242,7 +242,6 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
 <p className="text-sm text-muted-foreground">
   Membros <strong>PRO</strong>: <strong>50%</strong> de comissão nas indicações.
 </p>
-
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
