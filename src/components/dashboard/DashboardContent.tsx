@@ -237,8 +237,12 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
                 Programa de Indicação
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                Compartilhe seu código e ganhe R$ {referralStats.referral_earnings.toFixed(2)} com suas indicações
-              </p>
+  Membros <strong>VIP</strong>: <strong>30%</strong> de comissão nas indicações.
+</p>
+<p className="text-sm text-muted-foreground">
+  Membros <strong>PRO</strong>: <strong>50%</strong> de comissão nas indicações.
+</p>
+
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-3">
