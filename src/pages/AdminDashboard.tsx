@@ -24,6 +24,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { RequireRole } from "@/components/auth/RequireRole";
 import { IntegrationsSettings } from "@/components/integrations/IntegrationsSettings";
 import { AdminContentVisibility } from "@/components/admin/AdminContentVisibility";
+import { AdminAreaTrackingManager } from "@/components/admin/AdminAreaTrackingManager";
 
 type ActiveAdminSection = 
   | 'overview' 
@@ -146,7 +147,12 @@ const AdminDashboard = () => {
       case 'overview':
         return <AdminDashboardContent />;
       case 'analytics':
-        return <AdminUserAnalytics />;
+        return (
+          <div className="space-y-6 p-8">
+            <AdminUserAnalytics />
+            <AdminAreaTrackingManager />
+          </div>
+        );
       case 'users':
         return <AdvancedUserManagement />;
       case 'content':

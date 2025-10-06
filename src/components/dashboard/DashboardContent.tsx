@@ -12,6 +12,7 @@ import { MagneticBackground } from '@/components/background/MagneticBackground';
 import { Clock, Target, Users, Gift, Calendar, TrendingUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import SessionInfo from './SessionInfo';
+import { GlobalSearch } from './GlobalSearch';
 
 
 interface DashboardContentProps {
@@ -130,6 +131,11 @@ export const DashboardContent: React.FC<DashboardContentProps> = ({ onContentSel
           <Badge className={getPlanBadgeColor(profile.plan)}>
             Plano {profile.plan.toUpperCase()}
           </Badge>
+        </div>
+
+        {/* Global Search */}
+        <div className="flex justify-center">
+          <GlobalSearch onContentSelect={onContentSelect} />
         </div>
 
         {/* Main Stats Cards - Primeira linha */}

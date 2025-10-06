@@ -1893,6 +1893,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      admin_clear_area_tracking_history: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       admin_clear_chat_messages: {
         Args: { ticket_id_param: string }
         Returns: undefined
