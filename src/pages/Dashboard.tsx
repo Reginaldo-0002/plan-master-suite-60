@@ -299,9 +299,7 @@ export default function Dashboard() {
           contentId={selectedContentId} 
           userPlan={currentProfile.plan}
           onBack={() => {
-            setActiveSection('dashboard');
-            setSelectedContentId(null);
-            window.history.pushState({}, '', '/dashboard');
+            navigate(-1);
           }}
         />
       );
