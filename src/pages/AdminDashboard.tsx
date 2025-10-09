@@ -173,7 +173,7 @@ const AdminDashboard = () => {
               </div>
               <ContentTopicsEditor 
                 contentId={selectedContentId} 
-                onSave={handleBackToContent} 
+                onSave={() => {}} 
               />
             </div>
           );
