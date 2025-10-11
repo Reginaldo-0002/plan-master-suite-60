@@ -21,9 +21,11 @@ import {
   Edit2, 
   Trash2,
   CalendarDays,
-  AlertTriangle
+  AlertTriangle,
+  Download
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import * as XLSX from 'xlsx';
 
 interface User {
   id: string;
@@ -95,6 +97,9 @@ export const AdvancedUserManagement = () => {
     auto_renewal: true
   });
   const [searchTerm, setSearchTerm] = useState("");
+  const [planFilter, setPlanFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
 
   useEffect(() => {
@@ -437,10 +442,43 @@ const openDetailsDialog = async (user: User) => {
     setIsPlanDialogOpen(true);
   };
 
-  const filteredUsers = users.filter(user =>
-    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.user_id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = !searchTerm || 
+      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.user_id.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesPlan = planFilter === "all" || user.plan === planFilter;
+    
+    // Filtro de data
+    const now = new Date();
+    const userCreatedAt = new Date(user.created_at);
+    const daysDiff = Math.floor((now.getTime() - userCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
+    
+    let matchesDate = true;
+    if (dateFilter === "last7days") {
+      matchesDate = daysDiff <= 7;
+    } else if (dateFilter === "last30days") {
+      matchesDate = daysDiff <= 30;
+    } else if (dateFilter === "over90days") {
+      matchesDate = daysDiff > 90;
+    } else if (dateFilter === "over180days") {
+      matchesDate = daysDiff > 180;
+    } else if (dateFilter === "over1year") {
+      matchesDate = daysDiff > 365;
+    }
+    
+    // Filtro de status (plano vencido)
+    let matchesStatus = true;
+    if (statusFilter === "expired") {
+      matchesStatus = user.plan_status === 'expired';
+    } else if (statusFilter === "active") {
+      matchesStatus = user.plan_status === 'active' && user.plan !== 'free';
+    } else if (statusFilter === "free") {
+      matchesStatus = user.plan === 'free';
+    }
+    
+    return matchesSearch && matchesPlan && matchesDate && matchesStatus;
+  });
 
 const formatDate = (dateString: string | null) => {
   if (!dateString) return "Não definido";
@@ -453,6 +491,63 @@ const formatTime = (minutes?: number) => {
   const m = minutes % 60;
   return `${h}h ${m}m`;
 };
+
+  const exportToExcel = () => {
+    // Preparar dados para exportação
+    const exportData = filteredUsers.map(user => ({
+      'Nome': user.full_name || 'Não informado',
+      'Email': user.user_email || 'Não informado',
+      'WhatsApp': user.whatsapp || 'Não informado',
+      'Plataforma': user.purchase_source || 'Não informado',
+      'Plano': user.plan.toUpperCase(),
+      'Status': user.plan_status,
+      'Data Início': formatDate(user.plan_start_date),
+      'Data Fim': formatDate(user.plan_end_date),
+      'Auto Renovação': user.auto_renewal ? 'Sim' : 'Não',
+      'Tempo de Uso': formatTime(user.total_session_time),
+      'Áreas Acessadas': user.areas_accessed || 0,
+      'Chave PIX': user.pix_key || 'Não informado',
+      'Ganhos por Indicação': `R$ ${(user.referral_earnings || 0).toFixed(2)}`,
+      'Código de Indicação': user.referral_code || 'Não informado',
+      'Data de Cadastro': formatDate(user.created_at),
+      'Última Atualização': formatDate(user.updated_at),
+    }));
+
+    // Criar planilha
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Usuários');
+
+    // Ajustar largura das colunas
+    const colWidths = [
+      { wch: 25 }, // Nome
+      { wch: 30 }, // Email
+      { wch: 15 }, // WhatsApp
+      { wch: 15 }, // Plataforma
+      { wch: 10 }, // Plano
+      { wch: 12 }, // Status
+      { wch: 15 }, // Data Início
+      { wch: 15 }, // Data Fim
+      { wch: 15 }, // Auto Renovação
+      { wch: 15 }, // Tempo de Uso
+      { wch: 15 }, // Áreas Acessadas
+      { wch: 25 }, // Chave PIX
+      { wch: 20 }, // Ganhos
+      { wch: 20 }, // Código
+      { wch: 15 }, // Data Cadastro
+      { wch: 15 }, // Última Atualização
+    ];
+    ws['!cols'] = colWidths;
+
+    // Gerar arquivo
+    const timestamp = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `relatorio-usuarios-${timestamp}.xlsx`);
+
+    toast({
+      title: "Relatório gerado",
+      description: `${filteredUsers.length} usuários exportados com sucesso`,
+    });
+  };
 
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
@@ -489,15 +584,71 @@ const formatTime = (minutes?: number) => {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-4 mb-6">
-        <Input
-          placeholder="Buscar usuários..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md"
-        />
-      </div>
+      {/* Filtros e Busca */}
+      <Card className="border-border">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-lg text-foreground">Filtros</CardTitle>
+          <Button 
+            onClick={exportToExcel}
+            variant="outline"
+            className="bg-green-50 hover:bg-green-100 text-green-600 border-green-200"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Baixar Relatório Excel
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Buscar por nome ou ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Select value={planFilter} onValueChange={setPlanFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os planos</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-4">
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Filtrar por data de cadastro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as datas</SelectItem>
+                  <SelectItem value="last7days">Últimos 7 dias (Novos)</SelectItem>
+                  <SelectItem value="last30days">Últimos 30 dias</SelectItem>
+                  <SelectItem value="over90days">Mais de 90 dias</SelectItem>
+                  <SelectItem value="over180days">Mais de 180 dias</SelectItem>
+                  <SelectItem value="over1year">Mais de 1 ano</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="active">Planos Ativos (VIP/PRO)</SelectItem>
+                  <SelectItem value="free">Plano Free</SelectItem>
+                  <SelectItem value="expired">Vencido</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Users Table */}
       <Card>
