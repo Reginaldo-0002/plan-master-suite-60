@@ -10,10 +10,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Eye, Ban, Trash2, UserPlus, MessageSquare, Plus } from "lucide-react";
+import { Search, Eye, Ban, Trash2, UserPlus, MessageSquare, Plus, Download } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { CreateUserDialog } from "./CreateUserDialog";
 import { AdminDataReset } from "./AdminDataReset";
+import * as XLSX from 'xlsx';
 
 interface User {
   id: string;
@@ -42,6 +43,8 @@ export const AdminUserManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [planFilter, setPlanFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
+  const [dateFilter, setDateFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isMessageDialogOpen, setIsMessageDialogOpen] = useState(false);
@@ -282,8 +285,89 @@ export const AdminUserManagement = () => {
     const matchesPlan = planFilter === "all" || user.plan === planFilter;
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     
-    return matchesSearch && matchesPlan && matchesRole;
+    // Filtro de data
+    const now = new Date();
+    const userCreatedAt = new Date(user.created_at);
+    const daysDiff = Math.floor((now.getTime() - userCreatedAt.getTime()) / (1000 * 60 * 60 * 24));
+    
+    let matchesDate = true;
+    if (dateFilter === "last7days") {
+      matchesDate = daysDiff <= 7;
+    } else if (dateFilter === "last30days") {
+      matchesDate = daysDiff <= 30;
+    } else if (dateFilter === "over90days") {
+      matchesDate = daysDiff > 90;
+    } else if (dateFilter === "over180days") {
+      matchesDate = daysDiff > 180;
+    } else if (dateFilter === "over1year") {
+      matchesDate = daysDiff > 365;
+    }
+    
+    // Filtro de status (plano vencido)
+    let matchesStatus = true;
+    if (statusFilter === "expired") {
+      // Verifica se o usuário tem plano pago mas pode estar vencido
+      // Por enquanto, vamos considerar apenas se não é free
+      matchesStatus = user.plan !== 'free';
+    } else if (statusFilter === "active") {
+      matchesStatus = user.plan !== 'free';
+    } else if (statusFilter === "free") {
+      matchesStatus = user.plan === 'free';
+    }
+    
+    return matchesSearch && matchesPlan && matchesRole && matchesDate && matchesStatus;
   });
+
+  const exportToExcel = () => {
+    // Preparar dados para exportação
+    const exportData = filteredUsers.map(user => ({
+      'Nome': user.full_name || 'Não informado',
+      'Email': user.user_email || 'Não informado',
+      'WhatsApp': user.whatsapp || 'Não informado',
+      'Plataforma': user.purchase_source || 'Não informado',
+      'Plano': user.plan.toUpperCase(),
+      'Função': user.role,
+      'Tempo de Uso': formatTime(user.total_session_time),
+      'Áreas Acessadas': user.areas_accessed,
+      'Chave PIX': user.pix_key || 'Não informado',
+      'Ganhos por Indicação': `R$ ${user.referral_earnings.toFixed(2)}`,
+      'Código de Indicação': user.referral_code,
+      'Data de Cadastro': new Date(user.created_at).toLocaleDateString('pt-BR'),
+      'Última Atualização': new Date(user.updated_at).toLocaleDateString('pt-BR'),
+    }));
+
+    // Criar planilha
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Usuários');
+
+    // Ajustar largura das colunas
+    const colWidths = [
+      { wch: 25 }, // Nome
+      { wch: 30 }, // Email
+      { wch: 15 }, // WhatsApp
+      { wch: 15 }, // Plataforma
+      { wch: 10 }, // Plano
+      { wch: 12 }, // Função
+      { wch: 15 }, // Tempo de Uso
+      { wch: 15 }, // Áreas Acessadas
+      { wch: 25 }, // Chave PIX
+      { wch: 20 }, // Ganhos
+      { wch: 20 }, // Código
+      { wch: 15 }, // Data Cadastro
+      { wch: 15 }, // Última Atualização
+    ];
+    ws['!cols'] = colWidths;
+
+    // Gerar arquivo
+    const timestamp = new Date().toISOString().split('T')[0];
+    XLSX.writeFile(wb, `relatorio-usuarios-${timestamp}.xlsx`);
+
+    toast({
+      title: "Relatório gerado",
+      description: `${filteredUsers.length} usuários exportados com sucesso`,
+    });
+  };
 
   const getPlanBadgeColor = (plan: string) => {
     switch (plan) {
@@ -400,41 +484,77 @@ export const AdminUserManagement = () => {
 
       {/* Filters */}
       <Card className="border-border">
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="text-lg text-foreground">Filtros</CardTitle>
+          <Button 
+            onClick={exportToExcel}
+            variant="outline"
+            className="bg-green-50 hover:bg-green-100 text-green-600 border-green-200"
+          >
+            <Download className="w-4 h-4 mr-2" />
+            Baixar Relatório Excel
+          </Button>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4">
-            <div className="flex-1">
-              <Input
-                placeholder="Buscar por nome ou ID..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full"
-              />
+          <div className="space-y-4">
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <Input
+                  placeholder="Buscar por nome ou ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full"
+                />
+              </div>
+              <Select value={planFilter} onValueChange={setPlanFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por plano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os planos</SelectItem>
+                  <SelectItem value="free">Free</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={roleFilter} onValueChange={setRoleFilter}>
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="Filtrar por função" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as funções</SelectItem>
+                  <SelectItem value="user">Usuário</SelectItem>
+                  <SelectItem value="moderator">Moderador</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={planFilter} onValueChange={setPlanFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por plano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os planos</SelectItem>
-                <SelectItem value="free">Free</SelectItem>
-                <SelectItem value="vip">VIP</SelectItem>
-                <SelectItem value="pro">Pro</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Filtrar por função" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as funções</SelectItem>
-                <SelectItem value="user">Usuário</SelectItem>
-                <SelectItem value="moderator">Moderador</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex gap-4">
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Filtrar por data de cadastro" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as datas</SelectItem>
+                  <SelectItem value="last7days">Últimos 7 dias (Novos)</SelectItem>
+                  <SelectItem value="last30days">Últimos 30 dias</SelectItem>
+                  <SelectItem value="over90days">Mais de 90 dias</SelectItem>
+                  <SelectItem value="over180days">Mais de 180 dias</SelectItem>
+                  <SelectItem value="over1year">Mais de 1 ano</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-64">
+                  <SelectValue placeholder="Filtrar por status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os status</SelectItem>
+                  <SelectItem value="active">Planos Ativos (VIP/PRO)</SelectItem>
+                  <SelectItem value="free">Plano Free</SelectItem>
+                  <SelectItem value="expired">Possível Vencido (Não Free)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
