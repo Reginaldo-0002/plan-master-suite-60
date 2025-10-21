@@ -26,11 +26,22 @@ interface ReferralData {
   }>;
 }
 
+interface ReferralCommission {
+  vip_commission: number;
+  pro_commission: number;
+  min_payout: number;
+}
+
 export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
   const [referralData, setReferralData] = useState<ReferralData>({
     total_referrals: 0,
     total_earnings: 0,
     recent_referrals: []
+  });
+  const [commissions, setCommissions] = useState<ReferralCommission>({
+    vip_commission: 0,
+    pro_commission: 0,
+    min_payout: 50
   });
   const [loading, setLoading] = useState(true);
   const { navigateToPlans } = useOptimizedNavigation();
@@ -40,7 +51,42 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
 
   useEffect(() => {
     fetchReferralData();
+    fetchCommissionSettings();
   }, [profile.user_id]);
+
+  const fetchCommissionSettings = async () => {
+    try {
+      const { data: settings, error } = await supabase
+        .from('referral_settings')
+        .select('target_plan, amount, commission_type, min_payout')
+        .eq('is_active', true);
+
+      if (error) throw error;
+
+      let vipCommission = 0;
+      let proCommission = 0;
+      let minPayout = 50;
+
+      settings?.forEach((setting) => {
+        if (setting.target_plan === 'vip') {
+          vipCommission = setting.commission_type === 'percentage' ? setting.amount : 0;
+          minPayout = setting.min_payout;
+        } else if (setting.target_plan === 'pro') {
+          proCommission = setting.commission_type === 'percentage' ? setting.amount : 0;
+          if (setting.min_payout) minPayout = setting.min_payout;
+        }
+      });
+
+      setCommissions({
+        vip_commission: vipCommission,
+        pro_commission: proCommission,
+        min_payout: minPayout
+      });
+
+    } catch (error) {
+      console.error('Error fetching commission settings:', error);
+    }
+  };
 
   const fetchReferralData = async () => {
     try {
@@ -161,7 +207,7 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
             </div>
             <div className="text-center p-4 bg-muted/50 rounded-lg">
               <Gift className="w-8 h-8 text-purple-600 mx-auto mb-2" />
-              <div className="text-2xl font-bold">15%</div>
+              <div className="text-2xl font-bold">{commissions.vip_commission}%</div>
               <div className="text-sm text-muted-foreground">Comissão VIP</div>
             </div>
           </div>
@@ -205,19 +251,24 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
             <div className="grid gap-3 text-sm">
               <div className="flex items-start gap-3">
                 <Badge variant="outline" className="min-w-fit">1</Badge>
-                <span>Compartilhe seu link ou código de indicação</span>
+                <span>Compartilhe seu link ou código de indicação com seus amigos</span>
               </div>
               <div className="flex items-start gap-3">
                 <Badge variant="outline" className="min-w-fit">2</Badge>
-                <span>Seus amigos se cadastram usando seu código</span>
+                <span>Seus amigos se cadastram usando seu código ou link</span>
               </div>
               <div className="flex items-start gap-3">
                 <Badge variant="outline" className="min-w-fit">3</Badge>
-                <span>Quando eles assinam o plano VIP, você ganha 15% de comissão</span>
+                <span>
+                  Quando eles assinam, você ganha: <strong>{commissions.vip_commission}%</strong> no plano VIP 
+                  {commissions.pro_commission > 0 && (
+                    <> ou <strong>{commissions.pro_commission}%</strong> no plano PRO</>
+                  )}
+                </span>
               </div>
               <div className="flex items-start gap-3">
                 <Badge variant="outline" className="min-w-fit">4</Badge>
-                <span>Solicite o saque quando atingir R$ 50,00</span>
+                <span>Solicite o saque quando atingir R$ {commissions.min_payout.toFixed(2)}</span>
               </div>
             </div>
           </div>
