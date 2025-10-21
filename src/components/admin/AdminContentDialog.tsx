@@ -31,6 +31,11 @@ interface Content {
   difficulty_level: 'beginner' | 'intermediate' | 'advanced';
   estimated_duration?: number;
   order_index: number;
+  password_protected?: boolean;
+  content_password?: string;
+  scheduled_lock?: boolean;
+  lock_start_date?: string;
+  lock_end_date?: string;
 }
 
 interface AdminContentDialogProps {
@@ -61,7 +66,12 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
     tags: [],
     difficulty_level: "beginner",
     estimated_duration: 0,
-    order_index: 0
+    order_index: 0,
+    password_protected: false,
+    content_password: "",
+    scheduled_lock: false,
+    lock_start_date: "",
+    lock_end_date: ""
   });
 
   useEffect(() => {
@@ -87,7 +97,12 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
         tags: [],
         difficulty_level: "beginner",
         estimated_duration: 0,
-        order_index: 0
+        order_index: 0,
+        password_protected: false,
+        content_password: "",
+        scheduled_lock: false,
+        lock_start_date: "",
+        lock_end_date: ""
       });
       setTagInput("");
     }
@@ -149,6 +164,11 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
         difficulty_level: formData.difficulty_level,
         estimated_duration: formData.estimated_duration || null,
         order_index: formData.order_index,
+        password_protected: formData.password_protected || false,
+        content_password: formData.password_protected ? formData.content_password?.trim() || null : null,
+        scheduled_lock: formData.scheduled_lock || false,
+        lock_start_date: formData.scheduled_lock ? formData.lock_start_date || null : null,
+        lock_end_date: formData.scheduled_lock ? formData.lock_end_date || null : null,
         updated_at: new Date().toISOString()
       };
 
@@ -400,6 +420,72 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
               />
             </div>
           )}
+
+          <div className="border-t pt-6 space-y-4">
+            <h3 className="text-lg font-semibold">Bloqueios de Acesso</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="password_protected"
+                  checked={formData.password_protected}
+                  onCheckedChange={(checked) => handleInputChange('password_protected', checked)}
+                />
+                <Label htmlFor="password_protected">Proteger com Senha</Label>
+              </div>
+
+              {formData.password_protected && (
+                <div>
+                  <Label htmlFor="content_password">Senha do Conteúdo</Label>
+                  <Input
+                    id="content_password"
+                    type="text"
+                    value={formData.content_password || ''}
+                    onChange={(e) => handleInputChange('content_password', e.target.value)}
+                    placeholder="Digite a senha para acessar o conteúdo"
+                  />
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Os usuários precisarão inserir esta senha para acessar o conteúdo
+                  </p>
+                </div>
+              )}
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="scheduled_lock"
+                  checked={formData.scheduled_lock}
+                  onCheckedChange={(checked) => handleInputChange('scheduled_lock', checked)}
+                />
+                <Label htmlFor="scheduled_lock">Bloqueio por Agendamento</Label>
+              </div>
+
+              {formData.scheduled_lock && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="lock_start_date">Data de Início do Bloqueio</Label>
+                    <Input
+                      id="lock_start_date"
+                      type="datetime-local"
+                      value={formData.lock_start_date || ''}
+                      onChange={(e) => handleInputChange('lock_start_date', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="lock_end_date">Data de Fim do Bloqueio</Label>
+                    <Input
+                      id="lock_end_date"
+                      type="datetime-local"
+                      value={formData.lock_end_date || ''}
+                      onChange={(e) => handleInputChange('lock_end_date', e.target.value)}
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground col-span-2">
+                    O conteúdo ficará bloqueado durante o período selecionado
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex gap-2 pt-6">

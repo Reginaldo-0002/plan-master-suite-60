@@ -3,9 +3,11 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink, X } from "lucide-react";
+import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink, X, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
 import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
@@ -22,6 +24,11 @@ interface Content {
   release_date: string | null;
   created_at: string;
   updated_at: string;
+  password_protected?: boolean;
+  content_password?: string;
+  scheduled_lock?: boolean;
+  lock_start_date?: string;
+  lock_end_date?: string;
 }
 
 interface ContentSectionProps {
@@ -42,6 +49,9 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
   const { navigateToPlans } = useOptimizedNavigation();
@@ -86,7 +96,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
       let query = supabase
         .from('content')
-        .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')
+        .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, password_protected, content_password, scheduled_lock, lock_start_date, lock_end_date, created_at, updated_at')
         .eq('is_active', true)
         .eq('status', 'published')
         .order('created_at', { ascending: false });
@@ -152,11 +162,68 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
     }
   };
 
+  const isContentLocked = (contentItem: Content): { locked: boolean; reason: string } => {
+    // Verificar bloqueio por agendamento
+    if (contentItem.scheduled_lock && contentItem.lock_start_date && contentItem.lock_end_date) {
+      const now = new Date();
+      const lockStart = new Date(contentItem.lock_start_date);
+      const lockEnd = new Date(contentItem.lock_end_date);
+      
+      if (now >= lockStart && now <= lockEnd) {
+        return { 
+          locked: true, 
+          reason: `Conteúdo bloqueado até ${lockEnd.toLocaleDateString('pt-BR')} às ${lockEnd.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` 
+        };
+      }
+    }
+    
+    return { locked: false, reason: '' };
+  };
+
   const handleAccessContent = async (contentItem: Content) => {
     if (!canAccess(contentItem.required_plan) || (contentItem.status !== 'active' && contentItem.status !== 'published')) {
       return;
     }
 
+    // Verificar bloqueio por agendamento
+    const lockStatus = isContentLocked(contentItem);
+    if (lockStatus.locked) {
+      toast({
+        title: "Conteúdo Bloqueado",
+        description: lockStatus.reason,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Verificar proteção por senha
+    if (contentItem.password_protected) {
+      setSelectedContent(contentItem);
+      setPasswordDialogOpen(true);
+      return;
+    }
+
+    // Prosseguir com o acesso normal
+    await proceedToContent(contentItem);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!selectedContent) return;
+
+    if (passwordInput === selectedContent.content_password) {
+      setPasswordDialogOpen(false);
+      setPasswordInput("");
+      await proceedToContent(selectedContent);
+    } else {
+      toast({
+        title: "Senha Incorreta",
+        description: "A senha digitada está incorreta. Tente novamente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const proceedToContent = async (contentItem: Content) => {
     try {
       const currentUserId = (await supabase.auth.getUser()).data.user?.id;
       
@@ -334,13 +401,19 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
                     <Lock className="w-4 h-4 mr-2" />
                     Upgrade Necessário
                   </Button>
+                ) : isContentLocked(item).locked ? (
+                  <Button variant="outline" className="w-full" disabled>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Bloqueado Temporariamente
+                  </Button>
                 ) : (
                   <Button 
                     className="w-full" 
                     onClick={() => handleAccessContent(item)}
                   >
-                    {getActionIcon(item)}
-                    Acessar
+                    {item.password_protected && <KeyRound className="w-4 h-4 mr-2" />}
+                    {!item.password_protected && getActionIcon(item)}
+                    {item.password_protected ? 'Desbloquear' : 'Acessar'}
                   </Button>
                 )}
               </CardContent>
@@ -349,6 +422,51 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
         </div>
       )}
       
+      {/* Password Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Conteúdo Protegido</DialogTitle>
+            <DialogDescription>
+              Este conteúdo está protegido por senha. Digite a senha para acessar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="Digite a senha"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={handlePasswordSubmit} className="flex-1">
+              <KeyRound className="w-4 h-4 mr-2" />
+              Desbloquear
+            </Button>
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={() => {
+                setPasswordDialogOpen(false);
+                setPasswordInput("");
+              }}
+            >
+              Cancelar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* YouTube Video Player Dialog */}
       <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0">
