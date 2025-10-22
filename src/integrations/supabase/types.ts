@@ -316,6 +316,7 @@ export type Database = {
           auto_publish_at: string | null
           carousel_image_url: string | null
           carousel_order: number | null
+          content_password: string | null
           content_type: Database["public"]["Enums"]["content_type"]
           created_at: string | null
           description: string | null
@@ -325,10 +326,14 @@ export type Database = {
           hero_image_url: string | null
           id: string
           is_active: boolean | null
+          lock_end_date: string | null
+          lock_start_date: string | null
           metadata: Json | null
           order_index: number | null
+          password_protected: boolean | null
           published_at: string | null
           required_plan: Database["public"]["Enums"]["user_plan"]
+          scheduled_lock: boolean | null
           scheduled_publish_at: string | null
           show_in_carousel: boolean | null
           status: string | null
@@ -343,6 +348,7 @@ export type Database = {
           auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
+          content_password?: string | null
           content_type: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
@@ -352,10 +358,14 @@ export type Database = {
           hero_image_url?: string | null
           id?: string
           is_active?: boolean | null
+          lock_end_date?: string | null
+          lock_start_date?: string | null
           metadata?: Json | null
           order_index?: number | null
+          password_protected?: boolean | null
           published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
+          scheduled_lock?: boolean | null
           scheduled_publish_at?: string | null
           show_in_carousel?: boolean | null
           status?: string | null
@@ -370,6 +380,7 @@ export type Database = {
           auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
+          content_password?: string | null
           content_type?: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
@@ -379,10 +390,14 @@ export type Database = {
           hero_image_url?: string | null
           id?: string
           is_active?: boolean | null
+          lock_end_date?: string | null
+          lock_start_date?: string | null
           metadata?: Json | null
           order_index?: number | null
+          password_protected?: boolean | null
           published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
+          scheduled_lock?: boolean | null
           scheduled_publish_at?: string | null
           show_in_carousel?: boolean | null
           status?: string | null
