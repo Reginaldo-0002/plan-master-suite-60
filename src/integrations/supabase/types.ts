@@ -316,7 +316,6 @@ export type Database = {
           auto_publish_at: string | null
           carousel_image_url: string | null
           carousel_order: number | null
-          content_password: string | null
           content_type: Database["public"]["Enums"]["content_type"]
           created_at: string | null
           description: string | null
@@ -326,14 +325,10 @@ export type Database = {
           hero_image_url: string | null
           id: string
           is_active: boolean | null
-          lock_end_date: string | null
-          lock_start_date: string | null
           metadata: Json | null
           order_index: number | null
-          password_protected: boolean | null
           published_at: string | null
           required_plan: Database["public"]["Enums"]["user_plan"]
-          scheduled_lock: boolean | null
           scheduled_publish_at: string | null
           show_in_carousel: boolean | null
           status: string | null
@@ -348,7 +343,6 @@ export type Database = {
           auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
-          content_password?: string | null
           content_type: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
@@ -358,14 +352,10 @@ export type Database = {
           hero_image_url?: string | null
           id?: string
           is_active?: boolean | null
-          lock_end_date?: string | null
-          lock_start_date?: string | null
           metadata?: Json | null
           order_index?: number | null
-          password_protected?: boolean | null
           published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
-          scheduled_lock?: boolean | null
           scheduled_publish_at?: string | null
           show_in_carousel?: boolean | null
           status?: string | null
@@ -380,7 +370,6 @@ export type Database = {
           auto_publish_at?: string | null
           carousel_image_url?: string | null
           carousel_order?: number | null
-          content_password?: string | null
           content_type?: Database["public"]["Enums"]["content_type"]
           created_at?: string | null
           description?: string | null
@@ -390,14 +379,10 @@ export type Database = {
           hero_image_url?: string | null
           id?: string
           is_active?: boolean | null
-          lock_end_date?: string | null
-          lock_start_date?: string | null
           metadata?: Json | null
           order_index?: number | null
-          password_protected?: boolean | null
           published_at?: string | null
           required_plan?: Database["public"]["Enums"]["user_plan"]
-          scheduled_lock?: boolean | null
           scheduled_publish_at?: string | null
           show_in_carousel?: boolean | null
           status?: string | null
@@ -1189,7 +1174,7 @@ export type Database = {
           accepted_at: string
           created_at: string
           id: string
-          ip_address: unknown
+          ip_address: unknown | null
           user_agent: string | null
           user_id: string
         }
@@ -1197,7 +1182,7 @@ export type Database = {
           accepted_at?: string
           created_at?: string
           id?: string
-          ip_address?: unknown
+          ip_address?: unknown | null
           user_agent?: string | null
           user_id: string
         }
@@ -1205,7 +1190,7 @@ export type Database = {
           accepted_at?: string
           created_at?: string
           id?: string
-          ip_address?: unknown
+          ip_address?: unknown | null
           user_agent?: string | null
           user_id?: string
         }
@@ -1426,7 +1411,7 @@ export type Database = {
           created_at: string | null
           description: string | null
           id: string
-          ip_address: unknown
+          ip_address: unknown | null
           user_id: string
         }
         Insert: {
@@ -1434,7 +1419,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          ip_address?: unknown
+          ip_address?: unknown | null
           user_id: string
         }
         Update: {
@@ -1442,7 +1427,7 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           id?: string
-          ip_address?: unknown
+          ip_address?: unknown | null
           user_id?: string
         }
         Relationships: [
@@ -1577,7 +1562,7 @@ export type Database = {
           created_at: string | null
           id: string
           interaction_type: string
-          ip_address: unknown
+          ip_address: unknown | null
           metadata: Json | null
           session_id: string | null
           target_id: string | null
@@ -1588,7 +1573,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           interaction_type: string
-          ip_address?: unknown
+          ip_address?: unknown | null
           metadata?: Json | null
           session_id?: string | null
           target_id?: string | null
@@ -1599,7 +1584,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           interaction_type?: string
-          ip_address?: unknown
+          ip_address?: unknown | null
           metadata?: Json | null
           session_id?: string | null
           target_id?: string | null
@@ -1904,8 +1889,14 @@ export type Database = {
         Args: { minutes_to_add?: number }
         Returns: undefined
       }
-      admin_clear_all_sessions: { Args: never; Returns: undefined }
-      admin_clear_area_tracking_history: { Args: never; Returns: Json }
+      admin_clear_all_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      admin_clear_area_tracking_history: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       admin_clear_chat_messages: {
         Args: { ticket_id_param: string }
         Returns: undefined
@@ -1930,7 +1921,10 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_delete_all_tickets: { Args: never; Returns: Json }
+      admin_delete_all_tickets: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
       admin_delete_chatbot_response: {
         Args: { response_uuid: string }
         Returns: Json
@@ -1939,7 +1933,10 @@ export type Database = {
         Args: { target_user_id: string }
         Returns: Json
       }
-      admin_reset_user_data: { Args: { target_user_id: string }; Returns: Json }
+      admin_reset_user_data: {
+        Args: { target_user_id: string }
+        Returns: Json
+      }
       admin_soft_delete_content_topic: {
         Args: { topic_uuid: string }
         Returns: Json
@@ -1956,7 +1953,10 @@ export type Database = {
         }
         Returns: Json
       }
-      admin_unblock_user: { Args: { block_id: string }; Returns: Json }
+      admin_unblock_user: {
+        Args: { block_id: string }
+        Returns: Json
+      }
       award_loyalty_points: {
         Args: {
           activity_type: string
@@ -1973,8 +1973,14 @@ export type Database = {
         Args: { current_ip: unknown; target_user_id: string }
         Returns: Json
       }
-      check_user_role: { Args: { target_role: string }; Returns: boolean }
-      cleanup_user_sessions: { Args: never; Returns: undefined }
+      check_user_role: {
+        Args: { target_role: string }
+        Returns: boolean
+      }
+      cleanup_user_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       create_platform_checkout: {
         Args: {
           plan_slug: string
@@ -1984,10 +1990,16 @@ export type Database = {
         }
         Returns: Json
       }
-      enforce_ip_limits: { Args: never; Returns: undefined }
-      generate_webhook_url: { Args: { provider_name: string }; Returns: string }
+      enforce_ip_limits: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      generate_webhook_url: {
+        Args: { provider_name: string }
+        Returns: string
+      }
       get_all_users_for_admin: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           areas_accessed: number
           avatar_url: string
@@ -2008,7 +2020,7 @@ export type Database = {
         }[]
       }
       get_all_users_stats: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           last_activity: string
           month_minutes: number
@@ -2026,8 +2038,14 @@ export type Database = {
         Args: { requesting_user_id?: string; resource_id: string }
         Returns: string
       }
-      get_browser_info: { Args: { user_agent_string: string }; Returns: Json }
-      get_current_user_role: { Args: never; Returns: string }
+      get_browser_info: {
+        Args: { user_agent_string: string }
+        Returns: Json
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_time_stats: {
         Args: { target_user_id?: string }
         Returns: {
@@ -2064,7 +2082,7 @@ export type Database = {
         }[]
       }
       get_user_security_stats: {
-        Args: never
+        Args: Record<PropertyKey, never>
         Returns: {
           is_blocked: boolean
           is_currently_active: boolean
@@ -2086,7 +2104,10 @@ export type Database = {
           year_minutes: number
         }[]
       }
-      has_accepted_terms: { Args: { user_uuid?: string }; Returns: boolean }
+      has_accepted_terms: {
+        Args: { user_uuid?: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -2094,23 +2115,31 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_content_password: {
-        Args: { content_id_param: string; plain_password: string }
-        Returns: undefined
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
       }
-      is_admin_user: { Args: never; Returns: boolean }
-      is_current_user_admin: { Args: never; Returns: boolean }
-      is_user_admin: { Args: { user_uuid?: string }; Returns: boolean }
-      is_user_blocked: { Args: { target_user_id: string }; Returns: boolean }
-      normalize_webhook_payload:
-        | { Args: { payload: Json; provider: string }; Returns: Json }
-        | {
-            Args: {
+      is_current_user_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_user_admin: {
+        Args: { user_uuid?: string }
+        Returns: boolean
+      }
+      is_user_blocked: {
+        Args: { target_user_id: string }
+        Returns: boolean
+      }
+      normalize_webhook_payload: {
+        Args:
+          | {
               payload: Json
               provider: Database["public"]["Enums"]["platform_enum"]
             }
-            Returns: Json
-          }
+          | { payload: Json; provider: string }
+        Returns: Json
+      }
       notify_admins: {
         Args: {
           notification_message: string
@@ -2119,7 +2148,10 @@ export type Database = {
         }
         Returns: undefined
       }
-      process_auto_status_schedules: { Args: never; Returns: undefined }
+      process_auto_status_schedules: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       process_referral_purchase: {
         Args: {
           plan_purchased: string
@@ -2129,25 +2161,36 @@ export type Database = {
         }
         Returns: Json
       }
-      process_webhook_event: { Args: { event_id: string }; Returns: Json }
-      test_admin_notifications: { Args: never; Returns: undefined }
+      process_webhook_event: {
+        Args: { event_id: string }
+        Returns: Json
+      }
+      test_admin_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       track_area_access: {
         Args: { area_name_param: string; session_uuid?: string }
         Returns: undefined
       }
-      track_daily_time: { Args: { minutes_to_add: number }; Returns: undefined }
+      track_daily_time: {
+        Args: { minutes_to_add: number }
+        Returns: undefined
+      }
       update_referral_earnings: {
         Args: { amount: number; user_uuid: string }
         Returns: undefined
       }
-      update_user_total_session_time: { Args: never; Returns: undefined }
+      update_user_total_session_time: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       user_has_resource_access: {
         Args: { resource_is_premium: boolean; resource_required_plan: string }
         Returns: boolean
       }
-      validate_referral_code: { Args: { code: string }; Returns: boolean }
-      verify_content_password: {
-        Args: { content_id_param: string; plain_password: string }
+      validate_referral_code: {
+        Args: { code: string }
         Returns: boolean
       }
     }

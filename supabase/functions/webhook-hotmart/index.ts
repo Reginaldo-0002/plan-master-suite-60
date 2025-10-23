@@ -35,25 +35,7 @@ serve(async (req) => {
       )
     }
 
-    // Get timestamp for replay attack prevention
-    const timestamp = headers['x-hotmart-timestamp'] || headers['timestamp']
-    
-    // Reject requests without timestamp (replay attack prevention)
-    if (timestamp) {
-      const requestTime = parseInt(timestamp)
-      const now = Date.now()
-      const fiveMinutes = 5 * 60 * 1000
-      
-      if (isNaN(requestTime) || Math.abs(now - requestTime) > fiveMinutes) {
-        console.error('❌ Request timestamp too old or invalid')
-        return new Response(
-          JSON.stringify({ error: 'Request timestamp invalid or expired' }),
-          { status: 401, headers: corsHeaders }
-        )
-      }
-    }
-    
-    // MANDATORY: Verificar assinatura Hotmart
+    // Verificar assinatura Hotmart
     const hotmartSignature = headers['x-hotmart-hottok'] || headers['hottok']
     
     // Buscar endpoint configurado para Hotmart
@@ -74,59 +56,11 @@ serve(async (req) => {
 
     const endpoint = endpoints[0]
 
-    // MANDATORY signature verification using HMAC SHA-256
-    if (!endpoint.secret || !hotmartSignature) {
-      console.error('❌ Missing signature or secret')
-      
-      // Log failed attempt with IP
-      const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown'
-      console.log(`🚨 Unauthorized webhook attempt from IP: ${clientIP}`)
-      
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized: Missing signature' }),
-        { status: 401, headers: corsHeaders }
-      )
-    }
-
-    // Verify HMAC signature
-    try {
-      const encoder = new TextEncoder()
-      const key = await crypto.subtle.importKey(
-        'raw',
-        encoder.encode(endpoint.secret),
-        { name: 'HMAC', hash: 'SHA-256' },
-        false,
-        ['verify']
-      )
-      
-      const mac = await crypto.subtle.sign('HMAC', key, encoder.encode(rawBody))
-      const expectedHex = Array.from(new Uint8Array(mac))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')
-      
-      const provided = String(hotmartSignature).trim()
-      const isValid = provided === expectedHex || provided === `sha256=${expectedHex}`
-      
-      if (!isValid) {
-        console.error('❌ Invalid HMAC signature')
-        
-        // Log failed attempt with IP
-        const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown'
-        console.log(`🚨 Invalid signature from IP: ${clientIP}`)
-        
-        return new Response(
-          JSON.stringify({ error: 'Unauthorized: Invalid signature' }),
-          { status: 401, headers: corsHeaders }
-        )
-      }
-      
-      console.log('✅ Hotmart signature verified')
-    } catch (error) {
-      console.error('❌ Signature verification error:', error)
-      return new Response(
-        JSON.stringify({ error: 'Signature verification failed' }),
-        { status: 401, headers: corsHeaders }
-      )
+    // Verificar assinatura (se configurada)
+    if (endpoint.secret && hotmartSignature) {
+      // Aqui você implementaria a verificação de assinatura do Hotmart
+      // Por enquanto, apenas log
+      console.log('🔐 Signature verification would happen here')
     }
 
     // Gerar chave de idempotência

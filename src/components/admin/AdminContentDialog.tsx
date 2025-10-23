@@ -146,7 +146,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
     setLoading(true);
     
     try {
-      // Don't include content_password in the initial save - it will be hashed separately
       const dataToSave = {
         title: formData.title.trim(),
         description: formData.description.trim(),
@@ -166,6 +165,7 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
         estimated_duration: formData.estimated_duration || null,
         order_index: formData.order_index,
         password_protected: formData.password_protected || false,
+        content_password: formData.password_protected ? formData.content_password?.trim() || null : null,
         scheduled_lock: formData.scheduled_lock || false,
         lock_start_date: formData.scheduled_lock ? formData.lock_start_date || null : null,
         lock_end_date: formData.scheduled_lock ? formData.lock_end_date || null : null,
@@ -173,7 +173,6 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
       };
 
       let result;
-      let contentId: string;
       
       if (content?.id) {
         result = await supabase
@@ -181,34 +180,15 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
           .update(dataToSave)
           .eq('id', content.id)
           .select();
-        contentId = content.id;
       } else {
         result = await supabase
           .from('content')
           .insert([dataToSave])
           .select();
-        contentId = result.data?.[0]?.id;
       }
 
       if (result.error) {
         throw result.error;
-      }
-
-      // If password was provided and password_protected is true, hash it server-side
-      if (formData.password_protected && formData.content_password && formData.content_password.trim() !== '' && contentId) {
-        const { error: hashError } = await supabase.rpc('hash_content_password', {
-          content_id_param: contentId,
-          plain_password: formData.content_password.trim()
-        });
-
-        if (hashError) {
-          console.error('Error hashing password:', hashError);
-          toast({
-            title: "Aviso",
-            description: "Conteúdo salvo, mas houve erro ao definir a senha. Tente novamente.",
-            variant: "destructive",
-          });
-        }
       }
 
       toast({

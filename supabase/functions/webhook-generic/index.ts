@@ -37,26 +37,10 @@ serve(async (req) => {
       )
     }
 
-    // Get timestamp for replay attack prevention
-    const timestamp = headers['x-webhook-timestamp'] || headers['timestamp']
-    
-    // Reject requests without timestamp (replay attack prevention)
-    if (timestamp) {
-      const requestTime = parseInt(timestamp)
-      const now = Date.now()
-      const fiveMinutes = 5 * 60 * 1000
-      
-      if (isNaN(requestTime) || Math.abs(now - requestTime) > fiveMinutes) {
-        console.error('❌ Request timestamp too old or invalid')
-        return new Response(
-          JSON.stringify({ error: 'Request timestamp invalid or expired' }),
-          { status: 401, headers: corsHeaders }
-        )
-      }
-    }
-    
-    // MANDATORY: Secret verification via header only (never query params for security)
-    const providedSecret = headers['x-webhook-secret'] || headers['authorization']?.replace('Bearer ', '')
+    // Verificar secret via query param ou header
+    const secretFromQuery = url.searchParams.get('secret')
+    const secretFromHeader = headers['x-webhook-secret'] || headers['authorization']?.replace('Bearer ', '')
+    const providedSecret = secretFromQuery || secretFromHeader
     
     // Buscar endpoint configurado para Generic
     const { data: endpoints, error: endpointError } = await supabase
@@ -76,16 +60,11 @@ serve(async (req) => {
 
     const endpoint = endpoints[0]
 
-    // MANDATORY secret verification - reject if no secret or mismatch
-    if (!endpoint.secret || !providedSecret || providedSecret !== endpoint.secret) {
-      console.error('❌ Secret verification failed')
-      
-      // Log failed attempt with IP
-      const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown'
-      console.log(`🚨 Unauthorized webhook attempt from IP: ${clientIP}`)
-      
+    // Verificar secret
+    if (endpoint.secret && providedSecret !== endpoint.secret) {
+      console.error('❌ Invalid or missing secret')
       return new Response(
-        JSON.stringify({ error: 'Unauthorized: Invalid or missing secret' }),
+        JSON.stringify({ error: 'Invalid or missing secret' }),
         { status: 401, headers: corsHeaders }
       )
     }
