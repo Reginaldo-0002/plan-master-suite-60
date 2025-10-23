@@ -148,15 +148,15 @@ export const ReferralSystem = ({ profile }: ReferralSystemProps) => {
 
   const copyReferralCode = async () => {
     try {
-      await navigator.clipboard.writeText(profile.referral_code);
+      await navigator.clipboard.writeText(referralLink);
       toast({
         title: "Sucesso",
-        description: "Código de indicação copiado!",
+        description: "Link de indicação copiado!",
       });
     } catch (error) {
       toast({
         title: "Erro",
-        description: "Erro ao copiar código.",
+        description: "Erro ao copiar link.",
         variant: "destructive",
       });
     }
