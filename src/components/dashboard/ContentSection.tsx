@@ -210,14 +210,47 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   const handlePasswordSubmit = async () => {
     if (!selectedContent) return;
 
-    if (passwordInput === selectedContent.content_password) {
-      setPasswordDialogOpen(false);
-      setPasswordInput("");
-      await proceedToContent(selectedContent);
-    } else {
+    try {
+      // Call server-side password verification function
+      const { data, error } = await supabase.rpc('verify_content_password', {
+        content_id_param: selectedContent.id,
+        plain_password: passwordInput
+      });
+
+      if (error) {
+        // Check if it's a rate limit error
+        if (error.message.includes('Too many password attempts')) {
+          toast({
+            title: "Bloqueado Temporariamente",
+            description: "Você excedeu o limite de tentativas. Tente novamente em 15 minutos.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Erro",
+            description: "Erro ao verificar senha. Tente novamente.",
+            variant: "destructive",
+          });
+        }
+        return;
+      }
+
+      if (data === true) {
+        setPasswordDialogOpen(false);
+        setPasswordInput("");
+        await proceedToContent(selectedContent);
+      } else {
+        toast({
+          title: "Senha Incorreta",
+          description: "A senha digitada está incorreta. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Password verification error:', error);
       toast({
-        title: "Senha Incorreta",
-        description: "A senha digitada está incorreta. Tente novamente.",
+        title: "Erro",
+        description: "Erro ao verificar senha. Tente novamente.",
         variant: "destructive",
       });
     }

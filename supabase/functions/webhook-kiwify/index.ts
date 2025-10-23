@@ -87,12 +87,42 @@ serve(async (req) => {
 
     const endpoint = endpoints[0]
 
-    // Determinar se deve verificar assinatura
-    let isVerified = false
-    const kiwifySignature = headers['x-kiwify-signature'] || headers['signature']
+    // Get timestamp for replay attack prevention
+    const timestamp = headers['x-kiwify-timestamp'] || headers['timestamp']
+    
+    // Reject requests without timestamp (replay attack prevention)
+    if (timestamp) {
+      const requestTime = parseInt(timestamp)
+      const now = Date.now()
+      const fiveMinutes = 5 * 60 * 1000
+      
+      if (isNaN(requestTime) || Math.abs(now - requestTime) > fiveMinutes) {
+        console.error('❌ Request timestamp too old or invalid')
+        return new Response(
+          JSON.stringify({ error: 'Request timestamp invalid or expired' }),
+          { status: 401, headers: corsHeaders }
+        )
+      }
+    }
 
-    // Se endpoint exige assinatura E há assinatura, verifica
-    if (endpoint.require_signature && endpoint.secret && kiwifySignature) {
+    // MANDATORY signature verification - always required
+    const kiwifySignature = headers['x-kiwify-signature'] || headers['signature']
+    
+    if (!endpoint.secret || !kiwifySignature) {
+      console.error('❌ Missing signature or secret')
+      
+      // Log failed attempt with IP
+      const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown'
+      console.log(`🚨 Unauthorized webhook attempt from IP: ${clientIP}`)
+      
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized: Missing signature or secret' }),
+        { status: 401, headers: corsHeaders }
+      )
+    }
+
+    // Verify HMAC signature
+    try {
       const encoder = new TextEncoder()
       const key = await crypto.subtle.importKey(
         'raw',
@@ -108,22 +138,27 @@ serve(async (req) => {
         .join('')
       const provided = String(kiwifySignature).trim()
       const matches = provided === expectedHex || provided === `sha256=${expectedHex}`
+      
       if (!matches) {
-        console.error('❌ Invalid signature')
+        console.error('❌ Invalid HMAC signature')
+        
+        // Log failed attempt with IP
+        const clientIP = headers['x-forwarded-for'] || headers['x-real-ip'] || 'unknown'
+        console.log(`🚨 Invalid signature from IP: ${clientIP}`)
+        
         return new Response(
-          JSON.stringify({ error: 'Invalid signature' }),
+          JSON.stringify({ error: 'Unauthorized: Invalid signature' }),
           { status: 401, headers: corsHeaders }
         )
       }
       
-      isVerified = true
-      console.log('✅ Signature verified')
-    } else if (!endpoint.require_signature) {
-      // Se não exige assinatura, marca como verificado por padrão
-      isVerified = true
-      console.log('✅ Verification not required - marking as verified')
-    } else {
-      console.log('⚠️ Verification required but signature missing')
+      console.log('✅ Kiwify signature verified')
+    } catch (error) {
+      console.error('❌ Signature verification error:', error)
+      return new Response(
+        JSON.stringify({ error: 'Signature verification failed' }),
+        { status: 401, headers: corsHeaders }
+      )
     }
 
     // Gerar chave de idempotência usando order_id do payload da Kiwify
@@ -133,7 +168,7 @@ serve(async (req) => {
     
     console.log('🔑 Idempotency key:', idempotencyKey)
 
-    // Inserir evento (com idempotência)
+    // Inserir evento (com idempotência) - always verified now due to mandatory checks above
     const { data: webhookEvent, error: insertError } = await supabase
       .from('webhook_events')
       .insert({
@@ -141,7 +176,7 @@ serve(async (req) => {
         raw_headers: headers,
         raw_payload: payload,
         idempotency_key: idempotencyKey,
-        verified: isVerified,
+        verified: true, // Always true because we enforce signature verification above
         status: 'received'
       })
       .select()
