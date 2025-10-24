@@ -31,7 +31,7 @@ interface TopicResource {
   resource_url: string;
   thumbnail_url?: string;
   is_premium: boolean;
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   resource_order: number;
 }
 

@@ -20,7 +20,7 @@ interface UpcomingRelease {
 }
 
 interface ComingSoonSectionProps {
-  userPlan?: 'free' | 'vip' | 'pro';
+  userPlan?: 'free' | 'vip' | 'pro' | 'premium';
 }
 
 export const ComingSoonSection = ({ userPlan }: ComingSoonSectionProps) => {

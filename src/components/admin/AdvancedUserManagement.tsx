@@ -32,7 +32,7 @@ interface User {
   user_id: string;
   full_name: string | null;
   avatar_url: string | null;
-  plan: 'free' | 'vip' | 'pro';
+  plan: 'free' | 'vip' | 'pro' | 'premium';
   role: string;
   plan_start_date: string | null;
   plan_end_date: string | null;
@@ -62,7 +62,7 @@ interface NewUserData {
   email: string;
   password: string;
   full_name: string;
-  plan: 'free' | 'vip' | 'pro';
+  plan: 'free' | 'vip' | 'pro' | 'premium';
   plan_start_date: string;
   plan_end_date: string;
 }

@@ -13,7 +13,7 @@ interface SearchResult {
   title: string;
   description: string | null;
   content_type: string;
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   hero_image_url: string | null;
 }
 

@@ -15,14 +15,14 @@ interface CarouselContent {
   content_type: string;
   hero_image_url: string | null;
   video_url: string | null;
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   status: 'active' | 'maintenance' | 'blocked' | 'published' | 'draft';
   show_in_carousel: boolean;
   carousel_order: number;
 }
 
 interface CarouselSectionProps {
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   onContentSelect?: (contentId: string) => void;
 }
 

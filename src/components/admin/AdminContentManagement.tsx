@@ -14,7 +14,7 @@ interface Content {
   title: string;
   description: string | null;
   content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   is_active: boolean;
   status: 'published' | 'draft' | 'scheduled';
   video_url: string | null;

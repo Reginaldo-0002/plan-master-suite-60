@@ -9,7 +9,7 @@ import { Profile } from "@/types/profile";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
 
 interface PlansSectionProps {
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   profile: Profile;
 }
 

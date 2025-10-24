@@ -21,7 +21,7 @@ interface Content {
   carousel_order: number;
   show_in_carousel: boolean;
   content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   is_active: boolean;
 }
 

@@ -29,7 +29,7 @@ type ActiveSection = "dashboard" | "products" | "tools" | "courses" | "tutorials
 interface SidebarProps {
   activeSection: ActiveSection;
   onNavigate: (section: ActiveSection) => void;
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   userRole: string;
 }
 
@@ -58,6 +58,8 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
         return <Crown className="w-4 h-4" />;
       case 'vip':
         return <Gem className="w-4 h-4" />;
+      case 'premium':
+        return <Star className="w-4 h-4 animate-pulse" />;
       default:
         return <Star className="w-4 h-4" />;
     }
@@ -69,6 +71,8 @@ export const Sidebar = memo(({ activeSection, onNavigate, userPlan, userRole }: 
         return 'bg-plan-pro text-white';
       case 'vip':
         return 'bg-plan-vip text-white';
+      case 'premium':
+        return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white';
       default:
         return 'bg-plan-free text-white';
     }

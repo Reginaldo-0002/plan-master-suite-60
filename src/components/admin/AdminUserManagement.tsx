@@ -21,7 +21,7 @@ interface User {
   user_id: string;
   full_name: string | null;
   avatar_url: string | null;
-  plan: 'free' | 'vip' | 'pro';
+  plan: 'free' | 'vip' | 'pro' | 'premium';
   role: 'user' | 'admin' | 'moderator';
   pix_key: string | null;
   total_session_time: number;
@@ -101,7 +101,7 @@ export const AdminUserManagement = () => {
     }
   };
 
-  const updateUserPlan = async (userId: string, newPlan: 'free' | 'vip' | 'pro') => {
+  const updateUserPlan = async (userId: string, newPlan: 'free' | 'vip' | 'pro' | 'premium') => {
     try {
       console.log('Updating user plan:', { userId, newPlan });
       

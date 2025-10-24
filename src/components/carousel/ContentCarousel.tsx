@@ -15,7 +15,7 @@ interface ContentItem {
   title: string;
   description: string | null;
   content_type: string;
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   hero_image_url: string | null;
   carousel_image_url: string | null;
   video_url: string | null;
@@ -25,7 +25,7 @@ interface ContentItem {
 }
 
 interface ContentCarouselProps {
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   onContentClick?: (contentId: string) => void;
 }
 

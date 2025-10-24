@@ -27,12 +27,12 @@ interface Resource {
   thumbnail_url: string | null;
   resource_order: number;
   is_premium: boolean;
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
 }
 
 interface TopicsGalleryProps {
   contentId: string;
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   onBack: () => void;
 }
 

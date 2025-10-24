@@ -4,7 +4,7 @@ import { TopicsGallery } from "@/components/topics/TopicsGallery";
 
 interface TopicsRouterProps {
   contentId: string;
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   onBack: () => void;
 }
 

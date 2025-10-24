@@ -15,12 +15,12 @@ interface Tool {
   message: string | null;
   url?: string;
   description?: string;
-  required_plan?: 'free' | 'vip' | 'pro';
+  required_plan?: 'free' | 'vip' | 'pro' | 'premium';
   hero_image_url?: string;
 }
 
 interface ToolsSectionProps {
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   onContentSelect?: (contentId: string) => void;
 }
 
