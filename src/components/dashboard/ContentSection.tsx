@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink, X } from "lucide-react";
+import { Loader2, Crown, Gem, Star, Lock, Calendar, FileText, Play, Download, ExternalLink, X, KeyRound, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAreaTracking } from "@/hooks/useAreaTracking";
 import { useOptimizedNavigation } from "@/hooks/useOptimizedNavigation";
@@ -16,19 +18,24 @@ interface Content {
   description: string | null;
   content_type: string;
   status: 'active' | 'maintenance' | 'blocked' | 'published' | 'draft';
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   hero_image_url: string | null;
   video_url: string | null;
   release_date: string | null;
   created_at: string;
   updated_at: string;
+  password_protected?: boolean;
+  content_password?: string;
+  scheduled_lock?: boolean;
+  lock_start_date?: string;
+  lock_end_date?: string;
 }
 
 interface ContentSectionProps {
   contentType: string;
   title: string;
   description: string;
-  userPlan: 'free' | 'vip' | 'pro';
+  userPlan: 'free' | 'vip' | 'pro' | 'premium';
   onContentSelect?: (contentId: string) => void;
 }
 
@@ -42,6 +49,9 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   const [content, setContent] = useState<Content[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVideo, setSelectedVideo] = useState<VideoPlayer | null>(null);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [selectedContent, setSelectedContent] = useState<Content | null>(null);
   const { toast } = useToast();
   const { trackAreaAccess } = useAreaTracking();
   const { navigateToPlans } = useOptimizedNavigation();
@@ -86,7 +96,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
 
       let query = supabase
         .from('content')
-        .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at')
+        .select('id, title, description, content_type, status, required_plan, hero_image_url, video_url, scheduled_publish_at, created_at, updated_at, password_protected, content_password, scheduled_lock, lock_start_date, lock_end_date')
         .eq('is_active', true)
         .eq('status', 'published')
         .order('created_at', { ascending: false });
@@ -153,6 +163,20 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   };
 
   const isContentLocked = (contentItem: Content): { locked: boolean; reason: string } => {
+    // Verificar bloqueio por agendamento
+    if (contentItem.scheduled_lock && contentItem.lock_start_date && contentItem.lock_end_date) {
+      const now = new Date();
+      const startDate = new Date(contentItem.lock_start_date);
+      const endDate = new Date(contentItem.lock_end_date);
+      
+      if (now >= startDate && now <= endDate) {
+        return { 
+          locked: true, 
+          reason: `Conteúdo bloqueado até ${endDate.toLocaleDateString('pt-BR')} às ${endDate.toLocaleTimeString('pt-BR')}`
+        };
+      }
+    }
+    
     return { locked: false, reason: '' };
   };
 
@@ -172,8 +196,32 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
       return;
     }
 
+    // Verificar se conteúdo é protegido por senha
+    if (contentItem.password_protected && contentItem.content_password) {
+      setSelectedContent(contentItem);
+      setPasswordDialogOpen(true);
+      return;
+    }
+
     // Prosseguir com o acesso normal
     await proceedToContent(contentItem);
+  };
+
+  const handlePasswordSubmit = async () => {
+    if (!selectedContent) return;
+
+    if (passwordInput === selectedContent.content_password) {
+      setPasswordDialogOpen(false);
+      setPasswordInput("");
+      await proceedToContent(selectedContent);
+      setSelectedContent(null);
+    } else {
+      toast({
+        title: "Senha Incorreta",
+        description: "A senha digitada está incorreta. Tente novamente.",
+        variant: "destructive",
+      });
+    }
   };
 
 
@@ -219,6 +267,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
     switch (plan) {
       case 'pro': return <Crown className="w-4 h-4" />;
       case 'vip': return <Gem className="w-4 h-4" />;
+      case 'premium': return <Sparkles className="w-4 h-4" />;
       default: return <Star className="w-4 h-4" />;
     }
   };
@@ -227,6 +276,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
     switch (plan) {
       case 'pro': return 'bg-plan-pro text-white';
       case 'vip': return 'bg-plan-vip text-white';
+      case 'premium': return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white';
       default: return 'bg-plan-free text-white';
     }
   };
@@ -262,6 +312,10 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   };
 
   const canAccess = (contentPlan: string) => {
+    // Premium pode ser acessado por qualquer plano
+    if (contentPlan === 'premium') {
+      return true;
+    }
     const userLevel = planHierarchy[userPlan] || 0;
     const requiredLevel = planHierarchy[contentPlan as keyof typeof planHierarchy] || 0;
     return userLevel >= requiredLevel;
@@ -355,12 +409,20 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
                     <Lock className="w-4 h-4 mr-2" />
                     Upgrade Necessário
                   </Button>
-                ) : isContentLocked(item).locked ? (
+                 ) : isContentLocked(item).locked ? (
                   <Button variant="outline" className="w-full" disabled>
                     <Calendar className="w-4 h-4 mr-2" />
                     Bloqueado Temporariamente
                   </Button>
-                ) : (
+                 ) : item.password_protected ? (
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleAccessContent(item)}
+                  >
+                    <KeyRound className="w-4 h-4 mr-2" />
+                    Acessar com Senha
+                  </Button>
+                 ) : (
                   <Button 
                     className="w-full" 
                     onClick={() => handleAccessContent(item)}
@@ -375,6 +437,47 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
         </div>
       )}
       
+      {/* Password Dialog */}
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Conteúdo Protegido</DialogTitle>
+            <DialogDescription>
+              Este conteúdo está protegido por senha. Digite a senha para acessar.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="password">Senha</Label>
+              <Input
+                id="password"
+                type="password"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                placeholder="Digite a senha"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => {
+                setPasswordDialogOpen(false);
+                setPasswordInput("");
+                setSelectedContent(null);
+              }}>
+                Cancelar
+              </Button>
+              <Button onClick={handlePasswordSubmit}>
+                Acessar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* YouTube Video Player Dialog */}
       <Dialog open={!!selectedVideo} onOpenChange={() => setSelectedVideo(null)}>
         <DialogContent className="max-w-4xl max-h-[90vh] p-0">

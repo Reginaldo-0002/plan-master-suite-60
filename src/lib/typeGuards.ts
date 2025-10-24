@@ -1,7 +1,7 @@
 
 // Type guards para validação de runtime
-export const isValidUserPlan = (plan: string): plan is 'free' | 'vip' | 'pro' => {
-  return ['free', 'vip', 'pro'].includes(plan);
+export const isValidUserPlan = (plan: string): plan is 'free' | 'vip' | 'pro' | 'premium' => {
+  return ['free', 'vip', 'pro', 'premium'].includes(plan);
 };
 
 export const isValidUserRole = (role: string): role is 'user' | 'admin' | 'moderator' => {
@@ -24,7 +24,7 @@ export const isValidToolStatus = (status: string): status is 'active' | 'mainten
 export const validateProfileData = (data: any): data is {
   user_id: string;
   full_name: string | null;
-  plan: 'free' | 'vip' | 'pro';
+  plan: 'free' | 'vip' | 'pro' | 'premium';
   role: 'user' | 'admin' | 'moderator';
 } => {
   return (
@@ -40,7 +40,7 @@ export const validateContentData = (data: any): data is {
   id: string;
   title: string;
   content_type: 'course' | 'tutorial' | 'webinar' | 'article';
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
 } => {
   return (
     data &&

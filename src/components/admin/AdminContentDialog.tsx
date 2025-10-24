@@ -17,7 +17,7 @@ interface Content {
   title: string;
   description: string;
   content_type: 'product' | 'tool' | 'course' | 'tutorial';
-  required_plan: 'free' | 'vip' | 'pro';
+  required_plan: 'free' | 'vip' | 'pro' | 'premium';
   video_url?: string;
   hero_image_url?: string;
   carousel_image_url?: string;
@@ -306,6 +306,7 @@ export const AdminContentDialog = ({ isOpen, onClose, content, onContentSaved }:
                   <SelectItem value="free">Free</SelectItem>
                   <SelectItem value="vip">VIP</SelectItem>
                   <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="premium">Premium (Todos podem acessar)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

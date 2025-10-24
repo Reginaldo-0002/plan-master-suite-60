@@ -4,7 +4,7 @@ export interface Profile {
   user_id: string;
   full_name: string | null;
   avatar_url: string | null;
-  plan: 'free' | 'vip' | 'pro';
+  plan: 'free' | 'vip' | 'pro' | 'premium';
   plan_end_date: string | null;
   pix_key: string | null;
   whatsapp?: string | null;
