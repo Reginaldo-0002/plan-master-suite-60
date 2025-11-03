@@ -56,7 +56,7 @@ export const ContentSection = ({ contentType, title, description, userPlan, onCo
   const { trackAreaAccess } = useAreaTracking();
   const { navigateToPlans } = useOptimizedNavigation();
 
-  const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
+  const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2, 'premium': 3 };
 
   useEffect(() => {
     fetchContent();

@@ -165,7 +165,7 @@ export const TopicsGallery = ({ contentId, userPlan, onBack }: TopicsGalleryProp
   };
 
   const hasAccess = (resource: Resource) => {
-    const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2 };
+    const planHierarchy = { 'free': 0, 'vip': 1, 'pro': 2, 'premium': 3 };
     return planHierarchy[userPlan] >= planHierarchy[resource.required_plan];
   };
 
